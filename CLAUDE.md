@@ -61,10 +61,17 @@ make shell          # shell Django
 - [x] .env.example
 - [x] Makefile
 - [x] nginx.conf
-- [ ] make dev sobe sem erro
+- [x] make dev sobe sem erro
 - [x] Model Lead criado e registrado no admin
 - [x] Endpoint POST /api/leads/ funcionando
 - [x] Componentes Hero, Sobre, Portfolio, Contato
 - [x] Formulário conectado à API
 - [ ] Vitrine responsiva (testado em mobile)
-- [ ] make test passa
+- [x] make test passa (3/3)
+
+## Infra VPS
+- nginx-proxy em host network roteia por domínio (porta 80/443)
+- studio-fluir → porta interna 8001
+- uid-sistema → porta interna 8002
+- Novo cliente → porta 8003+ e um server block no proxy
+- Renovação SSL automática via certbot no nginx-proxy

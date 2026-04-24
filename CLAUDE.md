@@ -8,7 +8,7 @@ Sede: Uberlândia/MG | Operação: 100% digital/remota
 
 ## Stack
 - **Backend:** Python 3.12 + Django 5.x + Django REST Framework
-- **Frontend:** React 18 + Vite + Tailwind CSS + Axios + React Router v6
+- **Frontend:** React 18 + Vite + Tailwind CSS + Axios + React Router v6 + react-helmet-async
 - **Banco:** PostgreSQL 16
 - **Infra:** VPS Ubuntu 24.04 + Docker Compose + Nginx + Gunicorn
 
@@ -26,8 +26,21 @@ Sede: Uberlândia/MG | Operação: 100% digital/remota
 SytemD/
 ├── backend/        ← Django (core + vitrine)
 ├── frontend/       ← React + Vite
+│   └── src/
+│       ├── components/
+│       │   ├── Navbar.jsx
+│       │   ├── Hero.jsx
+│       │   ├── Pain.jsx
+│       │   ├── HowItWorks.jsx
+│       │   ├── Portfolio.jsx
+│       │   ├── Testimonial.jsx
+│       │   ├── About.jsx
+│       │   ├── Contact.jsx
+│       │   ├── Footer.jsx
+│       │   └── WhatsAppButton.jsx
+│       └── pages/VitrinePage.jsx
 ├── nginx/          ← config Nginx
-├── docker-compose.yml        ← dev
+├── docker-compose.yml        ← dev (backend: 8002, db: 5433)
 ├── docker-compose.prod.yml   ← produção
 ├── .env.example
 └── Makefile
@@ -43,33 +56,44 @@ make logs           # tail logs containers
 make shell          # shell Django
 ```
 
+## Portas dev (local)
+- Frontend: 5173
+- Backend:  8002  (8000 ocupado pelo Studio Fluir)
+- DB:       5433  (5432 ocupado pelo Studio Fluir)
+
 ## Status das Fases
 
 | Fase | Descrição | Status |
 |------|-----------|--------|
-| **Fase 1** | Setup + Vitrine Pública | 🔄 Em execução |
-| Fase 2 | Autenticação + Cadastro de Clientes | ⏳ Aguardando |
-| Fase 3 | Contratos + Mensalidades | ⏳ Aguardando |
-| Fase 4 | Projetos + Fases | ⏳ Aguardando |
-| Fase 5 | Financeiro + Dashboard | ⏳ Aguardando |
-| Fase 6 | Form de Levantamento de Requisitos | ⏳ Aguardando |
+| **Fase 1** | Setup + Vitrine base | ✅ Concluída |
+| **Fase 2** | Reconstrução completa da Vitrine Pública | ✅ Concluída |
+| Fase 3 | Autenticação + Gestão de Clientes | ⏳ Aguardando |
+| Fase 4 | OS (Ordens de Serviço) | ⏳ Aguardando |
+| Fase 5 | Financeiro | ⏳ Aguardando |
+| Fase 6 | Dashboard + Form Levantamento | ⏳ Aguardando |
 
-## Fase 1 — Checklist
-- [x] Estrutura de pastas criada
-- [x] docker-compose.yml dev
-- [x] docker-compose.prod.yml
-- [x] .env.example
-- [x] Makefile
-- [x] nginx.conf
-- [x] make dev sobe sem erro
-- [x] Model Lead criado e registrado no admin
-- [x] Endpoint POST /api/leads/ funcionando
-- [x] Componentes Hero, Sobre, Portfolio, Contato
-- [x] Formulário conectado à API
-- [ ] Vitrine responsiva (testado em mobile)
-- [x] make test passa (3/3)
+## Fase 2 — Checklist
+- [x] index.css com variáveis CSS e fontes (Plus Jakarta Sans + DM Sans)
+- [x] tailwind.config.js com paleta oficial Uid
+- [x] Navbar sticky com scroll suave e hamburguer mobile
+- [x] Hero com headline forte e grid geométrico animado
+- [x] Pain.jsx — 4 cards de dor
+- [x] HowItWorks.jsx — 3 passos com conectores
+- [x] Portfolio com badges (vermelho/azul/roxo)
+- [x] Testimonial criado com TODO comentado
+- [x] About começando pela proposta de valor
+- [x] Contact com novo copy e POST /api/leads/ mantido
+- [x] Footer com CNPJ e localização
+- [x] WhatsAppButton flutuante com pulse
+- [x] react-helmet-async instalado e meta tags configuradas
+- [x] make test passando (3/3)
+- [ ] Responsivo testado: 375px | 768px | 1280px
+- [ ] Screenshot real do Studio Fluir no Portfolio
+- [ ] Número do WhatsApp real (TODOs em Contact.jsx e WhatsAppButton.jsx)
+- [ ] Depoimento real do Studio Fluir (TODO em Testimonial.jsx)
 
 ## Infra VPS
+- Deploy via alias SSH: `vps-pcuidsoftware-root`
 - nginx-proxy em host network roteia por domínio (porta 80/443)
 - studio-fluir → porta interna 8001
 - uid-sistema → porta interna 8002

@@ -1,3 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-brand-blue:   #063BF8;
+  --color-brand-red:    #FF0000;
+  --color-brand-purple: #3d0361;
+  --color-bg-dark:      #0a0014;
+  --color-bg-mid:       #1a0a2e;
+  --color-bg-section:   #3d0361;
+  --color-text-main:    #f1f5f9;
+  --color-text-muted:   #a78bca;
+  --color-text-accent:  #6b8fff;
+  --color-border:       rgba(6, 59, 248, 0.2);
+  --color-border-hover: rgba(6, 59, 248, 0.6);
+  --color-btn-primary:  #063BF8;
+  --color-btn-hover:    #0430cc;
+  --color-badge-prod:   #FF0000;
+  --color-badge-dev:    #063BF8;
+  --color-badge-next:   #3d0361;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-main);
+}
+
+h1, h2, h3 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+@keyframes pulse-whatsapp {
+  0%, 100% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4); }
+  50%       { box-shadow: 0 4px 30px rgba(37, 211, 102, 0.8); }
+}

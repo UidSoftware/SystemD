@@ -5,10 +5,17 @@ export default {
     extend: {
       colors: {
         uid: {
-          blue: '#1E40AF',
-          dark: '#0F172A',
-          light: '#F8FAFC',
+          blue:    '#063BF8',
+          red:     '#FF0000',
+          purple:  '#3d0361',
+          dark:    '#0a0014',
+          mid:     '#1a0a2e',
+          section: '#3d0361',
         },
+      },
+      fontFamily: {
+        display: ['Plus Jakarta Sans', 'sans-serif'],
+        body:    ['DM Sans', 'sans-serif'],
       },
     },
   },

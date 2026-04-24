@@ -32,12 +32,12 @@ export default function Navbar() {
       }}
     >
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a
-          href="#inicio"
-          className="font-display font-bold text-2xl"
-          style={{ color: '#063BF8' }}
-        >
-          uid
+        <a href="#inicio" className="flex items-center">
+          <img
+            src="/assets/uid-logo.jpeg"
+            alt="Uid Software"
+            style={{ height: '42px', width: 'auto', borderRadius: '8px' }}
+          />
         </a>
 
         <div className="hidden md:flex items-center gap-8">

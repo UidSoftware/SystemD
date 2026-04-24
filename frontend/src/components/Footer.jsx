@@ -15,9 +15,11 @@ export default function Footer() {
     >
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="text-center md:text-left">
-          <span className="font-display font-bold text-2xl" style={{ color: '#063BF8' }}>
-            uid
-          </span>
+          <img
+            src="/assets/uid-logo.jpeg"
+            alt="Uid Software"
+            style={{ height: '48px', width: 'auto', borderRadius: '8px' }}
+          />
           <p className="text-sm mt-1" style={{ color: '#a78bca' }}>Uberlândia/MG</p>
           <p className="text-xs mt-1" style={{ color: '#a78bca' }}>CNPJ: 60.939.393/0001-25</p>
         </div>

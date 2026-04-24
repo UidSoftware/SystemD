@@ -69,7 +69,7 @@ export default function Hero() {
         {/* Elemento visual */}
         <div className="flex-shrink-0 lg:w-[420px]">
           <img
-            src="/assets/uid-card.jpeg"
+            src="/assets/uid-cartao.jpeg"
             alt="Uid Software"
             className="w-full rounded-2xl"
             style={{

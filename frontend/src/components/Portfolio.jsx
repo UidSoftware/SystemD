@@ -5,7 +5,6 @@ const projetos = [
     nome: 'Studio Fluir',
     descricao:
       'Sistema completo de gestão para estúdio de dança e pilates. Controle de alunos, turmas, mensalidades, frequência, créditos e reposições.',
-    tags: ['Django', 'React', 'PostgreSQL', 'Docker'],
     link: 'https://nostudiofluir.com.br',
     cta: null,
   },
@@ -15,7 +14,6 @@ const projetos = [
     nome: 'Gestão de Carteira',
     descricao:
       'Gestão de clientes, contratos e cobranças recorrentes para prestadores de serviço.',
-    tags: ['Django', 'React', 'Docker'],
     link: null,
     cta: null,
   },
@@ -25,7 +23,6 @@ const projetos = [
     nome: 'Seu sistema aqui',
     descricao:
       'Cada nicho tem suas particularidades. A gente aprende o seu negócio antes de propor qualquer solução.',
-    tags: [],
     link: null,
     cta: '#contato',
   },
@@ -74,20 +71,6 @@ export default function Portfolio() {
               <p className="text-sm flex-1" style={{ color: '#a78bca' }}>
                 {p.descricao}
               </p>
-
-              {p.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {p.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs px-3 py-1 rounded-full"
-                      style={{ backgroundColor: 'rgba(6, 59, 248, 0.15)', color: '#6b8fff' }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
 
               {p.link && (
                 <a

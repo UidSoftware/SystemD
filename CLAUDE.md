@@ -67,7 +67,7 @@ make shell          # shell Django
 |------|-----------|--------|
 | **Fase 1** | Setup + Vitrine base | ✅ Concluída |
 | **Fase 2** | Reconstrução completa da Vitrine Pública | ✅ Concluída |
-| Fase 3 | Autenticação + Gestão de Clientes | ⏳ Aguardando |
+| **Fase 3** | Bloco de Valores + Autenticação JWT + Cadastro de Clientes | 🔄 Em execução |
 | Fase 4 | OS (Ordens de Serviço) | ⏳ Aguardando |
 | Fase 5 | Financeiro | ⏳ Aguardando |
 | Fase 6 | Dashboard + Form Levantamento | ⏳ Aguardando |
@@ -91,6 +91,19 @@ make shell          # shell Django
 - [ ] Screenshot real do Studio Fluir no Portfolio
 - [ ] Número do WhatsApp real (TODOs em Contact.jsx e WhatsAppButton.jsx)
 - [ ] Depoimento real do Studio Fluir (TODO em Testimonial.jsx)
+
+## Fase 3 — Escopo
+
+**Frente 1 — Vitrine:** Bloco de Valores no About.jsx (texto do fundador, sem bullets corporativos).
+
+**Frente 2 — Sistema interno:**
+- App `usuarios`: autenticação por **email** + JWT (simplejwt), access token em **memória** (nunca localStorage)
+- App `clientes`: CRUD completo, soft delete obrigatório (`ativo=False`), todas as rotas com `IsAuthenticated`
+- Frontend: AuthContext, PrivateRoute, LoginPage, Sidebar, DashboardPage (placeholder), ClientesPage
+
+Endpoints novos: `/api/auth/token/`, `/api/auth/token/refresh/`, `/api/auth/logout/`, `/api/clientes/`
+
+---
 
 ## Infra VPS
 - Deploy via alias SSH: `vps-pcuidsoftware-root`

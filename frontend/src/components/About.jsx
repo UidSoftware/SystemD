@@ -65,6 +65,56 @@ export default function About() {
             </div>
           ))}
         </div>
+
+        {/* Bloco de Valores */}
+        <div
+          className="mt-20 pt-16"
+          style={{ borderTop: '1px solid rgba(6, 59, 248, 0.2)' }}
+        >
+          <h2
+            className="font-display font-bold text-3xl md:text-4xl text-center mb-10"
+            style={{ color: '#f1f5f9' }}
+          >
+            Nossos Valores
+          </h2>
+
+          <p
+            className="text-center text-lg md:text-xl italic mb-12 max-w-3xl mx-auto leading-relaxed"
+            style={{ color: '#a78bca' }}
+          >
+            "Antes de ser uma empresa de tecnologia, a Uid é uma empresa de responsabilidade."
+          </p>
+
+          <div className="max-w-3xl mx-auto space-y-10 text-base md:text-lg leading-relaxed" style={{ color: '#e2d9f3' }}>
+            <p>
+              Quando você nos confia seu negócio, não estamos recebendo um projeto.
+              Estamos recebendo a agenda dos seus clientes, o controle do seu financeiro,
+              o registro dos seus sonhos.
+            </p>
+
+            <p>Por isso trabalhamos com dois valores inegociáveis:</p>
+
+            <p>
+              <span className="font-bold" style={{ color: '#063BF8' }}>RESPEITO</span>
+              {' '}— pelo seu tempo, pelo seu negócio, pela sua realidade.
+              Não chegamos com solução pronta. Chegamos pra entender primeiro.
+            </p>
+
+            <p>
+              <span className="font-bold" style={{ color: '#063BF8' }}>RESPONSABILIDADE</span>
+              {' '}— o sistema que entregamos tem vidas dependendo dele
+              funcionar. Isso a gente nunca esquece, nem depois da entrega,
+              nem quando ninguém tá olhando.
+            </p>
+
+            <p>
+              A Uid foi construída pra durar além das pessoas que a fundaram.
+              O que a gente deixa não é código — é a transformação real no negócio
+              de quem confiou na gente.
+            </p>
+          </div>
+        </div>
+
       </div>
     </section>
   )

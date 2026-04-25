@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL
+import api from '../services/api'
 
 const estadoInicial = {
   nome: '',
@@ -37,7 +35,7 @@ export default function Contact() {
     setEnviando(true)
     setStatus(null)
     try {
-      await axios.post(`${API_URL}/leads/`, { ...form, origem: 'vitrine_contato' })
+      await api.post('/leads/', { ...form, origem: 'vitrine_contato' })
       setStatus('sucesso')
       setForm(estadoInicial)
     } catch {

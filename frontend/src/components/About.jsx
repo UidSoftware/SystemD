@@ -20,6 +20,9 @@ export default function About() {
   return (
     <section className="py-24 px-6" style={{ backgroundColor: '#3d0361' }}>
       <div className="max-w-5xl mx-auto">
+        <p className="text-sm font-semibold tracking-widest uppercase text-center mb-3" style={{ color: '#063BF8' }}>
+          Sobre Nós
+        </p>
         <h2
           className="font-display font-bold text-3xl md:text-4xl text-center mb-8"
           style={{ color: '#f1f5f9' }}

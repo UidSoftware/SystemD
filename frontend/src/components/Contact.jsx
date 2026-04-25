@@ -116,7 +116,7 @@ export default function Contact() {
             name="mensagem"
             value={form.mensagem}
             onChange={handleChange}
-            placeholder="Descreva o que você precisa *"
+            placeholder="Conte-me qual o seu problema, para que eu possa te ajudar. *"
             required
             rows={5}
             style={{ ...inputStyle, resize: 'none' }}

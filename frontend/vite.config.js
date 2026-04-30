@@ -12,10 +12,10 @@ export default defineConfig({
         name: 'Uid Software',
         short_name: 'Uid',
         description: 'Sistema de Gestão Uid Software',
-        start_url: '/',
+        start_url: '/sistema/',
         display: 'standalone',
         background_color: '#ffffff',
-        theme_color: '#1e40af',
+        theme_color: '#063BF8',
         lang: 'pt-BR',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

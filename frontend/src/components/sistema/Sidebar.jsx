@@ -26,7 +26,7 @@ const itemDesabilitado = {
   cursor: 'not-allowed',
 }
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   const { usuario, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -62,6 +62,15 @@ export default function Sidebar() {
           style={({ isActive }) => isActive ? { ...itemBase, ...itemAtivo } : itemBase}
         >
           <span>◎</span> Clientes
+        </NavLink>
+
+        <div className="h-px mx-4 my-2" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+
+        <NavLink
+          to="/sistema/email"
+          style={({ isActive }) => isActive ? { ...itemBase, ...itemAtivo } : itemBase}
+        >
+          <span>✉</span> Email
         </NavLink>
 
         <div className="h-px mx-4 my-2" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />

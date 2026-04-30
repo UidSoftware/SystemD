@@ -5,6 +5,7 @@ import VitrinePage from './pages/VitrinePage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/sistema/DashboardPage'
 import ClientesPage from './pages/sistema/ClientesPage'
+import EmailPage from './pages/sistema/EmailPage'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sistema/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
           <Route path="/sistema/clientes" element={<PrivateRoute><ClientesPage /></PrivateRoute>} />
+          <Route path="/sistema/email" element={<PrivateRoute><EmailPage /></PrivateRoute>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

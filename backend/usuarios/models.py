@@ -25,3 +25,19 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     @property
     def is_active(self):
         return self.ativo
+
+
+class UsuarioEmailConfig(models.Model):
+    usuario       = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='email_config')
+    email_conta   = models.EmailField()
+    email_senha   = models.CharField(max_length=255)
+    ativo         = models.BooleanField(default=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Configuração de Email'
+        verbose_name_plural = 'Configurações de Email'
+
+    def __str__(self):
+        return f'{self.usuario.email} → {self.email_conta}'

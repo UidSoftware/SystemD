@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'vitrine',
     'usuarios',
     'clientes',
+    'email_client',
 ]
 
 MIDDLEWARE = [
@@ -106,3 +107,11 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
 }
+
+# Email Client — IMAP/SMTP
+IMAP_HOST    = config('IMAP_HOST',    default='mail.uidsoftware.com.br')
+IMAP_PORT    = config('IMAP_PORT',    default='993')
+IMAP_USE_SSL = config('IMAP_USE_SSL', default='True')
+SMTP_HOST    = config('SMTP_HOST',    default='mail.uidsoftware.com.br')
+SMTP_PORT    = config('SMTP_PORT',    default='587')
+SMTP_USE_TLS = config('SMTP_USE_TLS', default='True')

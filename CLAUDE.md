@@ -49,6 +49,8 @@ SytemD/
 - [x] Sidebar responsiva com menu retratil no mobile (hamburger + overlay)
 - [x] SistemaLayout centralizado para Dashboard, Clientes e Email
 - [x] Webmail integrado: EmailPage, EmailList, EmailDetail, EmailCompose
+- [x] PWA start_url corrigido para /sistema/ — instala o sistema, nao a vitrine
+- [x] theme_color corrigido para #063BF8 (azul Uid)
 │   └── Dockerfile.prod
 ├── nginx/
 ├── docker-compose.yml        ← dev
@@ -84,6 +86,7 @@ make shell          # shell Django
 - **Próximo passo:** frontend React do webmail (EmailPage, EmailList, EmailDetail, EmailCompose)
 
 ## PWA
+> Para instalar: acessar https://uidsoftware.com.br/sistema/ e "Adicionar a tela inicial"
 - Plugin: `vite-plugin-pwa@0.21.1`
 - Nome: `Uid Software` / short_name: `Uid`
 - Ícones gerados a partir do logo em `public/icon-192.png` e `public/icon-512.png`
@@ -112,6 +115,8 @@ make shell          # shell Django
 - [x] Sidebar responsiva com menu retratil no mobile (hamburger + overlay)
 - [x] SistemaLayout centralizado para Dashboard, Clientes e Email
 - [x] Webmail integrado: EmailPage, EmailList, EmailDetail, EmailCompose
+- [x] PWA start_url corrigido para /sistema/ — instala o sistema, nao a vitrine
+- [x] theme_color corrigido para #063BF8 (azul Uid)
 - [ ] Responsivo testado: 375px | 768px | 1280px
 - [ ] Número do WhatsApp real (TODOs em Contact.jsx e WhatsAppButton.jsx)
 - [ ] Depoimento real do Studio Fluir (TODO em Testimonial.jsx)

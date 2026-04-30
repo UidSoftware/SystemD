@@ -12,7 +12,7 @@ Sede: Uberlândia/MG | Operação: 100% digital/remota
 - **Backend:** Python 3.12 + Django 5.x + Django REST Framework + SimpleJWT
 - **Frontend:** React 18 + Vite + Tailwind CSS + Axios + React Router v6 + react-helmet-async + **PWA (vite-plugin-pwa)**
 - **Banco:** PostgreSQL 16
-- **Email:** Mailcow Dockerized — IMAP via imapclient, SMTP via smtplib
+- **Email:** Mailcow Dockerized — IMAP via imapclient (porta 993 SSL), SMTP via smtplib (porta 587 STARTTLS)
 - **Infra:** VPS Ubuntu 24.04 + Docker Compose + Nginx + Gunicorn
 
 ## Regras críticas
@@ -46,6 +46,9 @@ SytemD/
 │   │   ├── icon-192.png   ← ícone PWA
 │   │   └── icon-512.png   ← ícone PWA
 │   ├── vite.config.js     ← PWA configurado
+- [x] Sidebar responsiva com menu retratil no mobile (hamburger + overlay)
+- [x] SistemaLayout centralizado para Dashboard, Clientes e Email
+- [x] Webmail integrado: EmailPage, EmailList, EmailDetail, EmailCompose
 │   └── Dockerfile.prod
 ├── nginx/
 ├── docker-compose.yml        ← dev
@@ -104,7 +107,11 @@ make shell          # shell Django
 - [x] Model `UsuarioEmailConfig` — vincula usuário à conta IMAP
 - [x] App `email_client` — IMAP/SMTP integrado ao Mailcow
 - [x] Endpoint `/api/email/inbox/` testado e funcionando
+- [x] Envio SMTP testado e funcionando (SSL desabilitado — cert autoassinado Mailcow)
 - [x] PWA configurado com manifest, service worker e ícones
+- [x] Sidebar responsiva com menu retratil no mobile (hamburger + overlay)
+- [x] SistemaLayout centralizado para Dashboard, Clientes e Email
+- [x] Webmail integrado: EmailPage, EmailList, EmailDetail, EmailCompose
 - [ ] Responsivo testado: 375px | 768px | 1280px
 - [ ] Número do WhatsApp real (TODOs em Contact.jsx e WhatsAppButton.jsx)
 - [ ] Depoimento real do Studio Fluir (TODO em Testimonial.jsx)

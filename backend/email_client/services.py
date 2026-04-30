@@ -145,6 +145,8 @@ def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_h
             msg.attach(MIMEText(corpo_html, "html", "utf-8"))
 
         context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         with smtplib.SMTP(settings.SMTP_HOST, int(settings.SMTP_PORT), timeout=10) as server:
             server.ehlo()
             server.starttls(context=context)

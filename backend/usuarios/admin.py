@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario
+from .models import Usuario, UsuarioEmailConfig
 
 
 @admin.register(Usuario)
@@ -22,3 +22,10 @@ class UsuarioAdmin(UserAdmin):
             'fields': ('email', 'nome', 'password1', 'password2', 'is_staff'),
         }),
     )
+
+
+@admin.register(UsuarioEmailConfig)
+class UsuarioEmailConfigAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'email_conta', 'ativo', 'criado_em')
+    list_filter = ('ativo',)
+    search_fields = ('usuario__email', 'email_conta')

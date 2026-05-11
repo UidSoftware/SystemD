@@ -5,20 +5,18 @@ import EmailDetail from '../../components/email/EmailDetail'
 import EmailCompose from '../../components/email/EmailCompose'
 import { emailApi } from '../../services/emailApi'
 
-const PASTAS_LABEL = {
-  'INBOX':  { label: 'Caixa de entrada', icon: '✉' },
-  'Sent':   { label: 'Enviados',         icon: '↗' },
-  'Junk':   { label: 'Spam',             icon: '⚠' },
-  'Trash':  { label: 'Lixeira',          icon: '🗑' },
-  'Drafts': { label: 'Rascunhos',        icon: '✏' },
+const PASTAS_META = {
+  'INBOX':   { label: 'Entrada',   icone: '✉' },
+  'Sent':    { label: 'Enviados',  icone: '↗' },
+  'Drafts':  { label: 'Rascunhos', icone: '✏' },
+  'Junk':    { label: 'Spam',      icone: '⚠' },
+  'Trash':   { label: 'Lixeira',   icone: '🗑' },
+  'Archive': { label: 'Arquivo',   icone: '📁' },
 }
+const ORDEM = ['INBOX', 'Sent', 'Drafts', 'Junk', 'Trash', 'Archive']
 
-function labelPasta(nome) {
-  return PASTAS_LABEL[nome]?.label || nome
-}
-function iconePasta(nome) {
-  return PASTAS_LABEL[nome]?.icon || '📁'
-}
+function labelPasta(n)  { return PASTAS_META[n]?.label || n }
+function iconePasta(n)  { return PASTAS_META[n]?.icone || '📁' }
 
 export default function EmailPage() {
   const [emails, setEmails]                     = useState([])
@@ -31,22 +29,17 @@ export default function EmailPage() {
   const [respondendo, setRespondendo]           = useState(false)
   const [carregando, setCarregando]             = useState(false)
   const [erro, setErro]                         = useState(null)
+  // mobile/tablet: 'lista' | 'detalhe' | 'compose'
+  const [vista, setVista]                       = useState('lista')
 
   useEffect(() => {
     emailApi.pastas().then(res => {
       const nomes = res.data.results.map(p => p.nome)
-      const ordem = ['INBOX', 'Sent', 'Drafts', 'Junk', 'Trash']
-      const ordenadas = [
-        ...ordem.filter(p => nomes.includes(p)),
-        ...nomes.filter(p => !ordem.includes(p)),
-      ]
-      setPastas(ordenadas)
+      setPastas([...ORDEM.filter(p => nomes.includes(p)), ...nomes.filter(p => !ORDEM.includes(p))])
     }).catch(() => setPastas(['INBOX']))
   }, [])
 
-  useEffect(() => {
-    carregarEmails()
-  }, [pagina, pastaAtual])
+  useEffect(() => { carregarEmails() }, [pagina, pastaAtual])
 
   async function carregarEmails() {
     setCarregando(true)
@@ -67,6 +60,7 @@ export default function EmailPage() {
     setPagina(1)
     setEmailSelecionado(null)
     setCompondo(false)
+    setVista('lista')
   }
 
   async function abrirEmail(uid) {
@@ -76,6 +70,7 @@ export default function EmailPage() {
       setCompondo(false)
       setRespondendo(false)
       setEmails(prev => prev.map(e => e.uid === uid ? { ...e, lido: true } : e))
+      setVista('detalhe')
     } catch {
       setErro('Erro ao abrir email.')
     }
@@ -85,110 +80,202 @@ export default function EmailPage() {
     try {
       await emailApi.deletar(uid, pastaAtual)
       setEmailSelecionado(null)
+      setVista('lista')
       carregarEmails()
     } catch {
       setErro('Erro ao deletar email.')
     }
   }
 
+  function abrirCompose() {
+    setRespondendo(false)
+    setCompondo(true)
+    setVista('compose')
+  }
+
   function iniciarResposta() {
     setRespondendo(true)
     setCompondo(true)
+    setVista('compose')
   }
 
   async function aoEnviar() {
     setCompondo(false)
     setRespondendo(false)
+    setVista('lista')
     if (!respondendo) carregarEmails()
   }
 
+  function voltarParaLista() {
+    setCompondo(false)
+    setRespondendo(false)
+    setVista('lista')
+  }
+
   const naoLidos = pastaAtual === 'INBOX' ? emails.filter(e => !e.lido).length : 0
+  const bottomPastas = pastas.slice(0, 5)
+
+  // ── Painel de pastas (desktop) ───────────────────────────────────────
+  const PainelPastas = () => (
+    <div className="hidden lg:flex flex-col w-48 shrink-0 pt-4 pb-2 gap-0.5 px-2"
+      style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+      <button
+        onClick={abrirCompose}
+        className="w-full mb-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+        style={{ backgroundColor: '#063BF8', color: '#fff' }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0430cc'}
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#063BF8'}
+      >
+        + Novo
+      </button>
+      {pastas.map(pasta => (
+        <button key={pasta} onClick={() => trocarPasta(pasta)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors"
+          style={{
+            backgroundColor: pastaAtual === pasta ? 'rgba(6,59,248,0.15)' : 'transparent',
+            color: pastaAtual === pasta ? '#f1f5f9' : '#a78bca',
+            borderLeft: pastaAtual === pasta ? '2px solid #063BF8' : '2px solid transparent',
+          }}>
+          <span>{iconePasta(pasta)}</span>
+          <span className="flex-1 truncate">{labelPasta(pasta)}</span>
+          {pasta === 'INBOX' && naoLidos > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full"
+              style={{ backgroundColor: '#063BF8', color: '#fff' }}>{naoLidos}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  )
+
+  // ── Lista de emails ───────────────────────────────────────────────────
+  const PainelLista = ({ classe = '' }) => (
+    <div className={`flex flex-col overflow-hidden ${classe}`}
+      style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+      {/* header mobile/tablet */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <span className="text-sm font-semibold" style={{ color: '#f1f5f9' }}>
+          {labelPasta(pastaAtual)}
+          {naoLidos > 0 && (
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+              style={{ backgroundColor: '#063BF8', color: '#fff' }}>{naoLidos}</span>
+          )}
+        </span>
+        <button onClick={abrirCompose}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg"
+          style={{ backgroundColor: '#063BF8', color: '#fff' }}>
+          + Novo
+        </button>
+      </div>
+      {/* header desktop */}
+      <div className="hidden lg:flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <span className="text-sm font-medium" style={{ color: '#a78bca' }}>
+          {labelPasta(pastaAtual)}
+        </span>
+      </div>
+      <div className="flex flex-col flex-1 overflow-hidden px-3 py-2">
+        {carregando && <p className="text-xs px-1 pb-1" style={{ color: '#6b6b8a' }}>Carregando...</p>}
+        {erro && <p className="text-xs px-1 pb-1" style={{ color: '#f87171' }}>{erro}</p>}
+        <EmailList
+          emails={emails} total={total} pagina={pagina}
+          onPagina={setPagina} onSelecionar={abrirEmail}
+          uidSelecionado={emailSelecionado?.uid}
+        />
+      </div>
+    </div>
+  )
+
+  // ── Painel de leitura/compose ─────────────────────────────────────────
+  const PainelConteudo = ({ classe = '' }) => (
+    <div className={`flex flex-col flex-1 min-w-0 overflow-hidden ${classe}`}>
+      {/* botão voltar mobile */}
+      <div className="lg:hidden flex items-center gap-2 px-4 py-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <button onClick={voltarParaLista}
+          className="text-sm font-medium flex items-center gap-1"
+          style={{ color: '#063BF8' }}>
+          ← Voltar
+        </button>
+      </div>
+      <div className="flex-1 overflow-hidden p-4">
+        {compondo && (
+          <EmailCompose
+            onEnviado={aoEnviar}
+            onCancelar={voltarParaLista}
+            destinatarioPadrao={respondendo ? emailSelecionado?.remetente : ''}
+            assuntoPadrao={respondendo ? 'Re: ' + emailSelecionado?.assunto : ''}
+          />
+        )}
+        {emailSelecionado && !compondo && (
+          <EmailDetail
+            email={emailSelecionado}
+            onDeletar={() => deletarEmail(emailSelecionado.uid)}
+            onResponder={iniciarResposta}
+          />
+        )}
+        {!compondo && !emailSelecionado && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm" style={{ color: '#6b6b8a' }}>Selecione um email para ler</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── Bottom bar pastas (mobile + tablet) ───────────────────────────────
+  const BottomBar = () => (
+    <div className="lg:hidden flex items-center justify-around px-2 py-1 shrink-0"
+      style={{
+        backgroundColor: '#0d001f',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        minHeight: '56px',
+      }}>
+      {bottomPastas.map(pasta => (
+        <button key={pasta} onClick={() => trocarPasta(pasta)}
+          className="flex flex-col items-center gap-0.5 flex-1 py-1 transition-opacity"
+          style={{ opacity: pastaAtual === pasta ? 1 : 0.5 }}>
+          <span className="text-lg leading-none relative">
+            {iconePasta(pasta)}
+            {pasta === 'INBOX' && naoLidos > 0 && (
+              <span className="absolute -top-1 -right-2 text-xs leading-none px-1 rounded-full"
+                style={{ backgroundColor: '#063BF8', color: '#fff', fontSize: '9px' }}>
+                {naoLidos}
+              </span>
+            )}
+          </span>
+          <span className="text-xs" style={{ color: pastaAtual === pasta ? '#f1f5f9' : '#6b6b8a', fontSize: '10px' }}>
+            {labelPasta(pasta)}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <SistemaLayout titulo="Email">
-      <div className="flex flex-1 overflow-hidden h-full">
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
 
-        {/* Painel esquerdo: pastas + lista */}
-        <div className="flex flex-col w-72 shrink-0 overflow-hidden" style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* Desktop: 3 colunas */}
+          <PainelPastas />
 
-          {/* Navegação de pastas */}
-          <div className="px-4 pt-4 pb-2 space-y-0.5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b6b8a' }}>Pastas</span>
-              <button
-                onClick={() => { setCompondo(true); setRespondendo(false); setEmailSelecionado(null) }}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                style={{ backgroundColor: '#063BF8', color: '#fff' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0430cc'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#063BF8'}
-              >
-                + Novo
-              </button>
-            </div>
+          {/* Desktop + tablet: lista sempre visível */}
+          {/* Mobile: só lista OU só conteúdo */}
+          <PainelLista classe={`
+            ${vista === 'lista' ? 'flex' : 'hidden'}
+            lg:flex w-full lg:w-72 lg:shrink-0
+          `} />
 
-            {pastas.map(pasta => (
-              <button
-                key={pasta}
-                onClick={() => trocarPasta(pasta)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors"
-                style={{
-                  backgroundColor: pastaAtual === pasta ? 'rgba(6,59,248,0.15)' : 'transparent',
-                  color: pastaAtual === pasta ? '#f1f5f9' : '#a78bca',
-                  borderLeft: pastaAtual === pasta ? '2px solid #063BF8' : '2px solid transparent',
-                }}
-              >
-                <span className="text-base leading-none">{iconePasta(pasta)}</span>
-                <span className="flex-1 truncate">{labelPasta(pasta)}</span>
-                {pasta === 'INBOX' && naoLidos > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#063BF8', color: '#fff' }}>
-                    {naoLidos}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          <PainelConteudo classe={`
+            ${vista === 'detalhe' || vista === 'compose' ? 'flex' : 'hidden'}
+            lg:flex
+          `} />
 
-          <div className="h-px mx-4 my-2" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
-
-          {/* Lista de emails */}
-          <div className="flex flex-col flex-1 overflow-hidden px-4 pb-4 gap-2">
-            {carregando && <p className="text-xs" style={{ color: '#6b6b8a' }}>Carregando...</p>}
-            {erro && <p className="text-xs" style={{ color: '#f87171' }}>{erro}</p>}
-            <EmailList
-              emails={emails}
-              total={total}
-              pagina={pagina}
-              onPagina={setPagina}
-              onSelecionar={abrirEmail}
-              uidSelecionado={emailSelecionado?.uid}
-            />
-          </div>
         </div>
 
-        {/* Painel direito: conteúdo */}
-        <div className="flex-1 min-w-0 p-4">
-          {compondo && (
-            <EmailCompose
-              onEnviado={aoEnviar}
-              onCancelar={() => { setCompondo(false); setRespondendo(false) }}
-              destinatarioPadrao={respondendo ? emailSelecionado?.remetente : ''}
-              assuntoPadrao={respondendo ? 'Re: ' + emailSelecionado?.assunto : ''}
-            />
-          )}
-          {emailSelecionado && !compondo && (
-            <EmailDetail
-              email={emailSelecionado}
-              onDeletar={() => deletarEmail(emailSelecionado.uid)}
-              onResponder={iniciarResposta}
-            />
-          )}
-          {!compondo && !emailSelecionado && (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-sm" style={{ color: '#6b6b8a' }}>Selecione um email para ler</p>
-            </div>
-          )}
-        </div>
-
+        {/* Bottom bar pastas — mobile + tablet */}
+        <BottomBar />
       </div>
     </SistemaLayout>
   )

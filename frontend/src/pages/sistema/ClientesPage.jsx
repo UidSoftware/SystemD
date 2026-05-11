@@ -11,7 +11,7 @@ function badgeColor(s) { return segmentoCores[s?.toLowerCase()] || '#4b5563' }
 const camposVazios = {
   nome_empresa: '', nome_contato: '', email: '', telefone: '',
   whatsapp: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
-  origem: '', observacoes: '',
+  origem: '', observacoes: '', dominio_email: '',
 }
 
 export default function ClientesPage() {
@@ -92,7 +92,7 @@ export default function ClientesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                {['Empresa', 'Segmento', 'Contato', 'Telefone', 'Cidade/UF', 'Ações'].map(h => (
+                {['Empresa', 'Segmento', 'Contato', 'Telefone', 'Email', 'Ações'].map(h => (
                   <th key={h} className="text-left px-5 py-3 font-medium" style={{ color: '#a78bca' }}>{h}</th>
                 ))}
               </tr>
@@ -115,8 +115,16 @@ export default function ClientesPage() {
                   </td>
                   <td className="px-5 py-4" style={{ color: '#e2d9f3' }}>{c.nome_contato}</td>
                   <td className="px-5 py-4" style={{ color: '#e2d9f3' }}>{c.telefone}</td>
-                  <td className="px-5 py-4" style={{ color: '#e2d9f3' }}>
-                    {[c.cidade, c.estado].filter(Boolean).join('/') || '—'}
+                  <td className="px-5 py-4">
+                    {c.email_ativo ? (
+                      <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: '#34d399' }}>
+                        <span>✉</span> {c.dominio_email || 'ativo'}
+                      </span>
+                    ) : c.dominio_email ? (
+                      <span className="text-xs" style={{ color: '#6b6b8a' }}>{c.dominio_email}</span>
+                    ) : (
+                      <span className="text-xs" style={{ color: '#6b6b8a' }}>—</span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex gap-3">
@@ -162,12 +170,15 @@ export default function ClientesPage() {
                 { label: 'UF', key: 'estado' },
                 { label: 'CNPJ/CPF', key: 'cnpj_cpf' },
                 { label: 'Origem *', key: 'origem', required: true },
-              ].map(({ label, key, required, type = 'text', col }) => (
+                { label: 'Domínio de email', key: 'dominio_email', col: 2,
+                  placeholder: 'Ex: empresacliente.com.br' },
+              ].map(({ label, key, required, type = 'text', col, placeholder }) => (
                 <div key={key} className="space-y-1" style={{ gridColumn: col === 2 ? 'span 2' : undefined }}>
                   <label className="text-xs" style={{ color: '#a78bca' }}>{label}</label>
-                  <input type={type} value={form[key]}
+                  <input type={type} value={form[key] || ''}
                     onChange={e => setForm({ ...form, [key]: e.target.value })}
                     required={required}
+                    placeholder={placeholder || ''}
                     className="w-full rounded-lg px-3 py-2 text-sm outline-none"
                     style={inputStyle} />
                 </div>

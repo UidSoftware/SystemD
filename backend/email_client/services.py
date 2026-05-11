@@ -35,11 +35,11 @@ def _get_imap_client(email_conta, email_senha):
     return client
 
 
-def listar_inbox(email_conta, email_senha, pagina=1, page_size=20):
+def listar_inbox(email_conta, email_senha, pagina=1, page_size=20, pasta="INBOX"):
     client = None
     try:
         client = _get_imap_client(email_conta, email_senha)
-        client.select_folder("INBOX", readonly=True)
+        client.select_folder(pasta, readonly=True)
 
         uids = list(reversed(client.search(["ALL"])))
 
@@ -82,11 +82,11 @@ def listar_inbox(email_conta, email_senha, pagina=1, page_size=20):
             client.logout()
 
 
-def ler_email(email_conta, email_senha, uid):
+def ler_email(email_conta, email_senha, uid, pasta="INBOX"):
     client = None
     try:
         client = _get_imap_client(email_conta, email_senha)
-        client.select_folder("INBOX")
+        client.select_folder(pasta)
         client.add_flags([uid], ["\\Seen"])
 
         mensagens = client.fetch([uid], ["RFC822"])
@@ -159,11 +159,11 @@ def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_h
         raise Exception(f"Erro ao enviar email: {str(e)}")
 
 
-def deletar_email(email_conta, email_senha, uid):
+def deletar_email(email_conta, email_senha, uid, pasta="INBOX"):
     client = None
     try:
         client = _get_imap_client(email_conta, email_senha)
-        client.select_folder("INBOX")
+        client.select_folder(pasta)
 
         pastas_lixeira = ["Trash", "Lixeira", "[Gmail]/Trash", "INBOX.Trash"]
         pastas = [p.decode() if isinstance(p, bytes) else p for _, _, p in client.list_folders()]

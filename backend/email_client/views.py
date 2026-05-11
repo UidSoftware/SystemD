@@ -19,7 +19,8 @@ class InboxView(APIView):
         try:
             email_conta, email_senha = _get_credenciais(request)
             pagina = int(request.query_params.get("page", 1))
-            return Response(services.listar_inbox(email_conta, email_senha, pagina=pagina))
+            pasta = request.query_params.get("pasta", "INBOX")
+            return Response(services.listar_inbox(email_conta, email_senha, pagina=pagina, pasta=pasta))
         except ValueError as e:
             return Response({"erro": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -32,7 +33,8 @@ class EmailDetailView(APIView):
     def get(self, request, uid):
         try:
             email_conta, email_senha = _get_credenciais(request)
-            return Response(services.ler_email(email_conta, email_senha, int(uid)))
+            pasta = request.query_params.get("pasta", "INBOX")
+            return Response(services.ler_email(email_conta, email_senha, int(uid), pasta=pasta))
         except Exception as e:
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -65,7 +67,8 @@ class ResponderEmailView(APIView):
     def post(self, request, uid):
         try:
             email_conta, email_senha = _get_credenciais(request)
-            original = services.ler_email(email_conta, email_senha, int(uid))
+            pasta = request.query_params.get("pasta", "INBOX")
+            original = services.ler_email(email_conta, email_senha, int(uid), pasta=pasta)
             return Response(
                 services.enviar_email(
                     email_conta, email_senha,
@@ -85,7 +88,8 @@ class DeletarEmailView(APIView):
     def delete(self, request, uid):
         try:
             email_conta, email_senha = _get_credenciais(request)
-            return Response(services.deletar_email(email_conta, email_senha, int(uid)))
+            pasta = request.query_params.get("pasta", "INBOX")
+            return Response(services.deletar_email(email_conta, email_senha, int(uid), pasta=pasta))
         except Exception as e:
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

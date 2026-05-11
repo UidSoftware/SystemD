@@ -1,130 +1,270 @@
 # CLAUDE.md — Sistema Interno Uid Software (SystemD)
 
 ## Projeto
-Sistema interno da **Uid Software e Tecnologia LTDA**  
-Fundador: Luiz Eduardo Gonçalves Ferreira  
-CNPJ: 60.939.393/0001-25 | Micro Empresa | Simples Nacional  
+Sistema interno da **Uid Software e Tecnologia LTDA**
+Fundador: Luiz Eduardo Gonçalves Ferreira
+CNPJ: 60.939.393/0001-25 | Micro Empresa | Simples Nacional
 Sede: Uberlândia/MG | Operação: 100% digital/remota
 
-> ⚠️ O nome correto do sistema é **SystemD**. Containers e diretório usam `sytemd` por erro de digitação histórico — não alterar para não quebrar infra.
+> ⚠️ O nome correto é **SystemD**. Containers e diretório usam `sytemd` por erro histórico — **não alterar**, pois quebra a infra.
+
+---
 
 ## Stack
 - **Backend:** Python 3.12 + Django 5.x + Django REST Framework + SimpleJWT
-- **Frontend:** React 18 + Vite + Tailwind CSS + Axios + React Router v6 + react-helmet-async + **PWA (vite-plugin-pwa)**
+- **Frontend:** React 18 + Vite + Tailwind CSS + Axios + React Router v6 + PWA (vite-plugin-pwa)
 - **Banco:** PostgreSQL 16
-- **Email:** Mailcow Dockerized — IMAP via imapclient (porta 993 SSL), SMTP via smtplib (porta 587 STARTTLS)
+- **Email:** Mailcow Dockerized via IMAP (imapclient, porta 993 SSL) + SMTP (smtplib, porta 587 STARTTLS)
 - **Infra:** VPS Ubuntu 24.04 + Docker Compose + Nginx + Gunicorn
 
+---
+
 ## Regras críticas
-- Nunca SQLite — sempre PostgreSQL
-- Nunca `FloatField` para dinheiro — sempre `DecimalField`
-- Nunca hardcodar credenciais — sempre `.env`
-- Nunca `response.data` direto em listas — sempre `response.data.results` (paginação DRF)
-- Nunca comitar `.env`
-- Soft delete em models: `ativo = BooleanField(default=True)`
-- `DEBUG=False` em produção
-- IMAP usa SSL com `check_hostname=False` / `verify_mode=CERT_NONE` — Mailcow usa certificado autoassinado no Dovecot (porta 993)
+
+| Regra | Detalhe |
+|-------|---------|
+| Nunca SQLite | Sempre PostgreSQL |
+| Nunca FloatField | Sempre DecimalField para dinheiro |
+| Nunca hardcodar credenciais | Sempre `.env` |
+| Nunca commitar senha | Credenciais de email → `manage.py shell` direto na VPS |
+| Nunca `response.data` direto | Sempre `response.data.results` (paginação DRF) |
+| Soft delete | `ativo = BooleanField(default=True)` em todos os models |
+| DEBUG=False em produção | Sempre |
+| IMAP SSL desabilitado | Mailcow usa cert autoassinado no Dovecot: `check_hostname=False` / `verify_mode=CERT_NONE` |
+| SMTP SSL desabilitado | Mesmo motivo: `context.check_hostname = False` / `context.verify_mode = ssl.CERT_NONE` |
+
+---
 
 ## Estrutura
+
 ```
 SytemD/
 ├── backend/
-│   ├── core/           ← settings, urls, wsgi
-│   ├── usuarios/       ← auth JWT, model Usuario + UsuarioEmailConfig
-│   ├── clientes/       ← CRUD clientes
-│   ├── vitrine/        ← leads da landing page
-│   ├── email_client/   ← webmail IMAP/SMTP
+│   ├── core/           ← settings.py, urls.py, wsgi.py
+│   ├── usuarios/       ← Usuario (auth JWT) + UsuarioEmailConfig
+│   ├── clientes/       ← CRUD clientes + vínculo com Usuario
+│   ├── vitrine/        ← leads da landing page pública
+│   ├── email_client/   ← webmail IMAP/SMTP (sem models — só services/views)
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   ├── contexts/
-│   │   ├── pages/
-│   │   └── services/
+│   │   ├── components/email/    ← EmailList, EmailDetail, EmailCompose
+│   │   ├── components/sistema/  ← SistemaLayout, Sidebar, Header
+│   │   ├── contexts/            ← AuthContext (JWT + interceptor Axios)
+│   │   ├── pages/sistema/       ← Dashboard, Clientes, Email
+│   │   └── services/            ← api.js, emailApi.js
 │   ├── public/
-│   │   ├── icon-192.png   ← ícone PWA
-│   │   └── icon-512.png   ← ícone PWA
-│   ├── vite.config.js     ← PWA configurado
-- [x] Sidebar responsiva com menu retratil no mobile (hamburger + overlay)
-- [x] SistemaLayout centralizado para Dashboard, Clientes e Email
-- [x] Webmail integrado: EmailPage, EmailList, EmailDetail, EmailCompose
-- [x] PWA start_url corrigido para /sistema/ — instala o sistema, nao a vitrine
-- [x] theme_color corrigido para #063BF8 (azul Uid)
-│   └── Dockerfile.prod
+│   │   ├── icon-192.png
+│   │   └── icon-512.png
+│   ├── vite.config.js           ← PWA configurado
+│   ├── Dockerfile.prod          ← build estático (target: build)
+│   └── Dockerfile               ← dev (npm run dev)
 ├── nginx/
-├── docker-compose.yml        ← dev
-├── docker-compose.prod.yml   ← produção
+│   └── nginx.conf               ← serve /api → backend, / → frontend static
+├── docker-compose.yml           ← dev (volumes de código, runserver)
+├── docker-compose.prod.yml      ← produção (build, gunicorn, nginx, frontend-builder)
 └── Makefile
 ```
 
-## Comandos
+---
+
+## Comandos úteis
+
 ```bash
-make dev            # sobe ambiente dev
-make build          # build produção
-make migrate        # aplica migrations
-make logs           # tail logs containers
-make shell          # shell Django
+# Dev local
+make dev              # sobe tudo (db + backend + frontend)
+make migrate          # aplica migrations
+make makemigrations   # gera migrations
+make shell            # shell Django
+make logs             # tail logs
+make createsuperuser  # cria admin
+
+# Produção (rodar na VPS /root/SytemD/)
+docker compose -f docker-compose.prod.yml build backend
+docker compose -f docker-compose.prod.yml up -d backend
+docker exec sytemd-backend-1 python manage.py migrate
+
+# Deploy frontend (OBRIGATÓRIO após qualquer mudança no frontend)
+docker compose -f docker-compose.prod.yml build --no-cache frontend-builder
+docker compose -f docker-compose.prod.yml run --rm frontend-builder
+docker compose -f docker-compose.prod.yml restart nginx
 ```
 
-## Portas dev (local)
-- Frontend: 5173
-- Backend:  8002  (8000 ocupado pelo Studio Fluir)
-- DB:       5433  (5432 ocupado pelo Studio Fluir)
+> ⚠️ **O frontend em produção não tem volume de código** — usa build estático copiado para volume Docker pelo `frontend-builder`. Qualquer mudança no frontend exige os 3 comandos acima.
 
-## Usuários do sistema
-| ID | Email | Conta email vinculada |
-|----|-------|----------------------|
-| 1  | uidsoftwaretecnologia@gmail.com | contato@uidsoftware.com.br |
-| 2  | luizinferrera@gmail.com | *(não vinculado — uso pessoal)* |
+---
+
+## Portas
+
+| Ambiente | Serviço | Porta |
+|----------|---------|-------|
+| Dev | Frontend Vite | 5173 |
+| Dev | Backend Django | 8002 |
+| Dev | PostgreSQL | 5433 |
+| Produção | Nginx interno | 8002 (→ nginx-proxy → 443 HTTPS) |
+
+---
+
+## Usuários do sistema (produção)
+
+| ID | Email login (SystemD) | Conta email (Mailcow) |
+|----|----------------------|----------------------|
+| 1 | uidsoftwaretecnologia@gmail.com | contato@uidsoftware.com.br |
+| 2 | luizinferrera@gmail.com | luizeduardo@uidsoftware.com.br |
+
+Credenciais em `UsuarioEmailConfig` — jamais em código ou commits.
+
+---
+
+## Models principais
+
+### Usuario (`usuarios/models.py`)
+```python
+class Usuario(AbstractBaseUser, PermissionsMixin):
+    email     = EmailField(unique=True)   # USERNAME_FIELD
+    nome      = CharField(max_length=150)
+    ativo     = BooleanField(default=True)
+    is_staff  = BooleanField(default=False)
+```
+
+### UsuarioEmailConfig (`usuarios/models.py`)
+```python
+class UsuarioEmailConfig(models.Model):
+    usuario     = OneToOneField(Usuario, related_name='email_config')
+    email_conta = EmailField()            # ex: luiz@empresa.com.br
+    email_senha = CharField(max_length=255)  # senha Mailcow — NUNCA commitar
+    ativo       = BooleanField(default=True)
+```
+
+### Cliente (`clientes/models.py`)
+```python
+class Cliente(models.Model):
+    nome_empresa  = CharField(max_length=150)
+    nome_contato  = CharField(max_length=150)
+    email         = EmailField()          # email de contato (Gmail etc.)
+    dominio_email = CharField(blank=True) # ex: empresacliente.com.br
+    usuario       = OneToOneField(Usuario, null=True, blank=True,
+                                  related_name='cliente_perfil')
+    # + telefone, whatsapp, segmento, cidade, estado, cnpj_cpf, origem, observacoes
+    ativo         = BooleanField(default=True)
+```
+
+---
 
 ## Email Client — app `email_client`
-- **Endpoints:** `/api/email/inbox/`, `/api/email/enviar/`, `/api/email/pastas/`, `/api/email/<uid>/`, `/api/email/<uid>/responder/`, `/api/email/<uid>/deletar/`
-- **Credenciais:** armazenadas em `UsuarioEmailConfig` (OneToOne → Usuario)
-- **IMAP:** `mail.uidsoftware.com.br:993` SSL (cert autoassinado — verificação desabilitada)
-- **SMTP:** `mail.uidsoftware.com.br:587` STARTTLS
-- **Próximo passo:** frontend React do webmail (EmailPage, EmailList, EmailDetail, EmailCompose)
+
+### Endpoints (`/api/email/`)
+| Método | URL | Ação |
+|--------|-----|------|
+| GET | `inbox/?page=1&pasta=INBOX` | Lista emails da pasta |
+| GET | `<uid>/?pasta=INBOX` | Lê email completo |
+| POST | `enviar/` | Envia novo email |
+| POST | `<uid>/responder/?pasta=INBOX` | Responde email |
+| DELETE | `<uid>/deletar/?pasta=INBOX` | Move para lixeira |
+| GET | `pastas/` | Lista todas as pastas IMAP |
+
+### Parâmetro `?pasta=`
+Todas as operações (listar, ler, deletar, responder) aceitam `?pasta=NOME` para operar em qualquer pasta IMAP. Default: `INBOX`.
+
+### Pastas do Mailcow
+| Nome IMAP | Label exibida |
+|-----------|---------------|
+| INBOX | Caixa de entrada |
+| Sent | Enviados |
+| Drafts | Rascunhos |
+| Junk | Spam |
+| Trash | Lixeira |
+| Archive | Arquivo |
+
+### Configuração no settings.py
+```python
+IMAP_HOST    = config('IMAP_HOST',    default='mail.uidsoftware.com.br')
+IMAP_PORT    = config('IMAP_PORT',    default='993')
+IMAP_USE_SSL = config('IMAP_USE_SSL', default='True')
+SMTP_HOST    = config('SMTP_HOST',    default='mail.uidsoftware.com.br')
+SMTP_PORT    = config('SMTP_PORT',    default='587')
+SMTP_USE_TLS = config('SMTP_USE_TLS', default='True')
+```
+
+### Como vincular email a um usuário na VPS (sem commitar senha)
+```bash
+docker exec sytemd-backend-1 python manage.py shell -c "
+from usuarios.models import Usuario, UsuarioEmailConfig
+u = Usuario.objects.get(email='LOGIN_DO_USUARIO')
+UsuarioEmailConfig.objects.get_or_create(
+    usuario=u,
+    defaults={'email_conta': 'conta@dominio.com.br', 'email_senha': 'SENHA', 'ativo': True}
+)
+print('OK')
+"
+```
+
+---
+
+## Frontend — Layout responsivo do Email
+
+| Breakpoint | Layout |
+|------------|--------|
+| Mobile (<768px) | Tela cheia: lista → detalhe → compose (estados). Bottom bar com ícones das pastas. |
+| Tablet (768–1023px) | Lista + leitura lado a lado. Bottom bar com ícones das pastas. |
+| Desktop (≥1024px) | 3 colunas: pastas lateral + lista + leitura. |
+
+---
+
+## Auth JWT
+
+- **Access token:** em memória React (estado), expira em 60 min
+- **Refresh token:** cookie httpOnly, expira em 7 dias, rotativo
+- **Interceptor Axios:** em `AuthContext.jsx` — adiciona `Authorization: Bearer` em todas as requests
+- **Renovação automática:** a cada 55 min via `POST /api/auth/token/refresh/`
+
+---
 
 ## PWA
-> Para instalar: acessar https://uidsoftware.com.br/sistema/ e "Adicionar a tela inicial"
+
 - Plugin: `vite-plugin-pwa@0.21.1`
-- Nome: `Uid Software` / short_name: `Uid`
-- Ícones gerados a partir do logo em `public/icon-192.png` e `public/icon-512.png`
-- Manifest servindo em `/manifest.webmanifest`
+- start_url: `/sistema/` (instala o sistema, não a vitrine)
+- theme_color: `#063BF8`
+- Ícones: `public/icon-192.png` e `public/icon-512.png`
+- Para instalar: acessar `https://uidsoftware.com.br/sistema/` → "Adicionar à tela inicial"
+
+---
+
+## Infra VPS (`209.50.241.122`)
+
+| Projeto | Porta interna | Domínio |
+|---------|--------------|---------|
+| nginx-proxy | 80/443 | (roteia todos) |
+| Studio Fluir | 8001 | — |
+| **SystemD** | **8002** | uidsoftware.com.br |
+| Mailcow HTTP | 8080 | — |
+| Mailcow HTTPS | 8443 | mail.uidsoftware.com.br |
+| Novos clientes | 8003+ | — |
+
+- Deploy: `/root/SytemD/`
+- SSL: certbot com renovação automática no nginx-proxy
+
+---
 
 ## Status das Fases
 
 | Fase | Descrição | Status |
 |------|-----------|--------|
-| **Fase 1** | Setup + Vitrine base | ✅ Concluída |
-| **Fase 2** | Reconstrução completa da Vitrine Pública | ✅ Concluída |
-| **Fase 3** | Autenticação JWT + Cadastro de Clientes + Email Client backend + PWA | ✅ Concluída |
-| **Fase 4** | Frontend webmail + telas do sistema | 🔄 Próxima |
-| Fase 5 | OS (Ordens de Serviço) | ⏳ Aguardando |
-| Fase 6 | Financeiro | ⏳ Aguardando |
-| Fase 7 | Dashboard + Form Levantamento | ⏳ Aguardando |
+| Fase 1 | Setup + Vitrine base | ✅ |
+| Fase 2 | Reconstrução completa da Vitrine Pública | ✅ |
+| Fase 3 | JWT + Clientes + Email Client backend + PWA | ✅ |
+| Fase 4 | Webmail frontend completo + responsivo + multi-pasta | ✅ |
+| Fase 5 | OS (Ordens de Serviço) | ⏳ |
+| Fase 6 | Financeiro | ⏳ |
+| Fase 7 | Dashboard + Form Levantamento | ⏳ |
 
-## Fase 3 — Checklist
-- [x] App `usuarios` com auth JWT (access em memória, refresh em cookie httpOnly)
-- [x] App `clientes` com CRUD completo e soft delete
-- [x] Model `UsuarioEmailConfig` — vincula usuário à conta IMAP
-- [x] App `email_client` — IMAP/SMTP integrado ao Mailcow
-- [x] Endpoint `/api/email/inbox/` testado e funcionando
-- [x] Envio SMTP testado e funcionando (SSL desabilitado — cert autoassinado Mailcow)
-- [x] PWA configurado com manifest, service worker e ícones
-- [x] Sidebar responsiva com menu retratil no mobile (hamburger + overlay)
-- [x] SistemaLayout centralizado para Dashboard, Clientes e Email
-- [x] Webmail integrado: EmailPage, EmailList, EmailDetail, EmailCompose
-- [x] PWA start_url corrigido para /sistema/ — instala o sistema, nao a vitrine
-- [x] theme_color corrigido para #063BF8 (azul Uid)
-- [ ] Responsivo testado: 375px | 768px | 1280px
-- [ ] Número do WhatsApp real (TODOs em Contact.jsx e WhatsAppButton.jsx)
-- [ ] Depoimento real do Studio Fluir (TODO em Testimonial.jsx)
+## Roadmap email multi-cliente
 
-## Infra VPS
-- Deploy: `/root/SytemD/` na VPS `209.50.241.122`
-- nginx-proxy em host network roteia por domínio (porta 80/443)
-- studio-fluir → porta interna 8001
-- uid-sistema (SystemD) → porta interna 8002
-- Novo cliente → porta 8003+
-- Renovação SSL automática via certbot no nginx-proxy
+| Etapa | Descrição | Status |
+|-------|-----------|--------|
+| Modelo `UsuarioEmailConfig` | Vincula usuário SystemD à mailbox Mailcow | ✅ |
+| Modelo `Cliente.usuario` | Cliente pode ter login próprio no SystemD | ✅ |
+| Frontend responsivo com pastas | Mobile/tablet/desktop | ✅ |
+| Adicionar domínio cliente no Mailcow | Manual pelo painel | ⏳ Fase 2 email |
+| Automatizar via API Mailcow | SystemD cria mailbox automaticamente | ⏳ Fase 3 email |

@@ -77,6 +77,13 @@ export default function EmailPage() {
     } catch { setErro('Erro ao deletar email.') }
   }
 
+  async function arquivarEmail(uid) {
+    try {
+      await emailApi.arquivar(uid, pastaAtual)
+      setEmailSelecionado(null); setVista('lista'); carregarEmails()
+    } catch { setErro('Erro ao arquivar email.') }
+  }
+
   function abrirCompose() { setRespondendo(false); setCompondo(true); setVista('compose') }
   function iniciarResposta() { setRespondendo(true); setCompondo(true); setVista('compose') }
   function voltarParaLista() { setCompondo(false); setRespondendo(false); setVista('lista') }
@@ -101,7 +108,7 @@ export default function EmailPage() {
         backgroundColor: '#1a0035',
         borderBottom: '1px solid rgba(6,59,248,0.25)',
       }}>
-      {pastas.slice(0, 5).map(pasta => {
+      {pastas.slice(0, 6).map(pasta => {
         const ativo = pastaAtual === pasta
         return (
           <button key={pasta} onClick={() => trocarPasta(pasta)}
@@ -243,8 +250,10 @@ export default function EmailPage() {
         {emailSelecionado && !compondo && (
           <EmailDetail
             email={emailSelecionado}
+            pasta={pastaAtual}
             onDeletar={() => deletarEmail(emailSelecionado.uid)}
             onResponder={iniciarResposta}
+            onArquivar={pastaAtual !== 'Archive' ? () => arquivarEmail(emailSelecionado.uid) : undefined}
           />
         )}
         {!compondo && !emailSelecionado && (

@@ -73,6 +73,7 @@ def listar_inbox(email_conta, email_senha, pagina=1, page_size=20, pasta="INBOX"
                 "tamanho": dados.get(b"RFC822.SIZE", 0),
             })
 
+        emails.sort(key=lambda e: e["uid"], reverse=True)
         return {"count": len(uids), "results": emails}
 
     except Exception as e:
@@ -182,6 +183,53 @@ def deletar_email(email_conta, email_senha, uid, pasta="INBOX"):
 
     except Exception as e:
         raise Exception(f"Erro ao deletar email: {str(e)}")
+    finally:
+        if client:
+            client.logout()
+
+
+def baixar_anexo(email_conta, email_senha, uid, indice=0, pasta="INBOX"):
+    client = None
+    try:
+        client = _get_imap_client(email_conta, email_senha)
+        client.select_folder(pasta)
+        mensagens = client.fetch([uid], ["RFC822"])
+        if uid not in mensagens:
+            raise Exception("Email não encontrado.")
+
+        import email as email_lib
+        msg = email_lib.message_from_bytes(mensagens[uid][b"RFC822"])
+
+        anexos = []
+        for part in msg.walk():
+            if "attachment" in str(part.get("Content-Disposition", "")):
+                anexos.append(part)
+
+        if indice >= len(anexos):
+            raise Exception("Anexo não encontrado.")
+
+        part = anexos[indice]
+        return part.get_payload(decode=True), part.get_content_type(), part.get_filename() or "anexo"
+
+    except Exception as e:
+        raise Exception(f"Erro ao baixar anexo: {str(e)}")
+    finally:
+        if client:
+            client.logout()
+
+
+def arquivar_email(email_conta, email_senha, uid, pasta="INBOX"):
+    client = None
+    try:
+        client = _get_imap_client(email_conta, email_senha)
+        client.select_folder(pasta)
+        pastas_disponiveis = [p.decode() if isinstance(p, bytes) else p for _, _, p in client.list_folders()]
+        if "Archive" not in pastas_disponiveis:
+            raise Exception("Pasta Archive não encontrada nesta conta.")
+        client.move([uid], "Archive")
+        return {"status": "arquivado"}
+    except Exception as e:
+        raise Exception(f"Erro ao arquivar: {str(e)}")
     finally:
         if client:
             client.logout()

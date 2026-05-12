@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from django.http import HttpResponse
 from . import services
 
 
@@ -102,5 +103,33 @@ class PastasView(APIView):
         try:
             email_conta, email_senha = _get_credenciais(request)
             return Response(services.listar_pastas(email_conta, email_senha))
+        except Exception as e:
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DownloadAnexoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, uid):
+        try:
+            email_conta, email_senha = _get_credenciais(request)
+            pasta = request.query_params.get("pasta", "INBOX")
+            indice = int(request.query_params.get("indice", 0))
+            conteudo, content_type, nome = services.baixar_anexo(email_conta, email_senha, int(uid), indice, pasta=pasta)
+            response = HttpResponse(conteudo, content_type=content_type)
+            response["Content-Disposition"] = f'attachment; filename="{nome}"'
+            return response
+        except Exception as e:
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ArquivarEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, uid):
+        try:
+            email_conta, email_senha = _get_credenciais(request)
+            pasta = request.query_params.get("pasta", "INBOX")
+            return Response(services.arquivar_email(email_conta, email_senha, int(uid), pasta=pasta))
         except Exception as e:
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

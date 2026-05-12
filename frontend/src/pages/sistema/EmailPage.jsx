@@ -30,6 +30,8 @@ export default function EmailPage() {
   const [carregando, setCarregando]             = useState(false)
   const [erro, setErro]                         = useState(null)
   const [vista, setVista]                       = useState('lista')
+  const [busca, setBusca]                       = useState('')
+  const [buscaAtiva, setBuscaAtiva]             = useState('')
 
   useEffect(() => {
     emailApi.pastas().then(res => {
@@ -39,6 +41,11 @@ export default function EmailPage() {
   }, [])
 
   useEffect(() => { carregarEmails() }, [pagina, pastaAtual])
+
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaAtiva(busca), 300)
+    return () => clearTimeout(t)
+  }, [busca])
 
   async function carregarEmails() {
     setCarregando(true); setErro(null)
@@ -79,6 +86,13 @@ export default function EmailPage() {
   }
 
   const naoLidos = pastaAtual === 'INBOX' ? emails.filter(e => !e.lido).length : 0
+
+  const emailsFiltrados = buscaAtiva
+    ? emails.filter(e =>
+        e.remetente?.toLowerCase().includes(buscaAtiva.toLowerCase()) ||
+        e.assunto?.toLowerCase().includes(buscaAtiva.toLowerCase())
+      )
+    : emails
 
   // ── Tab strip de pastas (mobile + tablet) ─────────────────────────────
   const TabsPastas = () => (
@@ -174,11 +188,30 @@ export default function EmailPage() {
         </span>
       </div>
 
-      <div className="flex flex-col flex-1 overflow-hidden px-3 py-2">
+      {/* Busca */}
+      <div className="px-3 py-2 shrink-0">
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5"
+          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
+          <span className="text-xs" style={{ color: '#6b6b8a' }}>🔍</span>
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar..."
+            className="flex-1 bg-transparent text-xs outline-none"
+            style={{ color: '#f1f5f9' }}
+          />
+          {busca && (
+            <button onClick={() => { setBusca(''); setBuscaAtiva('') }}
+              className="text-xs leading-none" style={{ color: '#6b6b8a' }}>✕</button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col flex-1 overflow-hidden px-3 pb-2">
         {carregando && <p className="text-xs px-1 pb-1" style={{ color: '#6b6b8a' }}>Carregando...</p>}
         {erro && <p className="text-xs px-1 pb-1" style={{ color: '#f87171' }}>{erro}</p>}
         <EmailList
-          emails={emails} total={total} pagina={pagina}
+          emails={emailsFiltrados} total={buscaAtiva ? emailsFiltrados.length : total} pagina={pagina}
           onPagina={setPagina} onSelecionar={abrirEmail}
           uidSelecionado={emailSelecionado?.uid}
         />

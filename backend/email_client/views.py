@@ -49,12 +49,13 @@ class EnviarEmailView(APIView):
             assunto = request.data.get("assunto")
             corpo = request.data.get("corpo", "")
             corpo_html = request.data.get("corpo_html", None)
+            cc = request.data.get("cc") or None
 
             if not destinatario or not assunto:
                 return Response({"erro": "destinatario e assunto são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response(
-                services.enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html),
+                services.enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html, cc),
                 status=status.HTTP_201_CREATED
             )
         except Exception as e:

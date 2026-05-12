@@ -134,12 +134,14 @@ def ler_email(email_conta, email_senha, uid, pasta="INBOX"):
             client.logout()
 
 
-def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html=None):
+def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html=None, cc=None):
     try:
         msg = MIMEMultipart("alternative")
         msg["From"] = email_conta
         msg["To"] = destinatario
         msg["Subject"] = assunto
+        if cc:
+            msg["CC"] = cc
         msg.attach(MIMEText(corpo, "plain", "utf-8"))
         if corpo_html:
             msg.attach(MIMEText(corpo_html, "html", "utf-8"))
@@ -151,7 +153,8 @@ def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_h
             server.ehlo()
             server.starttls(context=context)
             server.login(email_conta, email_senha)
-            server.sendmail(email_conta, destinatario, msg.as_string())
+            destinatarios = [destinatario] + ([cc] if cc else [])
+            server.sendmail(email_conta, destinatarios, msg.as_string())
 
         return {"status": "enviado"}
 

@@ -7,7 +7,7 @@ CNPJ: 60.939.393/0001-25 | Micro Empresa | Simples Nacional
 Sede: Uberlândia/MG | Operação: 100% digital/remota
 Contato: (34) 99134-9194 | uidsoftwaretecnologia@gmail.com | www.uidsoftware.com.br
 
-> ⚠️ O nome correto é **SystemD**. Containers e diretório usam `sytemd` por erro histórico — **não alterar**, pois quebra a infra.
+> ⚠️ O nome correto é **SystemD**. Containers e diretório usam `sytemd` por erro histórico — **não alterar**, pois quebra toda a infra.
 
 ---
 
@@ -50,11 +50,16 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 ---
 
 ## Stack
-- **Backend:** Python 3.12 + Django 5.x + Django REST Framework + SimpleJWT
-- **Frontend:** React 18 + Vite + Tailwind CSS + Axios + React Router v6 + PWA (vite-plugin-pwa)
-- **Banco:** PostgreSQL 16
-- **Email:** Mailcow Dockerized via IMAP (imapclient, porta 993 SSL) + SMTP (smtplib, porta 587 STARTTLS)
-- **Infra:** VPS Ubuntu 24.04 + Docker Compose + Nginx + Gunicorn
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Backend | Python 3.12 + Django 5.x + Django REST Framework + SimpleJWT |
+| Frontend | React 18 + Vite + Tailwind CSS + Axios + React Router v6 + PWA (vite-plugin-pwa) |
+| Banco | PostgreSQL 16 |
+| Email | Mailcow via IMAP (imapclient, porta 993 SSL) + SMTP (smtplib, porta 587 STARTTLS) |
+| Filtros | django-filter 24.3 (DRF) |
+| PDF | reportlab 4.2.5 (relatórios financeiros) |
+| Infra | VPS Ubuntu 24.04 + Docker Compose + Nginx + Gunicorn |
 
 ---
 
@@ -63,154 +68,241 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Regra | Detalhe |
 |-------|---------|
 | Nunca SQLite | Sempre PostgreSQL |
-| Nunca FloatField | Sempre DecimalField para dinheiro |
-| Nunca hardcodar credenciais | Sempre `.env` |
+| Nunca FloatField | Sempre `DecimalField` para qualquer campo monetário |
+| Nunca hardcodar credenciais | Sempre `.env` via `python-decouple` |
 | Nunca commitar senha | Credenciais de email → `manage.py shell` direto na VPS |
-| Nunca `response.data` direto | Sempre `response.data.results` (paginação DRF) |
-| Soft delete | `ativo = BooleanField(default=True)` em todos os models |
+| Nunca `response.data` direto | Sempre `response.data.results` — DRF pagina tudo |
+| Soft delete | `ativo = BooleanField(default=True)` nos models de negócio; `deleted_at` nos models do financeiro |
 | DEBUG=False em produção | Sempre |
-| IMAP SSL desabilitado | Mailcow usa cert autoassinado no Dovecot: `check_hostname=False` / `verify_mode=CERT_NONE` |
-| SMTP SSL desabilitado | Mesmo motivo: `context.check_hostname = False` / `context.verify_mode = ssl.CERT_NONE` |
+| IMAP/SMTP SSL desabilitado | Mailcow usa cert autoassinado: `check_hostname=False` / `verify_mode=CERT_NONE` |
+| App chamado `os` proibido | Conflita com módulo nativo Python — usar `ordens` com URLs `/api/os/` |
+| LivroCaixa imutável | `ReadCreateViewSet` — nunca expor PUT/PATCH/DELETE; correções via estorno |
+| FolhaPagamento sem signal | Não gera lançamento automático no LivroCaixa — por design deliberado |
+| Perfil no Usuario | Sempre via `perfil` TextChoices (ADMIN/OPERACIONAL/FINANCEIRO/CLIENTE) — nunca Django Groups |
+| FinanceiroTable reutilizável | Componente base para todas as telas financeiras — `src/components/sistema/FinanceiroTable.jsx` |
 
 ---
 
-## Estrutura
+## Estrutura de apps (backend)
 
 ```
-SytemD/
-├── backend/
-│   ├── core/           ← settings.py, urls.py, wsgi.py
-│   ├── usuarios/       ← Usuario (auth JWT) + UsuarioEmailConfig
-│   ├── clientes/       ← CRUD clientes + vínculo com Usuario
-│   ├── vitrine/        ← leads da landing page pública
-│   ├── email_client/   ← webmail IMAP/SMTP (sem models — só services/views)
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── components/email/    ← EmailList, EmailDetail, EmailCompose
-│   │   ├── components/sistema/  ← SistemaLayout, Sidebar, Header
-│   │   ├── contexts/            ← AuthContext (JWT + interceptor Axios)
-│   │   ├── pages/sistema/       ← Dashboard, Clientes, Email
-│   │   └── services/            ← api.js, emailApi.js
-│   ├── public/
-│   │   ├── icon-192.png
-│   │   └── icon-512.png
-│   ├── vite.config.js           ← PWA configurado
-│   ├── Dockerfile.prod          ← build estático (target: build)
-│   └── Dockerfile               ← dev (npm run dev)
-├── nginx/
-│   └── nginx.conf               ← serve /api → backend, / → frontend static
-├── docker-compose.yml           ← dev (volumes de código, runserver)
-├── docker-compose.prod.yml      ← produção (build, gunicorn, nginx, frontend-builder)
-└── Makefile
+backend/
+├── core/           ← settings.py, urls.py, wsgi.py
+├── usuarios/       ← Usuario + Setor + Perfil + UsuarioEmailConfig + permissions.py
+├── clientes/       ← CRUD clientes + vínculo com Usuario (cliente_perfil)
+├── vitrine/        ← leads da landing page pública
+├── email_client/   ← webmail IMAP/SMTP (sem models — só services/views)
+├── ordens/         ← OS + FaseOS + Contrato + Chamado + MensagemChamado
+└── financeiro/     ← 12 models financeiros + signals + relatorios + mixins
 ```
 
----
+## Estrutura de páginas (frontend)
 
-## Comandos úteis
-
-```bash
-# Dev local
-make dev              # sobe tudo (db + backend + frontend)
-make migrate          # aplica migrations
-make makemigrations   # gera migrations
-make shell            # shell Django
-make logs             # tail logs
-make createsuperuser  # cria admin
-
-# Produção (rodar na VPS /root/SytemD/)
-docker compose -f docker-compose.prod.yml build backend
-docker compose -f docker-compose.prod.yml up -d backend
-docker exec sytemd-backend-1 python manage.py migrate
-
-# Deploy frontend (OBRIGATÓRIO após qualquer mudança no frontend)
-docker compose -f docker-compose.prod.yml build --no-cache frontend-builder
-docker compose -f docker-compose.prod.yml run --rm frontend-builder
-docker compose -f docker-compose.prod.yml restart nginx
 ```
-
-> ⚠️ **O frontend em produção não tem volume de código** — usa build estático copiado para volume Docker pelo `frontend-builder`. Qualquer mudança no frontend exige os 3 comandos acima.
-
----
-
-## Portas
-
-| Ambiente | Serviço | Porta |
-|----------|---------|-------|
-| Dev | Frontend Vite | 5173 |
-| Dev | Backend Django | 8002 |
-| Dev | PostgreSQL | 5433 |
-| Produção | Nginx interno | 8002 (→ nginx-proxy → 443 HTTPS) |
+src/
+├── contexts/
+│   └── AuthContext.jsx          ← JWT em memória + /api/auth/me/ + interceptor Axios
+├── components/sistema/
+│   ├── SistemaLayout.jsx        ← layout base com Sidebar + Header
+│   ├── Sidebar.jsx              ← dinâmica por perfil + submenu Financeiro expansível
+│   ├── PrivateRoute.jsx         ← aceita perfisPermitidos[]
+│   └── FinanceiroTable.jsx      ← tabela, modais, badges, formatadores reutilizáveis
+├── pages/sistema/
+│   ├── DashboardPage.jsx
+│   ├── ClientesPage.jsx
+│   ├── EmailPage.jsx
+│   ├── OSPage.jsx               ← listagem com busca + filtro + badges
+│   ├── OSDetailPage.jsx         ← 4 abas: Resumo, Timeline, Contrato, Chamados
+│   ├── UsuariosPage.jsx         ← CRUD admin + badges de perfil
+│   ├── SetoresPage.jsx
+│   ├── financeiro/              ← 12 telas (contas, livro-caixa, contas-pagar, etc.)
+│   └── portal/                  ← MeusProjetos, Suporte, MinhasFaturas (perfil CLIENTE)
+└── services/
+    ├── api.js                   ← instância Axios base
+    ├── emailApi.js              ← IMAP/SMTP
+    ├── osApi.js                 ← OS + contrato + chamados + mensagens
+    ├── adminApi.js              ← usuários + setores
+    ├── financeiroApi.js         ← todos os endpoints /api/financeiro/
+    └── portalApi.js             ← portal do cliente (legado — preferir osApi.js)
+```
 
 ---
 
 ## Usuários do sistema (produção)
 
-| ID | Email login (SystemD) | Conta email (Mailcow) |
-|----|----------------------|----------------------|
-| 1 | uidsoftwaretecnologia@gmail.com | contato@uidsoftware.com.br |
-| 2 | luizinferrera@gmail.com | luizeduardo@uidsoftware.com.br |
+| Email login | Perfil | Conta email Mailcow |
+|-------------|--------|---------------------|
+| uidsoftwaretecnologia@gmail.com | ADMIN | contato@uidsoftware.com.br |
+| luizinferrera@gmail.com | ADMIN | luizeduardo@uidsoftware.com.br |
 
 Credenciais em `UsuarioEmailConfig` — jamais em código ou commits.
 
 ---
 
+## Perfis de usuário e permissões
+
+| Perfil | Cor badge | Acesso |
+|--------|-----------|--------|
+| ADMIN | `#FF0000` | Tudo |
+| OPERACIONAL | `#063BF8` | Clientes, OS, Email |
+| FINANCEIRO | `#10b981` | Financeiro, Email |
+| CLIENTE | `#3d0361` | Portal próprio (MeusProjetos, Suporte, MinhasFaturas) |
+
+**Permissões DRF** (`usuarios/permissions.py`):
+- `IsAdmin` — só ADMIN
+- `IsAdminOrOperacional` — Clientes, OS
+- `IsAdminOrFinanceiro` — Financeiro
+- `IsAdminOrOperacionalOrFinanceiro` — Email
+
+**AuthContext:** após login/refresh, chama `/api/auth/me/` e armazena `{ id, nome, email, perfil, setor, email_corporativo }` no estado global.
+
+---
+
 ## Models principais
 
-### Usuario (`usuarios/models.py`)
+### Usuario + Setor (`usuarios/models.py`)
 ```python
+class Perfil(models.TextChoices):
+    ADMIN = 'ADMIN' | FINANCEIRO = 'FINANCEIRO' | OPERACIONAL = 'OPERACIONAL' | CLIENTE = 'CLIENTE'
+
+class Setor(models.Model):
+    nome, descricao, ativo, criado_em
+    # Fixture: Diretoria | Comercial | Desenvolvimento | Financeiro | Suporte | Cliente
+
 class Usuario(AbstractBaseUser, PermissionsMixin):
-    email     = EmailField(unique=True)   # USERNAME_FIELD
-    nome      = CharField(max_length=150)
-    ativo     = BooleanField(default=True)
-    is_staff  = BooleanField(default=False)
+    email, nome, ativo, is_staff, criado_em
+    perfil = CharField(choices=Perfil)   # default: OPERACIONAL
+    setor  = ForeignKey(Setor, null=True)
 ```
 
 ### UsuarioEmailConfig (`usuarios/models.py`)
 ```python
 class UsuarioEmailConfig(models.Model):
     usuario     = OneToOneField(Usuario, related_name='email_config')
-    email_conta = EmailField()            # ex: luiz@empresa.com.br
-    email_senha = CharField(max_length=255)  # senha Mailcow — NUNCA commitar
+    email_conta = EmailField()       # ex: luiz@uidsoftware.com.br
+    email_senha = CharField(255)     # senha Mailcow — NUNCA commitar
     ativo       = BooleanField(default=True)
 ```
 
 ### Cliente (`clientes/models.py`)
 ```python
 class Cliente(models.Model):
-    nome_empresa  = CharField(max_length=150)
-    nome_contato  = CharField(max_length=150)
-    email         = EmailField()          # email de contato (Gmail etc.)
-    dominio_email = CharField(blank=True) # ex: empresacliente.com.br
-    usuario       = OneToOneField(Usuario, null=True, blank=True,
-                                  related_name='cliente_perfil')
+    nome_empresa, nome_contato, email, dominio_email
+    usuario  = OneToOneField(Usuario, null=True, related_name='cliente_perfil')
     # + telefone, whatsapp, segmento, cidade, estado, cnpj_cpf, origem, observacoes
-    ativo         = BooleanField(default=True)
+    ativo    = BooleanField(default=True)
+```
+
+### OS + relacionados (`ordens/models.py`)
+```python
+class StatusOS(TextChoices):
+    LEAD | REUNIAO | LEVANTAMENTO | PROPOSTA | CONTRATO | DEV | ENTREGA | MANUTENCAO | CANCELADA
+
+class OS(models.Model):
+    cliente, titulo, descricao, status, responsavel
+    valor_total, valor_entrada, valor_mensal (DecimalField)
+    data_inicio, data_entrega, observacoes, ativo, criado_em, atualizado_em
+
+class FaseOS(models.Model):   # imutável — nunca editar/deletar
+    os, fase, descricao, responsavel, criado_em
+
+class Contrato(models.Model):  # OneToOne com OS
+    numero, valor_total, valor_entrada, percentual_entrada, valor_mensal, data_assinatura
+
+class Chamado(models.Model):
+    os, aberto_por, titulo, descricao, prioridade, status, ativo
+
+class MensagemChamado(models.Model):  # imutável — histórico preservado
+    chamado, autor, mensagem, criado_em
+```
+
+### Financeiro (`financeiro/models.py`) — todos herdam de `BaseModel`
+```
+Conta | PlanoContas | Fornecedor | ServicoProduto | Produto
+ContasPagar | ContasReceber | PlanosPagamentos | ClientePlano
+LivroCaixa (imutável) | FolhaPagamento | Pedido + PedidoItem
+```
+`BaseModel` tem: `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`, `deleted_by`
+
+---
+
+## Endpoints por app
+
+### Auth (`/api/auth/`)
+| Endpoint | Acesso |
+|----------|--------|
+| `POST token/` | Login JWT |
+| `POST token/refresh/` | Renova via cookie httpOnly |
+| `POST logout/` | Apaga cookie |
+| `GET me/` | Perfil completo do usuário logado |
+| `GET/POST usuarios/` | CRUD usuários — só ADMIN |
+| `GET/POST setores/` | CRUD setores — só ADMIN |
+
+### Clientes (`/api/clientes/`)
+CRUD completo — ADMIN e OPERACIONAL
+
+### Email (`/api/email/`)
+| Endpoint | Ação |
+|----------|------|
+| `GET inbox/?page=&pasta=` | Lista emails (mais recente primeiro) |
+| `GET <uid>/?pasta=` | Lê email completo |
+| `POST enviar/` | Envia (aceita `cc`) |
+| `POST <uid>/responder/?pasta=` | Responde |
+| `DELETE <uid>/deletar/?pasta=` | Move para Lixeira |
+| `POST <uid>/arquivar/?pasta=` | Move para Archive |
+| `GET <uid>/anexo/?indice=&pasta=` | Download de anexo (blob) |
+| `GET pastas/` | Lista todas as pastas IMAP |
+
+### OS (`/api/os/` e `/api/chamados/`)
+| Endpoint | Permissão |
+|----------|-----------|
+| `GET/POST os/` | ADMIN, OPERACIONAL |
+| `GET/PATCH/DELETE os/{id}/` | ADMIN, OPERACIONAL |
+| `POST os/{id}/avancar/` | ADMIN, OPERACIONAL — muda status + registra FaseOS |
+| `POST os/{id}/cancelar/` | ADMIN, OPERACIONAL — encerra com motivo |
+| `GET/POST os/{id}/contrato/` | ADMIN criar/editar |
+| `GET/POST os/{id}/chamados/` | Criar: todos; ver: ADMIN/OPERACIONAL |
+| `GET/POST chamados/` | ADMIN, OPERACIONAL (CLIENTE vê só os próprios) |
+| `GET/POST chamados/{id}/mensagens/` | Todos autenticados |
+
+### Financeiro (`/api/financeiro/`)
+```
+CRUD: contas/ | plano-contas/ | fornecedores/ | servicos-produtos/ | produtos/
+      contas-pagar/ | contas-receber/ | planos-pagamentos/ | cliente-plano/
+      livro-caixa/ (GET+POST apenas) | folha-pagamento/ | pedidos/
+Ações:
+  GET  livro-caixa/totais/
+  GET  produtos/alertas-estoque/
+  POST pedidos/{id}/confirmar/
+  GET  pedidos/{id}/recibo/          (PDF)
+  POST transferencia/
+  POST gerar-mensalidades/
+Relatórios:
+  GET  relatorios/dre/?ano=&mes=
+  GET  relatorios/dre/pdf/
+  GET  relatorios/fluxo-caixa/?meses=3
+  GET  relatorios/fluxo-caixa/pdf/
+  GET  relatorios/extrato/
 ```
 
 ---
 
-## Email Client — app `email_client`
+## Auth JWT
 
-### Endpoints (`/api/email/`)
-| Método | URL | Ação |
-|--------|-----|------|
-| GET | `inbox/?page=1&pasta=INBOX` | Lista emails (mais recente primeiro) |
-| GET | `<uid>/?pasta=INBOX` | Lê email completo |
-| POST | `enviar/` | Envia email (aceita `cc`) |
-| POST | `<uid>/responder/?pasta=INBOX` | Responde email |
-| DELETE | `<uid>/deletar/?pasta=INBOX` | Move para Lixeira |
-| POST | `<uid>/arquivar/?pasta=INBOX` | Move para Archive |
-| GET | `<uid>/anexo/?indice=0&pasta=INBOX` | Download de anexo (blob) |
-| GET | `pastas/` | Lista todas as pastas IMAP |
+- **Access token:** em memória React (estado), expira em 60 min
+- **Refresh token:** cookie httpOnly (`Secure`, `SameSite=Lax`), expira em 7 dias, rotativo
+- **Interceptor Axios:** em `AuthContext.jsx` — adiciona `Authorization: Bearer` em todas as requests
+- **Renovação automática:** a cada 55 min via `POST /api/auth/token/refresh/`
+- **Race condition resolvida:** `useEffect` dependente de `accessToken` — só dispara quando o token existe
+- **Atenção mobile:** Android Chrome às vezes descarta cookie `Secure` ao recarregar — usuário pode precisar logar de novo
 
-### Parâmetro `?pasta=`
-Todas as operações (listar, ler, deletar, responder) aceitam `?pasta=NOME` para operar em qualquer pasta IMAP. Default: `INBOX`.
+---
 
-### Pastas do Mailcow
-| Nome IMAP | Label exibida |
-|-----------|---------------|
+## Email Client — detalhes operacionais
+
+### Pastas IMAP do Mailcow
+| Nome IMAP | Label |
+|-----------|-------|
 | INBOX | Caixa de entrada |
 | Sent | Enviados |
 | Drafts | Rascunhos |
@@ -218,17 +310,7 @@ Todas as operações (listar, ler, deletar, responder) aceitam `?pasta=NOME` par
 | Trash | Lixeira |
 | Archive | Arquivo |
 
-### Configuração no settings.py
-```python
-IMAP_HOST    = config('IMAP_HOST',    default='mail.uidsoftware.com.br')
-IMAP_PORT    = config('IMAP_PORT',    default='993')
-IMAP_USE_SSL = config('IMAP_USE_SSL', default='True')
-SMTP_HOST    = config('SMTP_HOST',    default='mail.uidsoftware.com.br')
-SMTP_PORT    = config('SMTP_PORT',    default='587')
-SMTP_USE_TLS = config('SMTP_USE_TLS', default='True')
-```
-
-### Como vincular email a um usuário na VPS (sem commitar senha)
+### Vincular email a usuário na VPS (sem commitar senha)
 ```bash
 docker exec sytemd-backend-1 python manage.py shell -c "
 from usuarios.models import Usuario, UsuarioEmailConfig
@@ -243,216 +325,38 @@ print('OK')
 
 ---
 
-## Frontend — Funcionalidades do Email
+## Financeiro — signals automáticos
 
-| Feature | Detalhe |
-|---------|---------|
-| Busca | Debounce 300ms, filtra por remetente e assunto na página atual |
-| CC | Campo expansível no compose — botão "CC" ao lado do campo Para |
-| Download anexo | Botão `⬇ nome` por anexo — blob download com JWT no header |
-| Arquivar | Botão "Arquivar" move email para Archive (oculto se já estiver lá) |
-| Ordem | Emails mais recentes primeiro (sort por UID desc) |
-| Validação | Compose valida presença de `@` antes de enviar |
+| Evento | Resultado |
+|--------|-----------|
+| `ContasPagar.pag_status = 'pago'` | LivroCaixa saída (exceto pró-labore) |
+| `ContasReceber.rec_status = 'recebido'` | LivroCaixa entrada |
+| `Pedido.ped_status = 'pago'` (à vista) | LivroCaixa entrada + reduz estoque |
+| `Pedido.ped_status = 'pago'` (futuro) | Cria ContasReceber em parcelas + reduz estoque |
 
-## Frontend — Layout responsivo do Email
+Todos usam `select_for_update()` + `transaction.atomic()` contra race condition.
 
-| Breakpoint | Layout |
-|------------|--------|
-| Mobile (<768px) | Tela cheia: lista → detalhe → compose (estados). Botão "← Voltar". |
-| Tablet (768–1023px) | Lista + leitura lado a lado. |
-| Desktop (≥1024px) | 3 colunas: pastas lateral (w-48) + lista (w-72) + leitura (flex-1). |
+### Vincular ContasReceber a cliente SystemD
+```javascript
+// rec_cliente_id é IntegerField genérico — sem FK direta
+{ rec_cliente_id: cliente.id, rec_nome_pagador: cliente.nome_empresa, ... }
+```
 
-**Tab strip de pastas (mobile + tablet):** ícones circulares `w-10 h-10`, fundo `#1a0035`, ativo `#063BF8`. Posicionado entre o header (título da pasta + "+ Novo") e a busca/lista. Mostra até 6 pastas.
-
----
-
-## Auth JWT
-
-- **Access token:** em memória React (estado), expira em 60 min
-- **Refresh token:** cookie httpOnly (`Secure`, `SameSite=Lax`), expira em 7 dias, rotativo
-- **Interceptor Axios:** em `AuthContext.jsx` — adiciona `Authorization: Bearer` em todas as requests
-- **Renovação automática:** a cada 55 min via `POST /api/auth/token/refresh/`
-- **Race condition resolvida:** `EmailPage` usa `accessToken` como dependency nos `useEffect` — só dispara chamadas IMAP quando o token existe, garantindo que o interceptor do Axios já está atualizado
-- **Atenção mobile:** Android Chrome às vezes descarta cookie `Secure` ao recarregar — usuário pode precisar logar de novo se o cookie expirar
+### Gerar mensalidades (cron sugerido)
+```bash
+# todo dia 27 às 08:00
+docker exec sytemd-backend-1 python manage.py gerar_mensalidades
+```
 
 ---
 
 ## PWA
 
 - Plugin: `vite-plugin-pwa@0.21.1`
-- start_url: `/sistema/` (instala o sistema, não a vitrine)
-- theme_color: `#063BF8`
+- `start_url`: `/sistema/` — instala o sistema, não a vitrine
+- `theme_color`: `#063BF8`
 - Ícones: `public/icon-192.png` e `public/icon-512.png`
-- Para instalar: acessar `https://uidsoftware.com.br/sistema/` → "Adicionar à tela inicial"
-
----
-
-## Fase 7 — Financeiro
-
-### App `financeiro/` (adaptado do template NosFluir)
-URL prefix: `/api/financeiro/`
-Dependências adicionadas: `django-filter==24.3`, `reportlab==4.2.5`
-
-### Models (12 no total)
-| Model | Descrição |
-|-------|-----------|
-| `Conta` | Conta bancária ou caixa físico |
-| `PlanoContas` | Classificação contábil |
-| `Fornecedor` | Cadastro de fornecedores |
-| `ServicoProduto` | Catálogo de serviços |
-| `Produto` | Estoque físico com alerta de mínimo |
-| `ContasPagar` | Controle de despesas |
-| `ContasReceber` | Controle de receitas (usa `rec_cliente_id` genérico) |
-| `PlanosPagamentos` | Catálogo de planos mensais/trimestrais/semestrais |
-| `ClientePlano` | Vínculo cliente ↔ plano (usa `cli_id` genérico) |
-| `LivroCaixa` | Imutável — ReadCreateViewSet, saldo acumulado c/ select_for_update |
-| `FolhaPagamento` | Sem lançamento automático — por design |
-| `Pedido` + `PedidoItem` | Com numeração automática PED-XXXX |
-
-### Mixins (`financeiro/mixins.py`)
-`BaseModel` (auditoria: created_at/updated_at/deleted_at + created/updated/deleted_by)
-`AuditMixin` — popula campos de auditoria em ViewSets
-`ReadCreateViewSet` — LivroCaixa (sem PUT/PATCH/DELETE)
-
-### Signals automáticos
-- `ContasPagar` pago → LivroCaixa saída (pró-labore excluído)
-- `ContasReceber` recebido → LivroCaixa entrada
-- `Pedido` pago → reduz estoque + LivroCaixa entrada (à vista) ou ContasReceber parcelas
-
-### Permissões
-- `IsAdminOrFinanceiro` → maioria dos endpoints
-- `IsAdmin` → FolhaPagamento, gerar-mensalidades
-
-### Endpoints relevantes
-```
-GET/POST    /api/financeiro/contas/
-GET/POST    /api/financeiro/livro-caixa/
-GET         /api/financeiro/livro-caixa/totais/
-GET/POST    /api/financeiro/contas-pagar/
-GET/POST    /api/financeiro/contas-receber/
-POST        /api/financeiro/transferencia/
-POST        /api/financeiro/gerar-mensalidades/
-GET         /api/financeiro/relatorios/dre/?ano=&mes=
-GET         /api/financeiro/relatorios/dre/pdf/
-GET         /api/financeiro/relatorios/fluxo-caixa/?meses=3
-GET         /api/financeiro/relatorios/extrato/
-```
-
-### Frontend (12 telas + sidebar com submenu)
-Todas em `/sistema/financeiro/` — acesso ADMIN e FINANCEIRO:
-`contas` | `livro-caixa` | `contas-pagar` | `contas-receber` | `fornecedores` | `servicos` | `planos` | `folha` | `transferencia` | `dre` | `fluxo-caixa` | `extrato`
-
-Sidebar: item "Financeiro" expande submenu vertical com as 12 telas.
-Componente reutilizável: `FinanceiroTable.jsx` (tabela, modais, badges, formatadores).
-
-### Nota: vincular ContasReceber a cliente SystemD
-```javascript
-// Ao criar ContasReceber via frontend
-{ rec_cliente_id: cliente.id, rec_nome_pagador: cliente.nome_empresa, ... }
-```
-
----
-
-## Fase 6 — OS: Ordens de Serviço
-
-### App `ordens/` (nome do app — `os` conflita com módulo Python nativo)
-URL prefix: `/api/os/` e `/api/chamados/`
-
-### Models
-| Model | Descrição |
-|-------|-----------|
-| `OS` | Ordem de Serviço — vinculada a Cliente, com status, responsável, valores, datas |
-| `FaseOS` | Registro imutável de cada transição de status — nunca editar/deletar |
-| `Contrato` | OneToOne com OS — número, valores, % entrada, data assinatura |
-| `Chamado` | Suporte vinculado a OS — prioridade, status, aberto_por |
-| `MensagemChamado` | Histórico imutável de mensagens por chamado |
-
-### StatusOS (fluxo)
-`LEAD → REUNIAO → LEVANTAMENTO → PROPOSTA → CONTRATO → DEV → ENTREGA → MANUTENCAO`
-Cancelamento disponível em qualquer fase via `/api/os/{id}/cancelar/`
-
-### Endpoints
-| Método | URL | Permissão |
-|--------|-----|-----------|
-| GET/POST | `/api/os/` | ADMIN, OPERACIONAL |
-| GET/PATCH/DELETE | `/api/os/{id}/` | ADMIN, OPERACIONAL |
-| POST | `/api/os/{id}/avancar/` | ADMIN, OPERACIONAL |
-| POST | `/api/os/{id}/cancelar/` | ADMIN, OPERACIONAL |
-| GET/POST | `/api/os/{id}/contrato/` | ADMIN (criar/editar), OPERACIONAL (ver) |
-| GET/POST | `/api/os/{id}/chamados/` | Criar: todos autenticados; ver: ADMIN/OPERACIONAL |
-| GET/POST | `/api/chamados/` | ADMIN, OPERACIONAL (CLIENTE vê só os próprios) |
-| GET/POST | `/api/chamados/{id}/mensagens/` | Todos autenticados |
-
-### Signal `post_save` na OS
-Ao criar uma OS, `FaseOS` é registrada automaticamente com a fase inicial.
-Ao avançar/cancelar via endpoint, nova `FaseOS` é registrada com descrição e responsável.
-
-### Frontend
-- `OSPage` (`/sistema/os`) — listagem com busca, filtro por status, badges, clique abre detalhe
-- `OSDetailPage` (`/sistema/os/:id`) — 4 abas: Resumo, Linha do tempo, Contrato, Chamados
-  - Aba Resumo: dados gerais + botão Avançar fase + botão Cancelar OS + modal Editar
-  - Aba Timeline: visual de linha do tempo vertical com todas as fases registradas
-  - Aba Contrato: formulário de registro/edição do contrato
-  - Aba Chamados: lista com histórico de mensagens + botão Novo chamado
-- Portal do Cliente atualizado: `MeusProjetos` e `Suporte` usam dados reais da API OS
-
-### Serviço frontend
-`src/services/osApi.js` — todos os endpoints (OS, contrato, chamados, mensagens)
-
-### Fixtures e migrations
-```bash
-# Na VPS após deploy
-docker exec sytemd-backend-1 python manage.py migrate
-# Não há fixture para OS — dados criados pelo sistema
-```
-
----
-
-## Fase 5 — Perfis + Setores + Permissões
-
-### Models adicionados (`usuarios/`)
-- **Setor** — nome, descricao, ativo, criado_em. Fixture: `Diretoria | Comercial | Desenvolvimento | Financeiro | Suporte | Cliente`
-- **Usuario** — novos campos: `perfil` (TextChoices: ADMIN/FINANCEIRO/OPERACIONAL/CLIENTE), `setor` (FK Setor nullable)
-- Migration segura: `RunPython` seta `perfil=ADMIN` para todos os usuários existentes
-
-### Permissions DRF (`usuarios/permissions.py`)
-| Classe | Perfis permitidos |
-|--------|------------------|
-| `IsAdmin` | ADMIN |
-| `IsAdminOrOperacional` | ADMIN, OPERACIONAL |
-| `IsAdminOrFinanceiro` | ADMIN, FINANCEIRO |
-| `IsAdminOrOperacionalOrFinanceiro` | ADMIN, OPERACIONAL, FINANCEIRO |
-
-Aplicadas: `ClienteViewSet` → `IsAdminOrOperacional` | `email_client` → `IsAdminOrOperacionalOrFinanceiro`
-
-### Endpoints adicionados (`/api/auth/`)
-| Método | URL | Acesso |
-|--------|-----|--------|
-| GET | `me/` | Retorna id, nome, email, perfil, setor, email_corporativo |
-| GET/POST/PATCH/DELETE | `usuarios/` | Só ADMIN |
-| GET/POST/PATCH/DELETE | `setores/` | Só ADMIN — DELETE bloqueia se houver usuários ativos |
-
-### Frontend
-- **AuthContext** — chama `/api/auth/me/` após login/refresh; `usuario` contém perfil completo
-- **Sidebar** — dinâmica por perfil (`menuPorPerfil`), exibe nome + email_corporativo no rodapé
-- **PrivateRoute** — aceita `perfisPermitidos[]`; redireciona `/sistema/` se não autorizado
-- **UsuariosPage** (`/sistema/usuarios`) — CRUD completo com busca, filtros, badges de perfil coloridos, soft delete. Só ADMIN.
-- **SetoresPage** (`/sistema/configuracoes/setores`) — CRUD completo. Só ADMIN.
-- **Portal do Cliente** — 3 telas (MeusProjetos, Suporte, MinhasFaturas) só para perfil CLIENTE
-
-### Badges de perfil
-| Perfil | Cor |
-|--------|-----|
-| ADMIN | `#FF0000` |
-| OPERACIONAL | `#063BF8` |
-| FINANCEIRO | `#10b981` |
-| CLIENTE | `#3d0361` |
-
-### Fixtures
-```bash
-# Carregar setores padrão (rodar na VPS após migrate)
-docker exec sytemd-backend-1 python manage.py loaddata setores
-```
+- Para instalar: `https://uidsoftware.com.br/sistema/` → "Adicionar à tela inicial"
 
 ---
 
@@ -461,13 +365,15 @@ docker exec sytemd-backend-1 python manage.py loaddata setores
 ### Paleta oficial (imutável)
 ```css
 --color-brand-blue:   #063BF8;   /* Azul Royal — CTAs, botões, destaques */
---color-brand-red:    #FF0000;   /* Vermelho — badge produção, urgência */
+--color-brand-red:    #FF0000;   /* Vermelho — urgência, badge ADMIN, erro */
 --color-brand-purple: #3d0361;   /* Roxo escuro — backgrounds */
 --color-bg-dark:      #0a0014;   /* fundo principal */
 --color-bg-mid:       #1a0a2e;   /* cards, seções secundárias */
 --color-text-main:    #f1f5f9;
 --color-text-muted:   #a78bca;
 --color-text-accent:  #6b8fff;
+--color-success:      #10b981;   /* verde — pago, ativo, positivo */
+--color-warning:      #f59e0b;   /* amarelo — pendente, atenção */
 ```
 
 ### Gradiente oficial
@@ -479,6 +385,9 @@ background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
 - Display / headlines: **Plus Jakarta Sans** (700, 800)
 - Body: **DM Sans** (400, 500, 600)
 - ❌ Nunca Inter, Roboto ou Arial
+
+### Padrão de componentes inline
+Não usamos Radix UI, TanStack Query ou outras libs de componente. Tudo em inline styles com a paleta acima. `FinanceiroTable.jsx` é o exemplo canônico de reutilização.
 
 ---
 
@@ -494,7 +403,55 @@ background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
 | Novos clientes | 8003+ | — |
 
 - Deploy: `/root/SytemD/`
+- SSH alias local: `vps-pcuidsoftware-root`
 - SSL: certbot com renovação automática no nginx-proxy
+
+---
+
+## Comandos úteis
+
+```bash
+# Dev local
+make dev              # sobe db + backend + frontend
+make migrate          # aplica migrations
+make makemigrations   # gera migrations
+make shell            # shell Django
+make logs             # tail logs
+make createsuperuser  # cria admin
+
+# Produção — rodar na VPS em /root/SytemD/
+docker compose -f docker-compose.prod.yml build backend
+docker compose -f docker-compose.prod.yml up -d backend
+docker exec sytemd-backend-1 python manage.py migrate
+
+# Deploy frontend (OBRIGATÓRIO após qualquer mudança no frontend)
+docker compose -f docker-compose.prod.yml build --no-cache frontend-builder
+docker compose -f docker-compose.prod.yml run --rm frontend-builder
+docker compose -f docker-compose.prod.yml restart nginx
+```
+
+> ⚠️ **Frontend em produção não tem volume de código** — build estático via `frontend-builder`. Qualquer alteração no frontend exige os 3 comandos acima.
+
+### Fixtures (carregar na VPS após migrate)
+```bash
+docker exec sytemd-backend-1 python manage.py loaddata setores
+```
+
+### Corrigir permissões de arquivos criados pelo Docker
+```bash
+docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim chown -R 1000:1000 /app/<diretorio>/
+```
+
+---
+
+## Portas
+
+| Ambiente | Serviço | Porta |
+|----------|---------|-------|
+| Dev | Frontend Vite | 5173 |
+| Dev | Backend Django | 8002 |
+| Dev | PostgreSQL | 5433 |
+| Produção | Nginx interno | 8002 (→ nginx-proxy → 443 HTTPS) |
 
 ---
 
@@ -506,22 +463,22 @@ background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
 | Fase 2 | Reconstrução completa da Vitrine Pública | ✅ |
 | Fase 3 | JWT + Clientes + Email Client backend + PWA | ✅ |
 | Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
-| **Fase 5** | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
-| **Fase 6** | OS — Ordens de Serviço (models + API + frontend completo) | ✅ |
-| **Fase 7** | Financeiro — módulo completo (12 models, signals, relatórios, 12 telas) | ✅ |
-| Fase 8 | Dashboard + Form Levantamento de Requisitos | ⏳ |
+| Fase 5 | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
+| Fase 6 | OS — Ordens de Serviço (models + API + frontend 4 abas + portal cliente) | ✅ |
+| Fase 7 | Financeiro — 12 models + signals + relatórios + 12 telas frontend | ✅ |
+| **Fase 8** | Dashboard + Form Levantamento de Requisitos | ⏳ |
 
 ---
 
 ## Roadmap email multi-cliente
 
-| Etapa | Descrição | Status |
-|-------|-----------|--------|
-| Modelo `UsuarioEmailConfig` | Vincula usuário SystemD à mailbox Mailcow | ✅ |
-| Modelo `Cliente.usuario` | Cliente pode ter login próprio no SystemD | ✅ |
-| Frontend responsivo com pastas | Mobile/tablet/desktop | ✅ |
-| Adicionar domínio cliente no Mailcow | Manual pelo painel | ⏳ Fase 2 email |
-| Automatizar via API Mailcow | SystemD cria mailbox automaticamente | ⏳ Fase 3 email |
+| Etapa | Status |
+|-------|--------|
+| Modelo `UsuarioEmailConfig` vincula usuário à mailbox Mailcow | ✅ |
+| Modelo `Cliente.usuario` — cliente pode ter login próprio | ✅ |
+| Frontend responsivo com multi-pasta | ✅ |
+| Adicionar domínio cliente no Mailcow (manual pelo painel) | ⏳ |
+| Automatizar via API Mailcow — SystemD cria mailbox automaticamente | ⏳ |
 
 ---
 
@@ -542,4 +499,4 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 19/04/2026*
+*Última atualização: 12/05/2026*

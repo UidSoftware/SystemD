@@ -5,8 +5,47 @@ Sistema interno da **Uid Software e Tecnologia LTDA**
 Fundador: Luiz Eduardo Gonçalves Ferreira
 CNPJ: 60.939.393/0001-25 | Micro Empresa | Simples Nacional
 Sede: Uberlândia/MG | Operação: 100% digital/remota
+Contato: (34) 99134-9194 | uidsoftwaretecnologia@gmail.com | www.uidsoftware.com.br
 
 > ⚠️ O nome correto é **SystemD**. Containers e diretório usam `sytemd` por erro histórico — **não alterar**, pois quebra a infra.
+
+---
+
+## Identidade da Uid
+
+### Quem é a empresa
+A Uid não é só uma software house. É uma **boutique de tecnologia de nicho** — desenvolve sistemas sob medida e produtos digitais para MEI, micro e pequenas empresas, usando metodologia própria e IA como acelerador.
+
+**Modelo de negócio:** ISV/SaaS vertical por segmento. Um sistema por nicho (pilates, salão, loja de roupa, clínica etc.), replicado para múltiplos clientes do mesmo segmento.
+**Meta:** 10 clientes × 10 segmentos × R$200/mês = R$20.000/mês recorrente.
+**Produto em produção:** Studio Fluir (nostudiofluir.com.br) — sistema de gestão para estúdio de pilates e funcional.
+
+### Quem é o fundador
+- 18 anos de experiência profissional antes de TI (1 em gráfica, 17 na mesma empresa)
+- Transição de carreira para TI em 2024 | Cursando ADS Unopar desde set/2024
+- Arquétipos: Performático (primário) + Criador (secundário) + Mago (terciário)
+- Sombra reconhecida: dispersão, perfeccionismo, isolamento — ativamente trabalhada
+- Fé cristã como âncora de valores e autoconhecimento
+- Filosofia: **vira cliente do prospecto antes de propor qualquer solução**
+
+### Origem do nome
+"Uid" veio de uma aula de MySQL em 2022. A noiva, cansada de ouvir "uid uid uid", inspirou involuntariamente o nome. Ela também criou o logo (caneca de café neon vermelho/azul com "uid" dentro) e é futura co-fundadora.
+
+### Valores (imutáveis — texto do fundador)
+> "Antes de ser uma empresa de tecnologia, a Uid é uma empresa de responsabilidade."
+
+**Respeito** — pelo tempo, pelo negócio e pela realidade do cliente. Não chegamos com solução pronta. Chegamos pra entender primeiro.
+
+**Responsabilidade** — o sistema que entregamos tem vidas dependendo dele funcionar. Isso nunca é esquecido, nem depois da entrega, nem quando ninguém tá olhando.
+
+A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa não é código — é a transformação real no negócio de quem confiou.
+
+### Tom de voz
+- Informal, direto, humor leve, zero frescura
+- "a gente" > "nossa empresa" | "você" > cliente
+- Concreto: "controle de alunos" > "gestão educacional"
+- Sem jargão técnico pro cliente final
+- Sem superlativo vazio ("a melhor solução do mercado")
 
 ---
 
@@ -248,12 +287,38 @@ print('OK')
 
 ---
 
+## Identidade Visual
+
+### Paleta oficial (imutável)
+```css
+--color-brand-blue:   #063BF8;   /* Azul Royal — CTAs, botões, destaques */
+--color-brand-red:    #FF0000;   /* Vermelho — badge produção, urgência */
+--color-brand-purple: #3d0361;   /* Roxo escuro — backgrounds */
+--color-bg-dark:      #0a0014;   /* fundo principal */
+--color-bg-mid:       #1a0a2e;   /* cards, seções secundárias */
+--color-text-main:    #f1f5f9;
+--color-text-muted:   #a78bca;
+--color-text-accent:  #6b8fff;
+```
+
+### Gradiente oficial
+```css
+background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
+```
+
+### Tipografia
+- Display / headlines: **Plus Jakarta Sans** (700, 800)
+- Body: **DM Sans** (400, 500, 600)
+- ❌ Nunca Inter, Roboto ou Arial
+
+---
+
 ## Infra VPS (`209.50.241.122`)
 
 | Projeto | Porta interna | Domínio |
 |---------|--------------|---------|
 | nginx-proxy | 80/443 | (roteia todos) |
-| Studio Fluir | 8001 | — |
+| Studio Fluir | 8001 | nostudiofluir.com.br |
 | **SystemD** | **8002** | uidsoftware.com.br |
 | Mailcow HTTP | 8080 | — |
 | Mailcow HTTPS | 8443 | mail.uidsoftware.com.br |
@@ -272,9 +337,11 @@ print('OK')
 | Fase 2 | Reconstrução completa da Vitrine Pública | ✅ |
 | Fase 3 | JWT + Clientes + Email Client backend + PWA | ✅ |
 | Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
-| Fase 5 | OS (Ordens de Serviço) | ⏳ |
+| **Fase 5** | OS (Ordens de Serviço) | ⏳ |
 | Fase 6 | Financeiro | ⏳ |
-| Fase 7 | Dashboard + Form Levantamento | ⏳ |
+| Fase 7 | Dashboard + Form Levantamento de Requisitos | ⏳ |
+
+---
 
 ## Roadmap email multi-cliente
 
@@ -285,3 +352,24 @@ print('OK')
 | Frontend responsivo com pastas | Mobile/tablet/desktop | ✅ |
 | Adicionar domínio cliente no Mailcow | Manual pelo painel | ⏳ Fase 2 email |
 | Automatizar via API Mailcow | SystemD cria mailbox automaticamente | ⏳ Fase 3 email |
+
+---
+
+## Pipeline de desenvolvimento Uid
+
+```
+Claude.ai (análise + documentação + Instruções de Fase)
+    ↓
+Claude Code (execução)
+    ↓
+CLAUDE.md (âncora do projeto — atualizar ao fim de cada fase)
+```
+
+Fluxo padrão de novos projetos:
+```
+Levantamento → UML → Skills → código-base → protótipo → contrato → produção → mensalidade
+```
+
+---
+*Uid Software e Tecnologia LTDA — Uberlândia/MG*
+*Última atualização: 19/04/2026*

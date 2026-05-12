@@ -228,20 +228,52 @@ export default function EmailPage() {
     </div>
   )
 
+  // ── Bottom bar ícones (mobile + tablet) ──────────────────────────────
+  const BottomBar = () => (
+    <div className="lg:hidden flex items-center justify-around px-4 py-2 shrink-0"
+      style={{
+        backgroundColor: '#0a0014',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+      }}>
+      {pastas.slice(0, 5).map(pasta => {
+        const ativo = pastaAtual === pasta
+        return (
+          <button key={pasta} onClick={() => trocarPasta(pasta)}
+            className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all"
+            style={{
+              backgroundColor: ativo ? '#063BF8' : 'rgba(255,255,255,0.06)',
+            }}>
+            <span className="text-base leading-none">{iconePasta(pasta)}</span>
+            {pasta === 'INBOX' && naoLidos > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full text-white"
+                style={{ backgroundColor: '#f87171', fontSize: '9px', fontWeight: 700 }}>
+                {naoLidos > 9 ? '9+' : naoLidos}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+
   return (
     <SistemaLayout titulo="Email">
-      <div className="flex flex-1 overflow-hidden h-full">
-        <PainelPastas />
+      <div className="flex flex-col flex-1 overflow-hidden h-full">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <PainelPastas />
 
-        <PainelLista classe={`
-          ${vista === 'lista' ? 'flex' : 'hidden'}
-          lg:flex w-full lg:w-72 lg:shrink-0
-        `} />
+          <PainelLista classe={`
+            ${vista === 'lista' ? 'flex' : 'hidden'}
+            lg:flex w-full lg:w-72 lg:shrink-0
+          `} />
 
-        <PainelConteudo classe={`
-          ${vista === 'detalhe' || vista === 'compose' ? 'flex' : 'hidden'}
-          lg:flex
-        `} />
+          <PainelConteudo classe={`
+            ${vista === 'detalhe' || vista === 'compose' ? 'flex' : 'hidden'}
+            lg:flex
+          `} />
+        </div>
+
+        <BottomBar />
       </div>
     </SistemaLayout>
   )

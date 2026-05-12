@@ -96,27 +96,22 @@ export default function EmailPage() {
 
   // ── Tab strip de pastas (mobile + tablet) ─────────────────────────────
   const TabsPastas = () => (
-    <div className="lg:hidden flex items-center gap-1 overflow-x-auto px-3 py-2 shrink-0 scrollbar-none"
+    <div className="lg:hidden flex items-center justify-around px-4 py-2 shrink-0"
       style={{
         backgroundColor: '#1a0035',
         borderBottom: '1px solid rgba(6,59,248,0.25)',
       }}>
-      {pastas.slice(0, 6).map(pasta => {
+      {pastas.slice(0, 5).map(pasta => {
         const ativo = pastaAtual === pasta
         return (
           <button key={pasta} onClick={() => trocarPasta(pasta)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-all"
-            style={{
-              backgroundColor: ativo ? '#063BF8' : 'rgba(255,255,255,0.08)',
-              color: ativo ? '#fff' : '#c4b5d9',
-              border: ativo ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
-            }}>
-            <span className="text-sm leading-none">{iconePasta(pasta)}</span>
-            <span>{labelPasta(pasta)}</span>
+            className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all"
+            style={{ backgroundColor: ativo ? '#063BF8' : 'rgba(255,255,255,0.08)' }}>
+            <span className="text-base leading-none">{iconePasta(pasta)}</span>
             {pasta === 'INBOX' && naoLidos > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-xs leading-none"
-                style={{ backgroundColor: ativo ? 'rgba(255,255,255,0.3)' : '#063BF8', color: '#fff', fontSize: '9px' }}>
-                {naoLidos}
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full text-white"
+                style={{ backgroundColor: '#f87171', fontSize: '9px', fontWeight: 700 }}>
+                {naoLidos > 9 ? '9+' : naoLidos}
               </span>
             )}
           </button>

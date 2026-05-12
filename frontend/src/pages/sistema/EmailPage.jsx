@@ -4,6 +4,7 @@ import EmailList from '../../components/email/EmailList'
 import EmailDetail from '../../components/email/EmailDetail'
 import EmailCompose from '../../components/email/EmailCompose'
 import { emailApi } from '../../services/emailApi'
+import { useAuth } from '../../contexts/AuthContext'
 
 const PASTAS_META = {
   'INBOX':   { label: 'Entrada',   icone: '✉' },
@@ -19,6 +20,7 @@ function labelPasta(n) { return PASTAS_META[n]?.label || n }
 function iconePasta(n) { return PASTAS_META[n]?.icone || '📁' }
 
 export default function EmailPage() {
+  const { carregando: authCarregando } = useAuth()
   const [emails, setEmails]                     = useState([])
   const [total, setTotal]                       = useState(0)
   const [pagina, setPagina]                     = useState(1)
@@ -34,13 +36,17 @@ export default function EmailPage() {
   const [buscaAtiva, setBuscaAtiva]             = useState('')
 
   useEffect(() => {
+    if (authCarregando) return
     emailApi.pastas().then(res => {
       const nomes = res.data.results.map(p => p.nome)
       setPastas([...ORDEM.filter(p => nomes.includes(p)), ...nomes.filter(p => !ORDEM.includes(p))])
     }).catch(() => setPastas(['INBOX']))
-  }, [])
+  }, [authCarregando])
 
-  useEffect(() => { carregarEmails() }, [pagina, pastaAtual])
+  useEffect(() => {
+    if (authCarregando) return
+    carregarEmails()
+  }, [pagina, pastaAtual, authCarregando])
 
   useEffect(() => {
     const t = setTimeout(() => setBuscaAtiva(busca), 300)

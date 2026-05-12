@@ -1,0 +1,8 @@
+[
+  {"model": "usuarios.setor", "pk": 1, "fields": {"nome": "Diretoria",      "descricao": "Direção estratégica da empresa",     "ativo": true, "criado_em": "2026-01-01T00:00:00Z"}},
+  {"model": "usuarios.setor", "pk": 2, "fields": {"nome": "Comercial",      "descricao": "Prospecção e gestão de clientes",    "ativo": true, "criado_em": "2026-01-01T00:00:00Z"}},
+  {"model": "usuarios.setor", "pk": 3, "fields": {"nome": "Desenvolvimento","descricao": "Desenvolvimento de sistemas",        "ativo": true, "criado_em": "2026-01-01T00:00:00Z"}},
+  {"model": "usuarios.setor", "pk": 4, "fields": {"nome": "Financeiro",     "descricao": "Gestão financeira e faturamento",   "ativo": true, "criado_em": "2026-01-01T00:00:00Z"}},
+  {"model": "usuarios.setor", "pk": 5, "fields": {"nome": "Suporte",        "descricao": "Atendimento e suporte técnico",     "ativo": true, "criado_em": "2026-01-01T00:00:00Z"}},
+  {"model": "usuarios.setor", "pk": 6, "fields": {"nome": "Cliente",        "descricao": "Acesso externo de clientes",        "ativo": true, "criado_em": "2026-01-01T00:00:00Z"}}
+]

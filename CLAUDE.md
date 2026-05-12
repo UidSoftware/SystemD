@@ -287,6 +287,54 @@ print('OK')
 
 ---
 
+## Fase 5 — Perfis + Setores + Permissões
+
+### Models adicionados (`usuarios/`)
+- **Setor** — nome, descricao, ativo, criado_em. Fixture: `Diretoria | Comercial | Desenvolvimento | Financeiro | Suporte | Cliente`
+- **Usuario** — novos campos: `perfil` (TextChoices: ADMIN/FINANCEIRO/OPERACIONAL/CLIENTE), `setor` (FK Setor nullable)
+- Migration segura: `RunPython` seta `perfil=ADMIN` para todos os usuários existentes
+
+### Permissions DRF (`usuarios/permissions.py`)
+| Classe | Perfis permitidos |
+|--------|------------------|
+| `IsAdmin` | ADMIN |
+| `IsAdminOrOperacional` | ADMIN, OPERACIONAL |
+| `IsAdminOrFinanceiro` | ADMIN, FINANCEIRO |
+| `IsAdminOrOperacionalOrFinanceiro` | ADMIN, OPERACIONAL, FINANCEIRO |
+
+Aplicadas: `ClienteViewSet` → `IsAdminOrOperacional` | `email_client` → `IsAdminOrOperacionalOrFinanceiro`
+
+### Endpoints adicionados (`/api/auth/`)
+| Método | URL | Acesso |
+|--------|-----|--------|
+| GET | `me/` | Retorna id, nome, email, perfil, setor, email_corporativo |
+| GET/POST/PATCH/DELETE | `usuarios/` | Só ADMIN |
+| GET/POST/PATCH/DELETE | `setores/` | Só ADMIN — DELETE bloqueia se houver usuários ativos |
+
+### Frontend
+- **AuthContext** — chama `/api/auth/me/` após login/refresh; `usuario` contém perfil completo
+- **Sidebar** — dinâmica por perfil (`menuPorPerfil`), exibe nome + email_corporativo no rodapé
+- **PrivateRoute** — aceita `perfisPermitidos[]`; redireciona `/sistema/` se não autorizado
+- **UsuariosPage** (`/sistema/usuarios`) — CRUD completo com busca, filtros, badges de perfil coloridos, soft delete. Só ADMIN.
+- **SetoresPage** (`/sistema/configuracoes/setores`) — CRUD completo. Só ADMIN.
+- **Portal do Cliente** — 3 telas (MeusProjetos, Suporte, MinhasFaturas) só para perfil CLIENTE
+
+### Badges de perfil
+| Perfil | Cor |
+|--------|-----|
+| ADMIN | `#FF0000` |
+| OPERACIONAL | `#063BF8` |
+| FINANCEIRO | `#10b981` |
+| CLIENTE | `#3d0361` |
+
+### Fixtures
+```bash
+# Carregar setores padrão (rodar na VPS após migrate)
+docker exec sytemd-backend-1 python manage.py loaddata setores
+```
+
+---
+
 ## Identidade Visual
 
 ### Paleta oficial (imutável)
@@ -337,9 +385,10 @@ background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
 | Fase 2 | Reconstrução completa da Vitrine Pública | ✅ |
 | Fase 3 | JWT + Clientes + Email Client backend + PWA | ✅ |
 | Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
-| **Fase 5** | OS (Ordens de Serviço) | ⏳ |
-| Fase 6 | Financeiro | ⏳ |
-| Fase 7 | Dashboard + Form Levantamento de Requisitos | ⏳ |
+| **Fase 5** | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
+| Fase 6 | OS (Ordens de Serviço) | ⏳ |
+| Fase 7 | Financeiro | ⏳ |
+| Fase 8 | Dashboard + Form Levantamento de Requisitos | ⏳ |
 
 ---
 

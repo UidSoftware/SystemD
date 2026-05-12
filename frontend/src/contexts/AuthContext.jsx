@@ -9,10 +9,18 @@ export function AuthProvider({ children }) {
   const [carregando, setCarregando] = useState(true)
   const timerRef = useRef(null)
 
-  const agendarRenovacao = useCallback((token) => {
+  const agendarRenovacao = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    // Renova 5 minutos antes de expirar (access token = 60 min)
     timerRef.current = setTimeout(renovarToken, 55 * 60 * 1000)
+  }, [])
+
+  const buscarPerfil = useCallback(async () => {
+    try {
+      const res = await api.get('/auth/me/')
+      setUsuario(res.data)
+    } catch {
+      // token pode ter expirado — renovarToken já trata isso
+    }
   }, [])
 
   const renovarToken = useCallback(async () => {
@@ -20,9 +28,7 @@ export function AuthProvider({ children }) {
       const res = await api.post('/auth/token/refresh/')
       const { access } = res.data
       setAccessToken(access)
-      const payload = JSON.parse(atob(access.split('.')[1]))
-      setUsuario({ email: payload.email, nome: payload.nome })
-      agendarRenovacao(access)
+      agendarRenovacao()
       return access
     } catch {
       setAccessToken(null)
@@ -31,18 +37,18 @@ export function AuthProvider({ children }) {
     }
   }, [agendarRenovacao])
 
-  // Tentar recuperar sessão ao montar (via refresh token no cookie httpOnly)
   useEffect(() => {
     renovarToken().finally(() => setCarregando(false))
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
-  // Injetar Bearer token em todas as requests
+  // Sempre que o access token muda, atualiza o interceptor e busca o perfil completo
   useEffect(() => {
     const interceptor = api.interceptors.request.use((config) => {
       if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
       return config
     })
+    if (accessToken) buscarPerfil()
     return () => api.interceptors.request.eject(interceptor)
   }, [accessToken])
 
@@ -50,9 +56,7 @@ export function AuthProvider({ children }) {
     const res = await api.post('/auth/token/', { email, password: senha })
     const { access } = res.data
     setAccessToken(access)
-    const payload = JSON.parse(atob(access.split('.')[1]))
-    setUsuario({ email: payload.email, nome: payload.nome })
-    agendarRenovacao(access)
+    agendarRenovacao()
   }
 
   const logout = async () => {
@@ -63,7 +67,14 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, accessToken, login, logout, isAutenticado: !!accessToken, carregando }}>
+    <AuthContext.Provider value={{
+      usuario,
+      accessToken,
+      login,
+      logout,
+      isAutenticado: !!accessToken,
+      carregando,
+    }}>
       {children}
     </AuthContext.Provider>
   )

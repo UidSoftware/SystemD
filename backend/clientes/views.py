@@ -1,13 +1,13 @@
 from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Cliente
 from .serializers import ClienteSerializer
+from usuarios.permissions import IsAdminOrOperacional
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
     serializer_class = ClienteSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrOperacional]
 
     def get_queryset(self):
         return Cliente.objects.filter(ativo=True)

@@ -1,9 +1,14 @@
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import action
+from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import UsuarioTokenSerializer
+from .models import Usuario, Setor
+from .serializers import UsuarioTokenSerializer, UsuarioSerializer, SetorSerializer, MeSerializer
+from .permissions import IsAdmin
 
 
 class LoginView(TokenObtainPairView):
@@ -46,3 +51,54 @@ class LogoutView(APIView):
         resp = Response({'mensagem': 'Logout realizado com sucesso'})
         resp.delete_cookie('refresh_token')
         return resp
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(MeSerializer(request.user).data)
+
+
+class UsuarioViewSet(ModelViewSet):
+    serializer_class = UsuarioSerializer
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        qs = Usuario.objects.select_related('setor', 'email_config').order_by('nome')
+        busca = self.request.query_params.get('busca')
+        perfil = self.request.query_params.get('perfil')
+        setor = self.request.query_params.get('setor')
+        if busca:
+            qs = qs.filter(nome__icontains=busca) | qs.filter(email__icontains=busca)
+        if perfil:
+            qs = qs.filter(perfil=perfil)
+        if setor:
+            qs = qs.filter(setor_id=setor)
+        return qs
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SetorViewSet(ModelViewSet):
+    serializer_class = SetorSerializer
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        return Setor.objects.all().order_by('nome')
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        usuarios_ativos = instance.usuarios.filter(ativo=True).count()
+        if usuarios_ativos > 0:
+            return Response(
+                {'erro': f'Não é possível desativar: {usuarios_ativos} usuário(s) ativo(s) vinculado(s) a este setor.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

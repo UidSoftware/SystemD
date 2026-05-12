@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
-export default function PrivateRoute({ children }) {
-  const { isAutenticado, carregando } = useAuth()
+export default function PrivateRoute({ children, perfisPermitidos }) {
+  const { isAutenticado, carregando, usuario } = useAuth()
 
   if (carregando) {
     return (
@@ -12,5 +12,11 @@ export default function PrivateRoute({ children }) {
     )
   }
 
-  return isAutenticado ? children : <Navigate to="/login" replace />
+  if (!isAutenticado) return <Navigate to="/login" replace />
+
+  if (perfisPermitidos && usuario && !perfisPermitidos.includes(usuario.perfil)) {
+    return <Navigate to="/sistema/" replace state={{ acessoNegado: true }} />
+  }
+
+  return children
 }

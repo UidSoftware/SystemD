@@ -15,8 +15,8 @@ const PASTAS_META = {
 }
 const ORDEM = ['INBOX', 'Sent', 'Drafts', 'Junk', 'Trash', 'Archive']
 
-function labelPasta(n)  { return PASTAS_META[n]?.label || n }
-function iconePasta(n)  { return PASTAS_META[n]?.icone || '📁' }
+function labelPasta(n) { return PASTAS_META[n]?.label || n }
+function iconePasta(n) { return PASTAS_META[n]?.icone || '📁' }
 
 export default function EmailPage() {
   const [emails, setEmails]                     = useState([])
@@ -29,7 +29,6 @@ export default function EmailPage() {
   const [respondendo, setRespondendo]           = useState(false)
   const [carregando, setCarregando]             = useState(false)
   const [erro, setErro]                         = useState(null)
-  // mobile/tablet: 'lista' | 'detalhe' | 'compose'
   const [vista, setVista]                       = useState('lista')
 
   useEffect(() => {
@@ -42,90 +41,85 @@ export default function EmailPage() {
   useEffect(() => { carregarEmails() }, [pagina, pastaAtual])
 
   async function carregarEmails() {
-    setCarregando(true)
-    setErro(null)
+    setCarregando(true); setErro(null)
     try {
       const res = await emailApi.inbox(pagina, pastaAtual)
-      setEmails(res.data.results)
-      setTotal(res.data.count)
-    } catch {
-      setErro('Erro ao carregar emails.')
-    } finally {
-      setCarregando(false)
-    }
+      setEmails(res.data.results); setTotal(res.data.count)
+    } catch { setErro('Erro ao carregar emails.') }
+    finally { setCarregando(false) }
   }
 
   function trocarPasta(pasta) {
-    setPastaAtual(pasta)
-    setPagina(1)
-    setEmailSelecionado(null)
-    setCompondo(false)
-    setVista('lista')
+    setPastaAtual(pasta); setPagina(1)
+    setEmailSelecionado(null); setCompondo(false); setVista('lista')
   }
 
   async function abrirEmail(uid) {
     try {
       const res = await emailApi.detalhe(uid, pastaAtual)
-      setEmailSelecionado(res.data)
-      setCompondo(false)
-      setRespondendo(false)
+      setEmailSelecionado(res.data); setCompondo(false); setRespondendo(false)
       setEmails(prev => prev.map(e => e.uid === uid ? { ...e, lido: true } : e))
       setVista('detalhe')
-    } catch {
-      setErro('Erro ao abrir email.')
-    }
+    } catch { setErro('Erro ao abrir email.') }
   }
 
   async function deletarEmail(uid) {
     try {
       await emailApi.deletar(uid, pastaAtual)
-      setEmailSelecionado(null)
-      setVista('lista')
-      carregarEmails()
-    } catch {
-      setErro('Erro ao deletar email.')
-    }
+      setEmailSelecionado(null); setVista('lista'); carregarEmails()
+    } catch { setErro('Erro ao deletar email.') }
   }
 
-  function abrirCompose() {
-    setRespondendo(false)
-    setCompondo(true)
-    setVista('compose')
-  }
-
-  function iniciarResposta() {
-    setRespondendo(true)
-    setCompondo(true)
-    setVista('compose')
-  }
-
+  function abrirCompose() { setRespondendo(false); setCompondo(true); setVista('compose') }
+  function iniciarResposta() { setRespondendo(true); setCompondo(true); setVista('compose') }
+  function voltarParaLista() { setCompondo(false); setRespondendo(false); setVista('lista') }
   async function aoEnviar() {
-    setCompondo(false)
-    setRespondendo(false)
-    setVista('lista')
+    setCompondo(false); setRespondendo(false); setVista('lista')
     if (!respondendo) carregarEmails()
   }
 
-  function voltarParaLista() {
-    setCompondo(false)
-    setRespondendo(false)
-    setVista('lista')
-  }
-
   const naoLidos = pastaAtual === 'INBOX' ? emails.filter(e => !e.lido).length : 0
-  const bottomPastas = pastas.slice(0, 5)
 
-  // ── Painel de pastas (desktop) ───────────────────────────────────────
+  // ── Tab strip de pastas (mobile + tablet) ─────────────────────────────
+  const TabsPastas = () => (
+    <div className="lg:hidden flex items-center gap-1 overflow-x-auto px-3 py-2 shrink-0 scrollbar-none"
+      style={{
+        backgroundColor: '#1a0035',
+        borderBottom: '1px solid rgba(6,59,248,0.25)',
+      }}>
+      {pastas.slice(0, 6).map(pasta => {
+        const ativo = pastaAtual === pasta
+        return (
+          <button key={pasta} onClick={() => trocarPasta(pasta)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-all"
+            style={{
+              backgroundColor: ativo ? '#063BF8' : 'rgba(255,255,255,0.08)',
+              color: ativo ? '#fff' : '#c4b5d9',
+              border: ativo ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
+            }}>
+            <span className="text-sm leading-none">{iconePasta(pasta)}</span>
+            <span>{labelPasta(pasta)}</span>
+            {pasta === 'INBOX' && naoLidos > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-xs leading-none"
+                style={{ backgroundColor: ativo ? 'rgba(255,255,255,0.3)' : '#063BF8', color: '#fff', fontSize: '9px' }}>
+                {naoLidos}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  // ── Painel de pastas (desktop) ─────────────────────────────────────────
   const PainelPastas = () => (
     <div className="hidden lg:flex flex-col w-48 shrink-0 pt-4 pb-2 gap-0.5 px-2"
       style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-      <button
-        onClick={abrirCompose}
+      <button onClick={abrirCompose}
         className="w-full mb-3 py-2 rounded-lg text-sm font-semibold transition-colors"
         style={{ backgroundColor: '#063BF8', color: '#fff' }}
         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0430cc'}
-        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#063BF8'}
-      >
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#063BF8'}>
         + Novo
       </button>
       {pastas.map(pasta => (
@@ -147,12 +141,13 @@ export default function EmailPage() {
     </div>
   )
 
-  // ── Lista de emails ───────────────────────────────────────────────────
+  // ── Painel lista de emails ─────────────────────────────────────────────
   const PainelLista = ({ classe = '' }) => (
     <div className={`flex flex-col overflow-hidden ${classe}`}
       style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-      {/* header mobile/tablet */}
-      <div className="lg:hidden flex items-center justify-between px-4 py-3"
+
+      {/* Header mobile/tablet */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <span className="text-sm font-semibold" style={{ color: '#f1f5f9' }}>
           {labelPasta(pastaAtual)}
@@ -162,18 +157,23 @@ export default function EmailPage() {
           )}
         </span>
         <button onClick={abrirCompose}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg"
+          className="text-xs font-semibold px-4 py-1.5 rounded-lg"
           style={{ backgroundColor: '#063BF8', color: '#fff' }}>
           + Novo
         </button>
       </div>
-      {/* header desktop */}
-      <div className="hidden lg:flex items-center justify-between px-4 py-3"
+
+      {/* Tabs de pastas — mobile/tablet, entre o header e a lista */}
+      <TabsPastas />
+
+      {/* Header desktop */}
+      <div className="hidden lg:flex items-center px-4 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <span className="text-sm font-medium" style={{ color: '#a78bca' }}>
           {labelPasta(pastaAtual)}
         </span>
       </div>
+
       <div className="flex flex-col flex-1 overflow-hidden px-3 py-2">
         {carregando && <p className="text-xs px-1 pb-1" style={{ color: '#6b6b8a' }}>Carregando...</p>}
         {erro && <p className="text-xs px-1 pb-1" style={{ color: '#f87171' }}>{erro}</p>}
@@ -186,18 +186,23 @@ export default function EmailPage() {
     </div>
   )
 
-  // ── Painel de leitura/compose ─────────────────────────────────────────
+  // ── Painel leitura / compose ───────────────────────────────────────────
   const PainelConteudo = ({ classe = '' }) => (
     <div className={`flex flex-col flex-1 min-w-0 overflow-hidden ${classe}`}>
-      {/* botão voltar mobile */}
-      <div className="lg:hidden flex items-center gap-2 px-4 py-3"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <button onClick={voltarParaLista}
-          className="text-sm font-medium flex items-center gap-1"
-          style={{ color: '#063BF8' }}>
-          ← Voltar
-        </button>
+      {/* Header mobile: voltar + tabs */}
+      <div className="lg:hidden shrink-0">
+        <div className="flex items-center px-4 py-3"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <button onClick={voltarParaLista}
+            className="text-sm font-medium flex items-center gap-1"
+            style={{ color: '#063BF8' }}>
+            ← Voltar
+          </button>
+        </div>
+        {/* Tabs também no painel de leitura para trocar pasta sem voltar */}
+        <TabsPastas />
       </div>
+
       <div className="flex-1 overflow-hidden p-4">
         {compondo && (
           <EmailCompose
@@ -223,59 +228,20 @@ export default function EmailPage() {
     </div>
   )
 
-  // ── Bottom bar pastas (mobile + tablet) ───────────────────────────────
-  const BottomBar = () => (
-    <div className="lg:hidden flex items-center justify-around px-2 py-1 shrink-0"
-      style={{
-        backgroundColor: '#0d001f',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        minHeight: '56px',
-      }}>
-      {bottomPastas.map(pasta => (
-        <button key={pasta} onClick={() => trocarPasta(pasta)}
-          className="flex flex-col items-center gap-0.5 flex-1 py-1 transition-opacity"
-          style={{ opacity: pastaAtual === pasta ? 1 : 0.5 }}>
-          <span className="text-lg leading-none relative">
-            {iconePasta(pasta)}
-            {pasta === 'INBOX' && naoLidos > 0 && (
-              <span className="absolute -top-1 -right-2 text-xs leading-none px-1 rounded-full"
-                style={{ backgroundColor: '#063BF8', color: '#fff', fontSize: '9px' }}>
-                {naoLidos}
-              </span>
-            )}
-          </span>
-          <span className="text-xs" style={{ color: pastaAtual === pasta ? '#f1f5f9' : '#6b6b8a', fontSize: '10px' }}>
-            {labelPasta(pasta)}
-          </span>
-        </button>
-      ))}
-    </div>
-  )
-
   return (
     <SistemaLayout titulo="Email">
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden h-full">
+        <PainelPastas />
 
-          {/* Desktop: 3 colunas */}
-          <PainelPastas />
+        <PainelLista classe={`
+          ${vista === 'lista' ? 'flex' : 'hidden'}
+          lg:flex w-full lg:w-72 lg:shrink-0
+        `} />
 
-          {/* Desktop + tablet: lista sempre visível */}
-          {/* Mobile: só lista OU só conteúdo */}
-          <PainelLista classe={`
-            ${vista === 'lista' ? 'flex' : 'hidden'}
-            lg:flex w-full lg:w-72 lg:shrink-0
-          `} />
-
-          <PainelConteudo classe={`
-            ${vista === 'detalhe' || vista === 'compose' ? 'flex' : 'hidden'}
-            lg:flex
-          `} />
-
-        </div>
-
-        {/* Bottom bar pastas — mobile + tablet */}
-        <BottomBar />
+        <PainelConteudo classe={`
+          ${vista === 'detalhe' || vista === 'compose' ? 'flex' : 'hidden'}
+          lg:flex
+        `} />
       </div>
     </SistemaLayout>
   )

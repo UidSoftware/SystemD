@@ -287,6 +287,72 @@ print('OK')
 
 ---
 
+## Fase 7 — Financeiro
+
+### App `financeiro/` (adaptado do template NosFluir)
+URL prefix: `/api/financeiro/`
+Dependências adicionadas: `django-filter==24.3`, `reportlab==4.2.5`
+
+### Models (12 no total)
+| Model | Descrição |
+|-------|-----------|
+| `Conta` | Conta bancária ou caixa físico |
+| `PlanoContas` | Classificação contábil |
+| `Fornecedor` | Cadastro de fornecedores |
+| `ServicoProduto` | Catálogo de serviços |
+| `Produto` | Estoque físico com alerta de mínimo |
+| `ContasPagar` | Controle de despesas |
+| `ContasReceber` | Controle de receitas (usa `rec_cliente_id` genérico) |
+| `PlanosPagamentos` | Catálogo de planos mensais/trimestrais/semestrais |
+| `ClientePlano` | Vínculo cliente ↔ plano (usa `cli_id` genérico) |
+| `LivroCaixa` | Imutável — ReadCreateViewSet, saldo acumulado c/ select_for_update |
+| `FolhaPagamento` | Sem lançamento automático — por design |
+| `Pedido` + `PedidoItem` | Com numeração automática PED-XXXX |
+
+### Mixins (`financeiro/mixins.py`)
+`BaseModel` (auditoria: created_at/updated_at/deleted_at + created/updated/deleted_by)
+`AuditMixin` — popula campos de auditoria em ViewSets
+`ReadCreateViewSet` — LivroCaixa (sem PUT/PATCH/DELETE)
+
+### Signals automáticos
+- `ContasPagar` pago → LivroCaixa saída (pró-labore excluído)
+- `ContasReceber` recebido → LivroCaixa entrada
+- `Pedido` pago → reduz estoque + LivroCaixa entrada (à vista) ou ContasReceber parcelas
+
+### Permissões
+- `IsAdminOrFinanceiro` → maioria dos endpoints
+- `IsAdmin` → FolhaPagamento, gerar-mensalidades
+
+### Endpoints relevantes
+```
+GET/POST    /api/financeiro/contas/
+GET/POST    /api/financeiro/livro-caixa/
+GET         /api/financeiro/livro-caixa/totais/
+GET/POST    /api/financeiro/contas-pagar/
+GET/POST    /api/financeiro/contas-receber/
+POST        /api/financeiro/transferencia/
+POST        /api/financeiro/gerar-mensalidades/
+GET         /api/financeiro/relatorios/dre/?ano=&mes=
+GET         /api/financeiro/relatorios/dre/pdf/
+GET         /api/financeiro/relatorios/fluxo-caixa/?meses=3
+GET         /api/financeiro/relatorios/extrato/
+```
+
+### Frontend (12 telas + sidebar com submenu)
+Todas em `/sistema/financeiro/` — acesso ADMIN e FINANCEIRO:
+`contas` | `livro-caixa` | `contas-pagar` | `contas-receber` | `fornecedores` | `servicos` | `planos` | `folha` | `transferencia` | `dre` | `fluxo-caixa` | `extrato`
+
+Sidebar: item "Financeiro" expande submenu vertical com as 12 telas.
+Componente reutilizável: `FinanceiroTable.jsx` (tabela, modais, badges, formatadores).
+
+### Nota: vincular ContasReceber a cliente SystemD
+```javascript
+// Ao criar ContasReceber via frontend
+{ rec_cliente_id: cliente.id, rec_nome_pagador: cliente.nome_empresa, ... }
+```
+
+---
+
 ## Fase 6 — OS: Ordens de Serviço
 
 ### App `ordens/` (nome do app — `os` conflita com módulo Python nativo)
@@ -442,7 +508,7 @@ background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
 | Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
 | **Fase 5** | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
 | **Fase 6** | OS — Ordens de Serviço (models + API + frontend completo) | ✅ |
-| Fase 7 | Financeiro | ⏳ |
+| **Fase 7** | Financeiro — módulo completo (12 models, signals, relatórios, 12 telas) | ✅ |
 | Fase 8 | Dashboard + Form Levantamento de Requisitos | ⏳ |
 
 ---

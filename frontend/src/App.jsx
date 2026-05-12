@@ -8,6 +8,8 @@ import ClientesPage from './pages/sistema/ClientesPage'
 import EmailPage from './pages/sistema/EmailPage'
 import UsuariosPage from './pages/sistema/UsuariosPage'
 import SetoresPage from './pages/sistema/SetoresPage'
+import OSPage from './pages/sistema/OSPage'
+import OSDetailPage from './pages/sistema/OSDetailPage'
 import MeusProjetosPage from './pages/sistema/portal/MeusProjetosPage'
 import SuportePage from './pages/sistema/portal/SuportePage'
 import MinhasFaturasPage from './pages/sistema/portal/MinhasFaturasPage'
@@ -26,6 +28,8 @@ export default function App() {
 
           {/* Admin + Operacional */}
           <Route path="/sistema/clientes" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><ClientesPage /></PrivateRoute>} />
+          <Route path="/sistema/os" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><OSPage /></PrivateRoute>} />
+          <Route path="/sistema/os/:id" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><OSDetailPage /></PrivateRoute>} />
 
           {/* Só Admin */}
           <Route path="/sistema/usuarios" element={<PrivateRoute perfisPermitidos={['ADMIN']}><UsuariosPage /></PrivateRoute>} />

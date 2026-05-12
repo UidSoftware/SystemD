@@ -287,6 +287,61 @@ print('OK')
 
 ---
 
+## Fase 6 — OS: Ordens de Serviço
+
+### App `ordens/` (nome do app — `os` conflita com módulo Python nativo)
+URL prefix: `/api/os/` e `/api/chamados/`
+
+### Models
+| Model | Descrição |
+|-------|-----------|
+| `OS` | Ordem de Serviço — vinculada a Cliente, com status, responsável, valores, datas |
+| `FaseOS` | Registro imutável de cada transição de status — nunca editar/deletar |
+| `Contrato` | OneToOne com OS — número, valores, % entrada, data assinatura |
+| `Chamado` | Suporte vinculado a OS — prioridade, status, aberto_por |
+| `MensagemChamado` | Histórico imutável de mensagens por chamado |
+
+### StatusOS (fluxo)
+`LEAD → REUNIAO → LEVANTAMENTO → PROPOSTA → CONTRATO → DEV → ENTREGA → MANUTENCAO`
+Cancelamento disponível em qualquer fase via `/api/os/{id}/cancelar/`
+
+### Endpoints
+| Método | URL | Permissão |
+|--------|-----|-----------|
+| GET/POST | `/api/os/` | ADMIN, OPERACIONAL |
+| GET/PATCH/DELETE | `/api/os/{id}/` | ADMIN, OPERACIONAL |
+| POST | `/api/os/{id}/avancar/` | ADMIN, OPERACIONAL |
+| POST | `/api/os/{id}/cancelar/` | ADMIN, OPERACIONAL |
+| GET/POST | `/api/os/{id}/contrato/` | ADMIN (criar/editar), OPERACIONAL (ver) |
+| GET/POST | `/api/os/{id}/chamados/` | Criar: todos autenticados; ver: ADMIN/OPERACIONAL |
+| GET/POST | `/api/chamados/` | ADMIN, OPERACIONAL (CLIENTE vê só os próprios) |
+| GET/POST | `/api/chamados/{id}/mensagens/` | Todos autenticados |
+
+### Signal `post_save` na OS
+Ao criar uma OS, `FaseOS` é registrada automaticamente com a fase inicial.
+Ao avançar/cancelar via endpoint, nova `FaseOS` é registrada com descrição e responsável.
+
+### Frontend
+- `OSPage` (`/sistema/os`) — listagem com busca, filtro por status, badges, clique abre detalhe
+- `OSDetailPage` (`/sistema/os/:id`) — 4 abas: Resumo, Linha do tempo, Contrato, Chamados
+  - Aba Resumo: dados gerais + botão Avançar fase + botão Cancelar OS + modal Editar
+  - Aba Timeline: visual de linha do tempo vertical com todas as fases registradas
+  - Aba Contrato: formulário de registro/edição do contrato
+  - Aba Chamados: lista com histórico de mensagens + botão Novo chamado
+- Portal do Cliente atualizado: `MeusProjetos` e `Suporte` usam dados reais da API OS
+
+### Serviço frontend
+`src/services/osApi.js` — todos os endpoints (OS, contrato, chamados, mensagens)
+
+### Fixtures e migrations
+```bash
+# Na VPS após deploy
+docker exec sytemd-backend-1 python manage.py migrate
+# Não há fixture para OS — dados criados pelo sistema
+```
+
+---
+
 ## Fase 5 — Perfis + Setores + Permissões
 
 ### Models adicionados (`usuarios/`)
@@ -386,7 +441,7 @@ background: linear-gradient(135deg, #0a0014 0%, #3d0361 50%, #063BF8 100%);
 | Fase 3 | JWT + Clientes + Email Client backend + PWA | ✅ |
 | Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
 | **Fase 5** | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
-| Fase 6 | OS (Ordens de Serviço) | ⏳ |
+| **Fase 6** | OS — Ordens de Serviço (models + API + frontend completo) | ✅ |
 | Fase 7 | Financeiro | ⏳ |
 | Fase 8 | Dashboard + Form Levantamento de Requisitos | ⏳ |
 

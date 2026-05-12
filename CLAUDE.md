@@ -157,11 +157,13 @@ class Cliente(models.Model):
 ### Endpoints (`/api/email/`)
 | Método | URL | Ação |
 |--------|-----|------|
-| GET | `inbox/?page=1&pasta=INBOX` | Lista emails da pasta |
+| GET | `inbox/?page=1&pasta=INBOX` | Lista emails (mais recente primeiro) |
 | GET | `<uid>/?pasta=INBOX` | Lê email completo |
-| POST | `enviar/` | Envia novo email |
+| POST | `enviar/` | Envia email (aceita `cc`) |
 | POST | `<uid>/responder/?pasta=INBOX` | Responde email |
-| DELETE | `<uid>/deletar/?pasta=INBOX` | Move para lixeira |
+| DELETE | `<uid>/deletar/?pasta=INBOX` | Move para Lixeira |
+| POST | `<uid>/arquivar/?pasta=INBOX` | Move para Archive |
+| GET | `<uid>/anexo/?indice=0&pasta=INBOX` | Download de anexo (blob) |
 | GET | `pastas/` | Lista todas as pastas IMAP |
 
 ### Parâmetro `?pasta=`
@@ -202,22 +204,37 @@ print('OK')
 
 ---
 
+## Frontend — Funcionalidades do Email
+
+| Feature | Detalhe |
+|---------|---------|
+| Busca | Debounce 300ms, filtra por remetente e assunto na página atual |
+| CC | Campo expansível no compose — botão "CC" ao lado do campo Para |
+| Download anexo | Botão `⬇ nome` por anexo — blob download com JWT no header |
+| Arquivar | Botão "Arquivar" move email para Archive (oculto se já estiver lá) |
+| Ordem | Emails mais recentes primeiro (sort por UID desc) |
+| Validação | Compose valida presença de `@` antes de enviar |
+
 ## Frontend — Layout responsivo do Email
 
 | Breakpoint | Layout |
 |------------|--------|
-| Mobile (<768px) | Tela cheia: lista → detalhe → compose (estados). Bottom bar com ícones das pastas. |
-| Tablet (768–1023px) | Lista + leitura lado a lado. Bottom bar com ícones das pastas. |
-| Desktop (≥1024px) | 3 colunas: pastas lateral + lista + leitura. |
+| Mobile (<768px) | Tela cheia: lista → detalhe → compose (estados). Botão "← Voltar". |
+| Tablet (768–1023px) | Lista + leitura lado a lado. |
+| Desktop (≥1024px) | 3 colunas: pastas lateral (w-48) + lista (w-72) + leitura (flex-1). |
+
+**Tab strip de pastas (mobile + tablet):** ícones circulares `w-10 h-10`, fundo `#1a0035`, ativo `#063BF8`. Posicionado entre o header (título da pasta + "+ Novo") e a busca/lista. Mostra até 6 pastas.
 
 ---
 
 ## Auth JWT
 
 - **Access token:** em memória React (estado), expira em 60 min
-- **Refresh token:** cookie httpOnly, expira em 7 dias, rotativo
+- **Refresh token:** cookie httpOnly (`Secure`, `SameSite=Lax`), expira em 7 dias, rotativo
 - **Interceptor Axios:** em `AuthContext.jsx` — adiciona `Authorization: Bearer` em todas as requests
 - **Renovação automática:** a cada 55 min via `POST /api/auth/token/refresh/`
+- **Race condition resolvida:** `EmailPage` usa `accessToken` como dependency nos `useEffect` — só dispara chamadas IMAP quando o token existe, garantindo que o interceptor do Axios já está atualizado
+- **Atenção mobile:** Android Chrome às vezes descarta cookie `Secure` ao recarregar — usuário pode precisar logar de novo se o cookie expirar
 
 ---
 
@@ -254,7 +271,7 @@ print('OK')
 | Fase 1 | Setup + Vitrine base | ✅ |
 | Fase 2 | Reconstrução completa da Vitrine Pública | ✅ |
 | Fase 3 | JWT + Clientes + Email Client backend + PWA | ✅ |
-| Fase 4 | Webmail frontend completo + responsivo + multi-pasta | ✅ |
+| Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
 | Fase 5 | OS (Ordens de Serviço) | ⏳ |
 | Fase 6 | Financeiro | ⏳ |
 | Fase 7 | Dashboard + Form Levantamento | ⏳ |

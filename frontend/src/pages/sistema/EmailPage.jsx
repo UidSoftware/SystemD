@@ -20,7 +20,7 @@ function labelPasta(n) { return PASTAS_META[n]?.label || n }
 function iconePasta(n) { return PASTAS_META[n]?.icone || '📁' }
 
 export default function EmailPage() {
-  const { carregando: authCarregando } = useAuth()
+  const { accessToken } = useAuth()
   const [emails, setEmails]                     = useState([])
   const [total, setTotal]                       = useState(0)
   const [pagina, setPagina]                     = useState(1)
@@ -36,17 +36,17 @@ export default function EmailPage() {
   const [buscaAtiva, setBuscaAtiva]             = useState('')
 
   useEffect(() => {
-    if (authCarregando) return
+    if (!accessToken) return
     emailApi.pastas().then(res => {
       const nomes = res.data.results.map(p => p.nome)
       setPastas([...ORDEM.filter(p => nomes.includes(p)), ...nomes.filter(p => !ORDEM.includes(p))])
     }).catch(() => setPastas(['INBOX']))
-  }, [authCarregando])
+  }, [accessToken])
 
   useEffect(() => {
-    if (authCarregando) return
+    if (!accessToken) return
     carregarEmails()
-  }, [pagina, pastaAtual, authCarregando])
+  }, [pagina, pastaAtual, accessToken])
 
   useEffect(() => {
     const t = setTimeout(() => setBuscaAtiva(busca), 300)

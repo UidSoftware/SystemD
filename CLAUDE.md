@@ -403,7 +403,6 @@ Não usamos Radix UI, TanStack Query ou outras libs de componente. Tudo em inlin
 | Novos clientes | 8003+ | — |
 
 - Deploy: `/root/SytemD/`
-- SSH alias local: `vps-pcuidsoftware-root`
 - SSL: certbot com renovação automática no nginx-proxy
 
 ---

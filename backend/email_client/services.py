@@ -135,6 +135,15 @@ def ler_email(email_conta, email_senha, uid, pasta="INBOX"):
             client.logout()
 
 
+def enviar_email_sistema(destinatario, assunto, corpo_html):
+    """Envia email usando a conta de sistema configurada em settings."""
+    email_conta = settings.SYSTEM_EMAIL_CONTA
+    email_senha = settings.SYSTEM_EMAIL_SENHA
+    if not email_senha:
+        raise Exception("SYSTEM_EMAIL_SENHA não configurada no .env")
+    enviar_email(email_conta, email_senha, destinatario, assunto, corpo_html, corpo_html=corpo_html)
+
+
 def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html=None, cc=None):
     try:
         msg = MIMEMultipart("alternative")

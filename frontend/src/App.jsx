@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import PrivateRoute from './components/sistema/PrivateRoute'
 import VitrinePage from './pages/VitrinePage'
 import LoginPage from './pages/LoginPage'
+import DefinirSenhaPage from './pages/DefinirSenhaPage'
 import DashboardPage from './pages/sistema/DashboardPage'
 import ClientesPage from './pages/sistema/ClientesPage'
 import LeadsPage from './pages/sistema/LeadsPage'
@@ -40,6 +41,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<VitrinePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/definir-senha" element={<DefinirSenhaPage />} />
 
           {/* Dashboard */}
           <Route path="/sistema/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import api from '../../services/api'
 
 const menuFinanceiro = [
   { label: 'Livro Caixa',     path: '/sistema/financeiro/livro-caixa' },
@@ -95,10 +96,38 @@ export default function Sidebar({ onClose }) {
 
   const financeiroAberto = location.pathname.startsWith('/sistema/financeiro')
   const [finOpen, setFinOpen] = useState(financeiroAberto)
+  const [modalSenha, setModalSenha] = useState(false)
+  const [senhaForm, setSenhaForm] = useState({ atual: '', nova: '', confirmar: '' })
+  const [senhaErro, setSenhaErro] = useState('')
+  const [senhaSucesso, setSenhaSucesso] = useState(false)
+  const [salvandoSenha, setSalvandoSenha] = useState(false)
 
   const handleLogout = async () => {
     await logout()
     navigate('/login')
+  }
+
+  const abrirModalSenha = () => {
+    setSenhaForm({ atual: '', nova: '', confirmar: '' })
+    setSenhaErro('')
+    setSenhaSucesso(false)
+    setModalSenha(true)
+  }
+
+  const salvarSenha = async (e) => {
+    e.preventDefault()
+    setSenhaErro('')
+    if (senhaForm.nova.length < 6) { setSenhaErro('Mínimo 6 caracteres.'); return }
+    if (senhaForm.nova !== senhaForm.confirmar) { setSenhaErro('As senhas não coincidem.'); return }
+    setSalvandoSenha(true)
+    try {
+      await api.post('/auth/alterar-senha/', { senha_atual: senhaForm.atual, senha_nova: senhaForm.nova })
+      setSenhaSucesso(true)
+    } catch (err) {
+      setSenhaErro(err.response?.data?.erro || 'Erro ao alterar senha.')
+    } finally {
+      setSalvandoSenha(false)
+    }
   }
 
   return (
@@ -162,12 +191,66 @@ export default function Sidebar({ onClose }) {
       <div className="px-5 py-4">
         <p className="text-xs mb-0.5 truncate font-medium" style={{ color: '#f1f5f9' }}>{usuario?.nome || usuario?.email}</p>
         <p className="text-xs mb-2 truncate" style={{ color: '#a78bca' }}>{usuario?.email_corporativo || usuario?.email}</p>
-        <button onClick={handleLogout} className="text-sm font-medium transition-colors" style={{ color: '#6b6b8a' }}
-          onMouseEnter={e => e.target.style.color = '#f87171'}
-          onMouseLeave={e => e.target.style.color = '#6b6b8a'}>
-          Sair
-        </button>
+        <div className="flex gap-3">
+          <button onClick={abrirModalSenha} className="text-sm font-medium transition-colors" style={{ color: '#6b6b8a' }}
+            onMouseEnter={e => e.target.style.color = '#6b8fff'}
+            onMouseLeave={e => e.target.style.color = '#6b6b8a'}>
+            Alterar senha
+          </button>
+          <span style={{ color: '#6b6b8a' }}>·</span>
+          <button onClick={handleLogout} className="text-sm font-medium transition-colors" style={{ color: '#6b6b8a' }}
+            onMouseEnter={e => e.target.style.color = '#f87171'}
+            onMouseLeave={e => e.target.style.color = '#6b6b8a'}>
+            Sair
+          </button>
+        </div>
       </div>
     </aside>
+
+    {/* Modal alterar senha */}
+    {modalSenha && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 380, padding: 28 }}>
+          {senhaSucesso ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+              <p style={{ color: '#f1f5f9', fontWeight: 700, marginBottom: 8 }}>Senha alterada!</p>
+              <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>Sua nova senha já está ativa.</p>
+              <button onClick={() => setModalSenha(false)}
+                style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={salvarSenha}>
+              <h2 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Alterar senha</h2>
+              {senhaErro && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{senhaErro}</p>}
+              {[
+                { label: 'Senha atual', field: 'atual' },
+                { label: 'Nova senha', field: 'nova' },
+                { label: 'Confirmar nova senha', field: 'confirmar' },
+              ].map(({ label, field }) => (
+                <div key={field} style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>
+                  <input type="password" value={senhaForm[field]} autoComplete="new-password"
+                    onChange={e => setSenhaForm(f => ({ ...f, [field]: e.target.value }))}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#f1f5f9', padding: '8px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                <button type="button" onClick={() => setModalSenha(false)}
+                  style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={salvandoSenha}
+                  style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvandoSenha ? 0.7 : 1 }}>
+                  {salvandoSenha ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    )}
   )
 }

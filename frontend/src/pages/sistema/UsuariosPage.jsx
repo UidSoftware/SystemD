@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import { adminApi } from '../../services/adminApi'
+import api from '../../services/api'
 
 const PERFIS = [
   { value: 'ADMIN',       label: 'Admin',       cor: '#FF0000' },
@@ -108,6 +109,15 @@ export default function UsuariosPage() {
     carregar()
   }
 
+  const enviarAcesso = async (u) => {
+    try {
+      const res = await api.post('/auth/solicitar-acesso/', { usuario_id: u.id })
+      alert(res.data.mensagem)
+    } catch (e) {
+      alert(e.response?.data?.erro || 'Erro ao enviar email.')
+    }
+  }
+
   const inputStyle = {
     backgroundColor: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.1)',
@@ -180,6 +190,7 @@ export default function UsuariosPage() {
                     <td className="px-4 py-3">
                       <div className="flex gap-3">
                         <button onClick={() => abrirEdicao(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
+                        {u.ativo && <button onClick={() => enviarAcesso(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#10b981' }}>Enviar acesso</button>}
                         {u.ativo && <button onClick={() => desativar(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
                       </div>
                     </td>

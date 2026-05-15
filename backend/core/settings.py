@@ -125,3 +125,8 @@ IMAP_USE_SSL = config('IMAP_USE_SSL', default='True')
 SMTP_HOST    = config('SMTP_HOST',    default='mail.uidsoftware.com.br')
 SMTP_PORT    = config('SMTP_PORT',    default='587')
 SMTP_USE_TLS = config('SMTP_USE_TLS', default='True')
+
+# Email de sistema — convites de acesso e redefinição de senha
+SYSTEM_EMAIL_CONTA = config('SYSTEM_EMAIL_CONTA', default='contato@uidsoftware.com.br')
+SYSTEM_EMAIL_SENHA = config('SYSTEM_EMAIL_SENHA', default='')
+FRONTEND_URL       = config('FRONTEND_URL',       default='https://uidsoftware.com.br')

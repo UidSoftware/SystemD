@@ -58,6 +58,18 @@ export default function ClientesPage() {
     setSalvando(false)
   }
 
+  const enviarAcesso = async (c) => {
+    const acao = c.usuario ? 'Enviar email de acesso' : 'Criar conta e enviar email de acesso'
+    if (!window.confirm(`${acao} para "${c.nome_empresa}" (${c.email})?`)) return
+    try {
+      const res = await api.post(`/clientes/${c.id}/enviar-acesso/`)
+      alert(res.data.mensagem)
+      carregar()
+    } catch (e) {
+      alert(e.response?.data?.erro || 'Erro ao enviar email.')
+    }
+  }
+
   const desativar = async (id) => {
     try { await api.delete(`/clientes/${id}/`); carregar(pagina) } catch {}
     setConfirmando(null)
@@ -130,8 +142,13 @@ export default function ClientesPage() {
                     )}
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
                       <button onClick={() => abrirEditar(c)} className="text-xs font-medium" style={{ color: '#063BF8' }}>Editar</button>
+                      {isAdmin && (
+                        <button onClick={() => enviarAcesso(c)} className="text-xs font-medium" style={{ color: '#10b981' }}>
+                          {c.usuario ? 'Enviar acesso' : 'Criar acesso'}
+                        </button>
+                      )}
                       <button onClick={() => setConfirmando(c.id)} className="text-xs font-medium" style={{ color: '#f87171' }}>Desativar</button>
                     </div>
                   </td>

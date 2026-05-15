@@ -93,7 +93,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 backend/
 ├── core/           ← settings.py, urls.py, wsgi.py
 ├── usuarios/       ← Usuario + Setor + Perfil + UsuarioEmailConfig + permissions.py
-├── clientes/       ← CRUD clientes + vínculo com Usuario (cliente_perfil) + tem_entregas
+├── clientes/       ← CRUD clientes + tem_entregas + enviar-acesso/ (cria usuário CLIENTE + email)
 ├── vitrine/        ← leads da landing page pública + gestão de Leads
 ├── prospectos/     ← Prospecto (Lead qualificado) + converter → Cliente
 ├── entregas/       ← Entrega multi-tenant + confirmação CLIENTE + export PDF/Excel
@@ -107,10 +107,10 @@ backend/
 ```
 src/
 ├── contexts/
-│   └── AuthContext.jsx          ← JWT em memória + /api/auth/me/ + interceptor Axios
+│   └── AuthContext.jsx          ← JWT + /api/auth/me/ + redirecionarPosLogin + alterar-senha
 ├── components/sistema/
-│   ├── SistemaLayout.jsx        ← layout base com Sidebar + Header
-│   ├── Sidebar.jsx              ← dinâmica por perfil + submenu Financeiro expansível
+│   ├── SistemaLayout.jsx        ← layout base com Sidebar + Header (main overflow-y-auto)
+│   ├── Sidebar.jsx              ← dinâmica por perfil + submenu Financeiro + modal alterar-senha
 │   ├── PrivateRoute.jsx         ← aceita perfisPermitidos[]
 │   └── FinanceiroTable.jsx      ← tabela, modais, badges, formatadores reutilizáveis
 ├── pages/sistema/
@@ -118,7 +118,7 @@ src/
 │   ├── LeadsPage.jsx            ← listagem + filtros + badge não lidos + converter → Prospecto
 │   ├── ProspectosPage.jsx       ← CRUD + converter → Cliente (só ADMIN)
 │   ├── EntregasPage.jsx         ← multi-tenant + confirmação CLIENTE + exportar PDF/Excel
-│   ├── ClientesPage.jsx         ← toggle tem_entregas visível só pra ADMIN
+│   ├── ClientesPage.jsx         ← toggle tem_entregas + botão Criar/Enviar acesso (só ADMIN)
 │   ├── EmailPage.jsx
 │   ├── OSPage.jsx               ← listagem com busca + filtro + badges
 │   ├── OSDetailPage.jsx         ← 4 abas: Resumo, Timeline, Contrato, Chamados
@@ -286,14 +286,17 @@ LivroCaixa (imutável) | FolhaPagamento | Pedido + PedidoItem
 ## Endpoints por app
 
 ### Auth (`/api/auth/`)
-| Endpoint | Acesso |
-|----------|--------|
-| `POST token/` | Login JWT |
-| `POST token/refresh/` | Renova via cookie httpOnly |
-| `POST logout/` | Apaga cookie |
-| `GET me/` | Perfil completo do usuário logado |
-| `GET/POST usuarios/` | CRUD usuários — só ADMIN |
-| `GET/POST setores/` | CRUD setores — só ADMIN |
+| Endpoint | Acesso | Descrição |
+|----------|--------|-----------|
+| `POST token/` | AllowAny | Login JWT |
+| `POST token/refresh/` | AllowAny | Renova via cookie httpOnly |
+| `POST logout/` | Autenticado | Apaga cookie |
+| `GET me/` | Autenticado | Perfil + `tem_entregas` |
+| `POST alterar-senha/` | Autenticado | Troca senha (requer senha atual) |
+| `POST solicitar-acesso/` | ADMIN | Gera token e envia email de primeiro acesso |
+| `POST definir-senha/` | AllowAny | Valida `uid+token`, define senha (link 24h) |
+| `GET/POST usuarios/` | ADMIN | CRUD usuários |
+| `GET/POST setores/` | ADMIN | CRUD setores |
 
 ### Leads (`/api/leads/`)
 | Endpoint | Permissão | Descrição |
@@ -313,6 +316,10 @@ LivroCaixa (imutável) | FolhaPagamento | Pedido + PedidoItem
 
 ### Clientes (`/api/clientes/`)
 CRUD completo — ADMIN e OPERACIONAL. Campo `tem_entregas` — editar só via ADMIN no frontend.
+
+| Endpoint | Permissão | Descrição |
+|----------|-----------|-----------|
+| `POST clientes/{id}/enviar-acesso/` | ADMIN | Cria usuário CLIENTE (se não existir) + envia email de primeiro acesso |
 
 ### Entregas (`/api/entregas/`)
 | Endpoint | Permissão | Descrição |
@@ -407,6 +414,24 @@ UsuarioEmailConfig.objects.get_or_create(
 )
 print('OK')
 "
+```
+
+### Fluxo de acesso do cliente (sem commitar senha)
+
+```bash
+# 1. Na ClientesPage (ADMIN): clicar em "Criar acesso" na linha do cliente
+#    → cria Usuario CLIENTE com o email do cliente
+#    → vincula ao Cliente
+#    → envia email com link /definir-senha/?uid=&token= (válido 24h)
+# 2. Cliente clica no link e define a própria senha
+# 3. Login normal em /login
+
+# Para reenviar (link expirado): clicar em "Enviar acesso" na ClientesPage
+
+# Email de sistema (vars obrigatórias no .env da VPS):
+# SYSTEM_EMAIL_CONTA=contato@uidsoftware.com.br
+# SYSTEM_EMAIL_SENHA=<senha Mailcow>
+# FRONTEND_URL=https://uidsoftware.com.br
 ```
 
 ---
@@ -552,6 +577,7 @@ docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim 
 | Fase 6 | OS — Ordens de Serviço (models + API + frontend 4 abas + portal cliente) | ✅ |
 | Fase 7 | Financeiro — 12 models + signals + relatórios + 12 telas frontend | ✅ |
 | Fase 8 | Leads + Prospectos + Entregas + Navbar "Entrar" + redirect pós-login | ✅ |
+| Fase 8.1 | Acesso do cliente: criar conta + email de primeiro acesso + alterar senha | ✅ |
 | **Fase 9** | Dashboard + Form Levantamento de Requisitos | ⏳ |
 
 ---
@@ -585,4 +611,4 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 15/05/2026*
+*Última atualização: 15/05/2026 (noite)*

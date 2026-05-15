@@ -131,6 +131,7 @@ export default function Sidebar({ onClose }) {
   }
 
   return (
+    <>
     <aside className="flex flex-col h-screen w-56 shrink-0"
       style={{ backgroundColor: '#0a0014', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
       <div className="px-5 py-6">
@@ -252,5 +253,6 @@ export default function Sidebar({ onClose }) {
         </div>
       </div>
     )}
+    </>
   )
 }

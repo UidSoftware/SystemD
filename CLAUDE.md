@@ -80,6 +80,10 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | FolhaPagamento sem signal | Não gera lançamento automático no LivroCaixa — por design deliberado |
 | Perfil no Usuario | Sempre via `perfil` TextChoices (ADMIN/OPERACIONAL/FINANCEIRO/CLIENTE) — nunca Django Groups |
 | FinanceiroTable reutilizável | Componente base para todas as telas financeiras — `src/components/sistema/FinanceiroTable.jsx` |
+| Leads sem DELETE | Soft delete via `convertido=True` — endpoint DELETE retorna 405 por design |
+| Entrega `registrado_por` | Campo `read_only` no serializer — preenchido via `perform_create(registrado_por=request.user)` |
+| Multi-tenant Entregas | Todo queryset de CLIENTE **obrigatoriamente** filtra por `empresa=cliente_perfil` — nunca `Entrega.objects.all()` sem filtro |
+| Prospecto sem `tem_entregas` | Campo `tem_entregas` existe só em `Cliente` — nunca adicionar ao Prospecto |
 
 ---
 
@@ -89,8 +93,10 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 backend/
 ├── core/           ← settings.py, urls.py, wsgi.py
 ├── usuarios/       ← Usuario + Setor + Perfil + UsuarioEmailConfig + permissions.py
-├── clientes/       ← CRUD clientes + vínculo com Usuario (cliente_perfil)
-├── vitrine/        ← leads da landing page pública
+├── clientes/       ← CRUD clientes + vínculo com Usuario (cliente_perfil) + tem_entregas
+├── vitrine/        ← leads da landing page pública + gestão de Leads
+├── prospectos/     ← Prospecto (Lead qualificado) + converter → Cliente
+├── entregas/       ← Entrega multi-tenant + confirmação CLIENTE + export PDF/Excel
 ├── email_client/   ← webmail IMAP/SMTP (sem models — só services/views)
 ├── ordens/         ← OS + FaseOS + Contrato + Chamado + MensagemChamado
 └── financeiro/     ← 12 models financeiros + signals + relatorios + mixins
@@ -109,7 +115,10 @@ src/
 │   └── FinanceiroTable.jsx      ← tabela, modais, badges, formatadores reutilizáveis
 ├── pages/sistema/
 │   ├── DashboardPage.jsx
-│   ├── ClientesPage.jsx
+│   ├── LeadsPage.jsx            ← listagem + filtros + badge não lidos + converter → Prospecto
+│   ├── ProspectosPage.jsx       ← CRUD + converter → Cliente (só ADMIN)
+│   ├── EntregasPage.jsx         ← multi-tenant + confirmação CLIENTE + exportar PDF/Excel
+│   ├── ClientesPage.jsx         ← toggle tem_entregas visível só pra ADMIN
 │   ├── EmailPage.jsx
 │   ├── OSPage.jsx               ← listagem com busca + filtro + badges
 │   ├── OSDetailPage.jsx         ← 4 abas: Resumo, Timeline, Contrato, Chamados
@@ -144,17 +153,23 @@ Credenciais em `UsuarioEmailConfig` — jamais em código ou commits.
 | Perfil | Cor badge | Acesso |
 |--------|-----------|--------|
 | ADMIN | `#FF0000` | Tudo |
-| OPERACIONAL | `#063BF8` | Clientes, OS, Email |
+| OPERACIONAL | `#063BF8` | Leads, Prospectos, Clientes, OS, Entregas, Email |
 | FINANCEIRO | `#10b981` | Financeiro, Email |
-| CLIENTE | `#3d0361` | Portal próprio (MeusProjetos, Suporte, MinhasFaturas) |
+| CLIENTE | `#3d0361` | Portal (MeusProjetos, Suporte, MinhasFaturas) + Entregas se `tem_entregas=True` |
 
 **Permissões DRF** (`usuarios/permissions.py`):
 - `IsAdmin` — só ADMIN
-- `IsAdminOrOperacional` — Clientes, OS
+- `IsAdminOrOperacional` — Leads, Prospectos, Clientes, OS
 - `IsAdminOrFinanceiro` — Financeiro
 - `IsAdminOrOperacionalOrFinanceiro` — Email
+- `IsAdminOperacionalOrCliente` — Entregas (CLIENTE vê só as próprias)
 
-**AuthContext:** após login/refresh, chama `/api/auth/me/` e armazena `{ id, nome, email, perfil, setor, email_corporativo }` no estado global.
+**Redirecionamento pós-login** (via `redirecionarPosLogin` no `AuthContext`):
+- `CLIENTE` com `tem_entregas=True` → `/sistema/entregas`
+- `CLIENTE` sem `tem_entregas` → `/sistema/meus-projetos`
+- demais perfis → `/sistema/`
+
+**AuthContext:** após login, chama `/api/auth/me/` e armazena `{ id, nome, email, perfil, setor, email_corporativo, tem_entregas }` no estado global.
 
 ---
 
@@ -188,9 +203,51 @@ class UsuarioEmailConfig(models.Model):
 ```python
 class Cliente(models.Model):
     nome_empresa, nome_contato, email, dominio_email
-    usuario  = OneToOneField(Usuario, null=True, related_name='cliente_perfil')
+    usuario      = OneToOneField(Usuario, null=True, related_name='cliente_perfil')
     # + telefone, whatsapp, segmento, cidade, estado, cnpj_cpf, origem, observacoes
-    ativo    = BooleanField(default=True)
+    tem_entregas = BooleanField(default=False)  # ← acesso ao módulo /entregas/
+    ativo        = BooleanField(default=True)
+```
+
+### Lead (`vitrine/models.py`)
+```python
+class Lead(models.Model):
+    nome, email, telefone, empresa, mensagem, origem, criado_em
+    lido                = BooleanField(default=False)
+    observacoes_internas = TextField(blank=True)   # ← preenchido internamente
+    convertido          = BooleanField(default=False)  # ← True após converter → Prospecto
+```
+
+### Prospecto (`prospectos/models.py`)
+```python
+class Prospecto(models.Model):
+    lead          = ForeignKey('vitrine.Lead', null=True, SET_NULL)
+    nome_empresa, nome_contato, email, telefone, whatsapp
+    segmento, cidade, estado, cnpj_cpf, origem, observacoes
+    responsavel   = ForeignKey('usuarios.Usuario', null=True, SET_NULL)
+    convertido    = BooleanField(default=False)   # ← True após → Cliente
+    convertido_em = DateTimeField(null=True)
+    ativo         = BooleanField(default=True)    # soft delete
+```
+
+### Entrega (`entregas/models.py`)
+```python
+class StatusEntrega(TextChoices):
+    PENDENTE | EM_ROTA | ENTREGUE | DEVOLVIDO | CANCELADO
+
+class ConfirmacaoEntrega(TextChoices):
+    PENDENTE | CONFIRMADA | NAO_CONFIRMADA
+
+class Entrega(models.Model):
+    empresa        = ForeignKey('clientes.Cliente', PROTECT)  # ← campo tenant
+    data, hora, origem, destino, descricao, status, observacoes
+    registrado_por = ForeignKey('usuarios.Usuario', PROTECT, related_name='entregas_registradas')
+    confirmacao    = CharField(choices=ConfirmacaoEntrega, default='PENDENTE')
+    confirmacao_motivo = TextField(blank=True)   # obrigatório se NAO_CONFIRMADA
+    confirmado_por = ForeignKey('usuarios.Usuario', null=True, SET_NULL)
+    confirmado_em  = DateTimeField(null=True)
+    ativo          = BooleanField(default=True)  # soft delete
+    # ordering: ['-data', '-hora']
 ```
 
 ### OS + relacionados (`ordens/models.py`)
@@ -238,8 +295,37 @@ LivroCaixa (imutável) | FolhaPagamento | Pedido + PedidoItem
 | `GET/POST usuarios/` | CRUD usuários — só ADMIN |
 | `GET/POST setores/` | CRUD setores — só ADMIN |
 
+### Leads (`/api/leads/`)
+| Endpoint | Permissão | Descrição |
+|----------|-----------|-----------|
+| `POST leads/` | AllowAny | Form público da vitrine |
+| `GET leads/` | ADMIN, OPERACIONAL | Lista + filtros (data, lido, origem) |
+| `PATCH leads/{id}/` | ADMIN, OPERACIONAL | Editar / marcar como lido |
+| `POST leads/{id}/converter/` | ADMIN, OPERACIONAL | Cria Prospecto e marca `convertido=True` |
+
+### Prospectos (`/api/prospectos/`)
+| Endpoint | Permissão | Descrição |
+|----------|-----------|-----------|
+| `GET/POST prospectos/` | ADMIN, OPERACIONAL | Lista + criar |
+| `PATCH prospectos/{id}/` | ADMIN, OPERACIONAL | Editar |
+| `DELETE prospectos/{id}/` | ADMIN | Soft delete |
+| `POST prospectos/{id}/converter/` | ADMIN | Cria Cliente e marca `convertido=True` |
+
 ### Clientes (`/api/clientes/`)
-CRUD completo — ADMIN e OPERACIONAL
+CRUD completo — ADMIN e OPERACIONAL. Campo `tem_entregas` — editar só via ADMIN no frontend.
+
+### Entregas (`/api/entregas/`)
+| Endpoint | Permissão | Descrição |
+|----------|-----------|-----------|
+| `GET entregas/` | ADMIN, OPERACIONAL, CLIENTE | CLIENTE vê só da própria empresa |
+| `POST entregas/` | ADMIN, OPERACIONAL | Registra entrega |
+| `PATCH entregas/{id}/` | ADMIN, OPERACIONAL | Edita |
+| `DELETE entregas/{id}/` | ADMIN | Soft delete |
+| `PATCH entregas/{id}/confirmar/` | CLIENTE (própria), ADMIN | Confirma ou recusa |
+| `GET entregas/exportar/pdf/` | Todos autenticados | PDF período + empresa |
+| `GET entregas/exportar/excel/` | Todos autenticados | Excel período + empresa |
+
+Filtros: `?empresa=`, `?data_inicio=`, `?data_fim=`, `?origem=`, `?destino=`, `?status=`, `?confirmacao=`
 
 ### Email (`/api/email/`)
 | Endpoint | Ação |
@@ -465,7 +551,8 @@ docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim 
 | Fase 5 | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
 | Fase 6 | OS — Ordens de Serviço (models + API + frontend 4 abas + portal cliente) | ✅ |
 | Fase 7 | Financeiro — 12 models + signals + relatórios + 12 telas frontend | ✅ |
-| **Fase 8** | Dashboard + Form Levantamento de Requisitos | ⏳ |
+| Fase 8 | Leads + Prospectos + Entregas + Navbar "Entrar" + redirect pós-login | ✅ |
+| **Fase 9** | Dashboard + Form Levantamento de Requisitos | ⏳ |
 
 ---
 
@@ -498,4 +585,4 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 12/05/2026*
+*Última atualização: 15/05/2026*

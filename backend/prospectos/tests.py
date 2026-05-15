@@ -58,9 +58,9 @@ class ProspectoCRUDTest(TestCase):
         res = self.client.get(self.url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_nao_autenticado_retorna_403(self):
+    def test_nao_autenticado_retorna_401(self):
         res = self.client.get(self.url)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_soft_delete_desativa_prospecto(self):
         p = criar_prospecto()

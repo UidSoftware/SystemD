@@ -16,5 +16,5 @@ class EntregaSerializer(serializers.ModelSerializer):
             'id', 'criado_em', 'atualizado_em',
             'empresa_nome', 'registrado_por_nome', 'confirmado_por_nome',
             'status_display', 'confirmacao_display',
-            'confirmado_por', 'confirmado_em',
+            'registrado_por', 'confirmado_por', 'confirmado_em',
         )

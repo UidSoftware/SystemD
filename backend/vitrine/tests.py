@@ -41,9 +41,9 @@ class LeadPublicoTest(TestCase):
         res = self.client.post(self.url, {**self.payload, 'mensagem': ''}, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_listar_leads_sem_auth_retorna_403(self):
+    def test_listar_leads_sem_auth_retorna_401(self):
         res = self.client.get(self.url)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class LeadGestaoTest(TestCase):

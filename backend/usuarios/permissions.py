@@ -19,3 +19,8 @@ class IsAdminOrFinanceiro(BasePermission):
 class IsAdminOrOperacionalOrFinanceiro(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'OPERACIONAL', 'FINANCEIRO'])
+
+
+class IsAdminOperacionalOrCliente(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'OPERACIONAL', 'CLIENTE'])

@@ -10,6 +10,8 @@ class Lead(models.Model):
     origem = models.CharField(max_length=50)
     criado_em = models.DateTimeField(auto_now_add=True)
     lido = models.BooleanField(default=False)
+    observacoes_internas = models.TextField(blank=True)
+    convertido = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Lead'

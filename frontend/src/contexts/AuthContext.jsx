@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
       const res = await api.get('/auth/me/')
       setUsuario(res.data)
     } catch {
-      // token pode ter expirado — renovarToken já trata isso
+      // token pode ter expirado
     }
   }, [])
 
@@ -42,7 +42,6 @@ export function AuthProvider({ children }) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
-  // Sempre que o access token muda, atualiza o interceptor e busca o perfil completo
   useEffect(() => {
     const interceptor = api.interceptors.request.use((config) => {
       if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
@@ -57,6 +56,10 @@ export function AuthProvider({ children }) {
     const { access } = res.data
     setAccessToken(access)
     agendarRenovacao()
+    // Busca perfil imediatamente para retornar ao caller (redirect pós-login)
+    const perfilRes = await api.get('/auth/me/', { headers: { Authorization: `Bearer ${access}` } })
+    setUsuario(perfilRes.data)
+    return perfilRes.data
   }
 
   const logout = async () => {
@@ -66,12 +69,23 @@ export function AuthProvider({ children }) {
     if (timerRef.current) clearTimeout(timerRef.current)
   }
 
+  const redirecionarPosLogin = (perfil, navigate) => {
+    if (perfil.perfil === 'CLIENTE' && perfil.tem_entregas) {
+      navigate('/sistema/entregas')
+    } else if (perfil.perfil === 'CLIENTE') {
+      navigate('/sistema/meus-projetos')
+    } else {
+      navigate('/sistema/')
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       usuario,
       accessToken,
       login,
       logout,
+      redirecionarPosLogin,
       isAutenticado: !!accessToken,
       carregando,
     }}>

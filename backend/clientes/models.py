@@ -21,6 +21,7 @@ class Cliente(models.Model):
     cnpj_cpf      = models.CharField(max_length=20, blank=True)
     origem        = models.CharField(max_length=50)
     observacoes   = models.TextField(blank=True)
+    tem_entregas  = models.BooleanField(default=False)
     ativo         = models.BooleanField(default=True)
     criado_em     = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

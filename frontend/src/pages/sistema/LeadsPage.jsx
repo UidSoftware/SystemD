@@ -1,0 +1,371 @@
+import { useState, useEffect, useCallback } from 'react'
+import SistemaLayout from '../../components/sistema/SistemaLayout'
+import api from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
+
+const badge = {
+  LIDO: { bg: 'rgba(16,185,129,0.15)', color: '#10b981', label: 'Lido' },
+  NAO_LIDO: { bg: 'rgba(239,68,68,0.12)', color: '#f87171', label: 'Não lido' },
+}
+
+const inputStyle = {
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 8,
+  color: '#f1f5f9',
+  padding: '8px 12px',
+  fontSize: 13,
+  outline: 'none',
+  width: '100%',
+}
+
+const thStyle = {
+  padding: '10px 14px',
+  textAlign: 'left',
+  fontSize: 11,
+  fontWeight: 600,
+  color: '#a78bca',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  borderBottom: '1px solid rgba(255,255,255,0.07)',
+}
+
+const tdStyle = {
+  padding: '10px 14px',
+  fontSize: 13,
+  color: '#e2e8f0',
+  borderBottom: '1px solid rgba(255,255,255,0.04)',
+}
+
+export default function LeadsPage() {
+  const { usuario } = useAuth()
+  const [leads, setLeads] = useState([])
+  const [total, setTotal] = useState(0)
+  const [naoLidos, setNaoLidos] = useState(0)
+  const [carregando, setCarregando] = useState(true)
+  const [pagina, setPagina] = useState(1)
+  const [totalPaginas, setTotalPaginas] = useState(1)
+
+  const [filtros, setFiltros] = useState({ data_inicio: '', data_fim: '', lido: '', origem: '' })
+  const [filtrosAtivos, setFiltrosAtivos] = useState({})
+
+  const [modalLead, setModalLead] = useState(null)
+  const [modalConverter, setModalConverter] = useState(null)
+  const [dadosConverter, setDadosConverter] = useState({})
+  const [salvando, setSalvando] = useState(false)
+
+  const carregar = useCallback(async (pag = 1, f = filtrosAtivos) => {
+    setCarregando(true)
+    try {
+      const params = { page: pag, ...f }
+      const res = await api.get('/leads/', { params })
+      setLeads(res.data.results)
+      setTotal(res.data.count)
+      setTotalPaginas(Math.ceil(res.data.count / 20))
+    } finally {
+      setCarregando(false)
+    }
+  }, [filtrosAtivos])
+
+  const carregarNaoLidos = useCallback(async () => {
+    const res = await api.get('/leads/', { params: { lido: 'false', page_size: 1 } })
+    setNaoLidos(res.data.count)
+  }, [])
+
+  useEffect(() => { carregar(1); carregarNaoLidos() }, [])
+
+  const filtrar = () => {
+    setFiltrosAtivos({ ...filtros })
+    setPagina(1)
+    carregar(1, filtros)
+    carregarNaoLidos()
+  }
+
+  const limpar = () => {
+    const vazio = { data_inicio: '', data_fim: '', lido: '', origem: '' }
+    setFiltros(vazio)
+    setFiltrosAtivos({})
+    setPagina(1)
+    carregar(1, {})
+  }
+
+  const salvarLead = async () => {
+    if (!modalLead) return
+    setSalvando(true)
+    try {
+      await api.patch(`/leads/${modalLead.id}/`, modalLead)
+      setModalLead(null)
+      carregar(pagina)
+      carregarNaoLidos()
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const abrirConverter = (lead) => {
+    setDadosConverter({
+      nome_empresa: lead.empresa || '',
+      nome_contato: lead.nome,
+      email: lead.email,
+      telefone: lead.telefone || '',
+      origem: lead.origem || '',
+      observacoes: lead.observacoes_internas || '',
+    })
+    setModalConverter(lead)
+    setModalLead(null)
+  }
+
+  const confirmarConverter = async () => {
+    if (!modalConverter) return
+    setSalvando(true)
+    try {
+      await api.post(`/leads/${modalConverter.id}/converter/`, dadosConverter)
+      setModalConverter(null)
+      carregar(pagina)
+      carregarNaoLidos()
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const cardStyle = {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: 12,
+    overflow: 'hidden',
+  }
+
+  return (
+    <SistemaLayout>
+      <div style={{ padding: '24px 28px', maxWidth: 1200, margin: '0 auto' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Leads</h1>
+            <p style={{ fontSize: 13, color: '#a78bca', marginTop: 4 }}>
+              {naoLidos > 0 && (
+                <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', borderRadius: 20, padding: '2px 10px', fontWeight: 600, marginRight: 8 }}>
+                  {naoLidos} não {naoLidos === 1 ? 'lido' : 'lidos'}
+                </span>
+              )}
+              {total} lead{total !== 1 ? 's' : ''} no total
+            </p>
+          </div>
+        </div>
+
+        {/* Filtros */}
+        <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Data início</label>
+              <input type="date" style={inputStyle} value={filtros.data_inicio}
+                onChange={e => setFiltros(f => ({ ...f, data_inicio: e.target.value }))} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Data fim</label>
+              <input type="date" style={inputStyle} value={filtros.data_fim}
+                onChange={e => setFiltros(f => ({ ...f, data_fim: e.target.value }))} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Status</label>
+              <select style={inputStyle} value={filtros.lido}
+                onChange={e => setFiltros(f => ({ ...f, lido: e.target.value }))}>
+                <option value="">Todos</option>
+                <option value="true">Lido</option>
+                <option value="false">Não lido</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Origem</label>
+              <input type="text" style={inputStyle} placeholder="Ex: vitrine_contato" value={filtros.origem}
+                onChange={e => setFiltros(f => ({ ...f, origem: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+              <button onClick={filtrar}
+                style={{ flex: 1, background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Filtrar
+              </button>
+              <button onClick={limpar}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 13, cursor: 'pointer' }}>
+                Limpar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela */}
+        <div style={cardStyle}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Data', 'Nome', 'Empresa', 'Email', 'Telefone', 'Origem', 'Status', 'Ações'].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {carregando ? (
+                <tr><td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#a78bca' }}>Carregando...</td></tr>
+              ) : leads.length === 0 ? (
+                <tr><td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#a78bca' }}>Nenhum lead encontrado</td></tr>
+              ) : leads.map(lead => (
+                <tr key={lead.id}
+                  style={{ background: lead.lido ? 'transparent' : 'rgba(239,68,68,0.04)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(6,59,248,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = lead.lido ? 'transparent' : 'rgba(239,68,68,0.04)'}
+                >
+                  <td style={tdStyle}>{new Date(lead.criado_em).toLocaleDateString('pt-BR')}</td>
+                  <td style={tdStyle}>
+                    {!lead.lido && <span style={{ background: '#f87171', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', marginRight: 6 }}>NOVO</span>}
+                    {lead.nome}
+                  </td>
+                  <td style={tdStyle}>{lead.empresa || '—'}</td>
+                  <td style={tdStyle}>{lead.email}</td>
+                  <td style={tdStyle}>{lead.telefone || '—'}</td>
+                  <td style={tdStyle}>{lead.origem}</td>
+                  <td style={tdStyle}>
+                    <span style={{ background: lead.lido ? badge.LIDO.bg : badge.NAO_LIDO.bg, color: lead.lido ? badge.LIDO.color : badge.NAO_LIDO.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
+                      {lead.lido ? 'Lido' : 'Não lido'}
+                    </span>
+                    {lead.convertido && <span style={{ marginLeft: 6, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10 }}>Convertido</span>}
+                  </td>
+                  <td style={tdStyle}>
+                    <button onClick={() => setModalLead({ ...lead })}
+                      style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
+                      Ver
+                    </button>
+                    {!lead.convertido && (
+                      <button onClick={() => abrirConverter(lead)}
+                        style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+                        Converter
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Paginação */}
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 16 }}>
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => { setPagina(p); carregar(p) }}
+                  style={{ background: p === pagina ? '#063BF8' : 'rgba(255,255,255,0.06)', color: p === pagina ? '#fff' : '#a78bca', border: 'none', borderRadius: 6, width: 32, height: 32, cursor: 'pointer', fontSize: 13 }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal detalhe/edição */}
+      {modalLead && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 20 }}>Lead — {modalLead.nome}</h2>
+
+            {[
+              { label: 'Nome', field: 'nome' },
+              { label: 'Email', field: 'email' },
+              { label: 'Telefone', field: 'telefone' },
+              { label: 'Empresa', field: 'empresa' },
+              { label: 'Origem', field: 'origem' },
+            ].map(({ label, field }) => (
+              <div key={field} style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>
+                <input value={modalLead[field] || ''} onChange={e => setModalLead(m => ({ ...m, [field]: e.target.value }))}
+                  style={inputStyle} />
+              </div>
+            ))}
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Mensagem</label>
+              <textarea value={modalLead.mensagem || ''} readOnly rows={3}
+                style={{ ...inputStyle, resize: 'vertical', opacity: 0.7 }} />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações internas</label>
+              <textarea value={modalLead.observacoes_internas || ''} rows={3}
+                onChange={e => setModalLead(m => ({ ...m, observacoes_internas: e.target.value }))}
+                style={{ ...inputStyle, resize: 'vertical' }} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <input type="checkbox" id="lido" checked={!!modalLead.lido}
+                onChange={e => setModalLead(m => ({ ...m, lido: e.target.checked }))} />
+              <label htmlFor="lido" style={{ color: '#f1f5f9', fontSize: 13 }}>Marcar como lido</label>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              {!modalLead.convertido && (
+                <button onClick={() => abrirConverter(modalLead)}
+                  style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
+                  Converter em Prospecto
+                </button>
+              )}
+              <button onClick={() => setModalLead(null)}
+                style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={salvarLead} disabled={salvando}
+                style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
+                {salvando ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal converter */}
+      {modalConverter && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Converter em Prospecto</h2>
+            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>Revise os dados antes de confirmar</p>
+
+            {[
+              { label: 'Nome da empresa *', field: 'nome_empresa' },
+              { label: 'Nome do contato *', field: 'nome_contato' },
+              { label: 'Email *', field: 'email' },
+              { label: 'Telefone', field: 'telefone' },
+              { label: 'WhatsApp', field: 'whatsapp' },
+              { label: 'Segmento', field: 'segmento' },
+              { label: 'Cidade', field: 'cidade' },
+              { label: 'Estado (UF)', field: 'estado' },
+              { label: 'CNPJ/CPF', field: 'cnpj_cpf' },
+              { label: 'Origem', field: 'origem' },
+            ].map(({ label, field }) => (
+              <div key={field} style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>
+                <input value={dadosConverter[field] || ''} onChange={e => setDadosConverter(d => ({ ...d, [field]: e.target.value }))}
+                  style={inputStyle} />
+              </div>
+            ))}
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>
+              <textarea value={dadosConverter.observacoes || ''} rows={3}
+                onChange={e => setDadosConverter(d => ({ ...d, observacoes: e.target.value }))}
+                style={{ ...inputStyle, resize: 'vertical' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalConverter(null)}
+                style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={confirmarConverter} disabled={salvando}
+                style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
+                {salvando ? 'Convertendo...' : 'Confirmar conversão'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </SistemaLayout>
+  )
+}

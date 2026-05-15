@@ -7,7 +7,7 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
-  const { login } = useAuth()
+  const { login, redirecionarPosLogin } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -15,8 +15,8 @@ export default function LoginPage() {
     setErro('')
     setCarregando(true)
     try {
-      await login(email, senha)
-      navigate('/sistema/')
+      const perfil = await login(email, senha)
+      redirecionarPosLogin(perfil, navigate)
     } catch {
       setErro('E-mail ou senha incorretos')
     } finally {

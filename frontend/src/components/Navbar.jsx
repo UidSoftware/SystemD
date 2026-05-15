@@ -52,6 +52,25 @@ export default function Navbar() {
             </a>
           ))}
           <a
+            href="/login"
+            className="text-sm font-medium px-5 py-2 rounded-full transition-all"
+            style={{
+              border: '1px solid rgba(6, 59, 248, 0.4)',
+              background: 'transparent',
+              color: '#f1f5f9',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#063BF8'
+              e.currentTarget.style.color = '#6b8fff'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(6, 59, 248, 0.4)'
+              e.currentTarget.style.color = '#f1f5f9'
+            }}
+          >
+            Entrar
+          </a>
+          <a
             href="#contato"
             className="text-sm font-semibold px-5 py-2 rounded-full transition-colors"
             style={{ backgroundColor: '#063BF8', color: '#fff' }}
@@ -95,6 +114,14 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
+          <a
+            href="/login"
+            className="text-base font-medium"
+            style={{ color: '#a78bca' }}
+            onClick={() => setOpen(false)}
+          >
+            Entrar
+          </a>
           <a
             href="#contato"
             className="text-sm font-semibold px-5 py-3 rounded-full text-center"

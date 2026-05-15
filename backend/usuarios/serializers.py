@@ -76,11 +76,18 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class MeSerializer(serializers.ModelSerializer):
     setor = SetorResumoSerializer(read_only=True)
     email_corporativo = serializers.SerializerMethodField()
+    tem_entregas = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
-        fields = ['id', 'nome', 'email', 'perfil', 'setor', 'email_corporativo']
+        fields = ['id', 'nome', 'email', 'perfil', 'setor', 'email_corporativo', 'tem_entregas']
 
     def get_email_corporativo(self, obj):
         config = getattr(obj, 'email_config', None)
         return config.email_conta if config and config.ativo else None
+
+    def get_tem_entregas(self, obj):
+        if obj.perfil == 'CLIENTE':
+            cliente = getattr(obj, 'cliente_perfil', None)
+            return cliente.tem_entregas if cliente else False
+        return False

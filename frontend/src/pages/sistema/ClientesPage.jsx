@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const segmentoCores = {
   pilates: '#7c3aed', salao: '#db2777', loja: '#2563eb',
@@ -11,10 +12,12 @@ function badgeColor(s) { return segmentoCores[s?.toLowerCase()] || '#4b5563' }
 const camposVazios = {
   nome_empresa: '', nome_contato: '', email: '', telefone: '',
   whatsapp: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
-  origem: '', observacoes: '', dominio_email: '',
+  origem: '', observacoes: '', dominio_email: '', tem_entregas: false,
 }
 
 export default function ClientesPage() {
+  const { usuario } = useAuth()
+  const isAdmin = usuario?.perfil === 'ADMIN'
   const [clientes, setClientes]     = useState([])
   const [busca, setBusca]           = useState('')
   const [pagina, setPagina]         = useState(1)
@@ -190,6 +193,16 @@ export default function ClientesPage() {
                   rows={3} className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
                   style={inputStyle} />
               </div>
+              {isAdmin && (
+                <div className="flex items-center gap-3" style={{ gridColumn: 'span 2' }}>
+                  <input type="checkbox" id="tem_entregas" checked={!!form.tem_entregas}
+                    onChange={e => setForm({ ...form, tem_entregas: e.target.checked })} />
+                  <label htmlFor="tem_entregas" className="text-sm" style={{ color: '#f1f5f9' }}>
+                    Acesso ao módulo de Entregas
+                  </label>
+                  <span style={{ fontSize: 11, color: '#a78bca' }}>(cliente será redirecionado para /entregas/ após login)</span>
+                </div>
+              )}
               <div className="flex gap-3 justify-end" style={{ gridColumn: 'span 2' }}>
                 <button type="button" onClick={() => setModalAberto(false)}
                   className="px-5 py-2 rounded-lg text-sm"

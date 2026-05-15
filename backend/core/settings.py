@@ -25,6 +25,8 @@ INSTALLED_APPS = [
     'email_client',
     'ordens',
     'financeiro',
+    'prospectos',
+    'entregas',
 ]
 
 MIDDLEWARE = [

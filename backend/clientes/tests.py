@@ -26,8 +26,7 @@ class ClienteTemEntregasTest(TestCase):
             'origem': 'indicacao',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        cliente = Cliente.objects.first()
-        self.assertFalse(cliente.tem_entregas)
+        self.assertFalse(Cliente.objects.first().tem_entregas)
 
     def test_admin_ativa_tem_entregas(self):
         cliente = Cliente.objects.create(
@@ -41,7 +40,7 @@ class ClienteTemEntregasTest(TestCase):
         cliente.refresh_from_db()
         self.assertTrue(cliente.tem_entregas)
 
-    def test_tem_entregas_retornado_no_me_endpoint(self):
+    def test_me_retorna_tem_entregas_true_para_cliente_com_flag(self):
         cliente = Cliente.objects.create(
             nome_empresa='Studio', nome_contato='Ana', email='ana@studio.com',
             telefone='34999990000', segmento='pilates', origem='indicacao',
@@ -58,7 +57,7 @@ class ClienteTemEntregasTest(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertTrue(res.data['tem_entregas'])
 
-    def test_tem_entregas_false_para_usuario_sem_perfil_cliente(self):
+    def test_me_retorna_tem_entregas_false_para_admin(self):
         self.client.force_authenticate(self.admin)
         res = self.client.get(reverse('me'))
         self.assertEqual(res.status_code, status.HTTP_200_OK)

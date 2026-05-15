@@ -42,20 +42,11 @@ class EntregaCRUDTest(TestCase):
             email='op@uid.com', nome='Op', password='s', perfil='OPERACIONAL'
         )
         self.empresa_a = criar_cliente(nome_empresa='Empresa A', email='a@empresa.com')
-        self.empresa_b = criar_cliente(nome_empresa='Empresa B', email='b@empresa.com')
-
-        self.cliente_a = Usuario.objects.create_user(
+        self.cli_a = Usuario.objects.create_user(
             email='cli_a@uid.com', nome='CLI A', password='s', perfil='CLIENTE'
         )
-        self.empresa_a.usuario = self.cliente_a
+        self.empresa_a.usuario = self.cli_a
         self.empresa_a.save()
-
-        self.cliente_b = Usuario.objects.create_user(
-            email='cli_b@uid.com', nome='CLI B', password='s', perfil='CLIENTE'
-        )
-        self.empresa_b.usuario = self.cliente_b
-        self.empresa_b.save()
-
         self.url = reverse('entregas-list')
 
     def test_admin_cria_entrega(self):
@@ -83,7 +74,7 @@ class EntregaCRUDTest(TestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_cliente_nao_pode_criar_entrega(self):
-        self.client.force_authenticate(self.cliente_a)
+        self.client.force_authenticate(self.cli_a)
         res = self.client.post(self.url, {
             'empresa': self.empresa_a.id,
             'data': '2026-05-10',
@@ -125,7 +116,7 @@ class EntregaMultiTenantTest(TestCase):
         self.empresa_b.usuario = self.cli_b
         self.empresa_b.save()
 
-        criar_entrega(self.empresa_a, self.admin, destino='Destino A')
+        criar_entrega(self.empresa_a, self.admin, destino='Destino A1')
         criar_entrega(self.empresa_a, self.admin, destino='Destino A2')
         criar_entrega(self.empresa_b, self.admin, destino='Destino B')
 
@@ -154,11 +145,11 @@ class EntregaMultiTenantTest(TestCase):
         res = self.client.get(self.url, {'empresa': self.empresa_b.id})
         self.assertEqual(res.data['count'], 1)
 
-    def test_cliente_sem_perfil_ve_zero_entregas(self):
-        sem_perfil = Usuario.objects.create_user(
+    def test_cliente_sem_empresa_vinculada_ve_zero(self):
+        sem_empresa = Usuario.objects.create_user(
             email='sem@uid.com', nome='Sem', password='s', perfil='CLIENTE'
         )
-        self.client.force_authenticate(sem_perfil)
+        self.client.force_authenticate(sem_empresa)
         res = self.client.get(self.url)
         self.assertEqual(res.data['count'], 0)
 
@@ -188,7 +179,7 @@ class EntregaConfirmacaoTest(TestCase):
         self.assertEqual(self.entrega.confirmacao, ConfirmacaoEntrega.CONFIRMADA)
         self.assertEqual(self.entrega.confirmado_por, self.cli)
 
-    def test_cliente_nao_confirma_sem_motivo(self):
+    def test_cliente_nao_confirma_sem_motivo_retorna_400(self):
         self.client.force_authenticate(self.cli)
         res = self.client.patch(self.url, {'confirmacao': 'NAO_CONFIRMADA'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

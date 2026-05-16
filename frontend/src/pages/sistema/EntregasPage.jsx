@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
@@ -74,11 +74,16 @@ export default function EntregasPage() {
   const [motivo, setMotivo] = useState('')
   const [salvando, setSalvando] = useState(false)
 
+  const tokenRef = useRef(accessToken)
+  useEffect(() => { tokenRef.current = accessToken }, [accessToken])
+  const authHeader = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {}
+
   const carregar = useCallback(async (pag = 1, f = filtrosAtivos) => {
+    if (!tokenRef.current) return
     setCarregando(true)
     try {
       const params = { page: pag, ...f }
-      const res = await api.get('/entregas/', { params })
+      const res = await api.get('/entregas/', { params, headers: authHeader() })
       setEntregas(res.data.results)
       setTotal(res.data.count)
       setTotalPaginas(Math.ceil(res.data.count / 20))
@@ -91,7 +96,7 @@ export default function EntregasPage() {
     if (!accessToken) return
     carregar()
     if (isInterno) {
-      api.get('/clientes/', { params: { ativo: true, page_size: 200 } })
+      api.get('/clientes/', { params: { ativo: true, page_size: 200 }, headers: authHeader() })
         .then(r => setClientes(r.data.results || r.data))
         .catch(() => {})
     }

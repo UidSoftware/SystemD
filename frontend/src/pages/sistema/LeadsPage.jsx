@@ -56,13 +56,18 @@ export default function LeadsPage() {
   const [novosLeads, setNovosLeads] = useState(0)
 
   const totalRef = useRef(0)
-  const paginaRef = useRef(1)
+  // ref garante que carregar sempre lê o token atual, sem depender do interceptor do AuthContext
+  const tokenRef = useRef(accessToken)
+  useEffect(() => { tokenRef.current = accessToken }, [accessToken])
+
+  const authHeader = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {}
 
   const carregar = useCallback(async (pag = 1, f = filtrosAtivos, silencioso = false) => {
+    if (!tokenRef.current) return
     if (!silencioso) setCarregando(true)
     try {
       const params = { page: pag, ...f }
-      const res = await api.get('/leads/', { params })
+      const res = await api.get('/leads/', { params, headers: authHeader() })
       setLeads(res.data.results)
       setTotal(res.data.count)
       setTotalPaginas(Math.ceil(res.data.count / 20))
@@ -73,7 +78,8 @@ export default function LeadsPage() {
   }, [filtrosAtivos])
 
   const carregarNaoLidos = useCallback(async () => {
-    const res = await api.get('/leads/', { params: { lido: 'false' } })
+    if (!tokenRef.current) return
+    const res = await api.get('/leads/', { params: { lido: 'false' }, headers: authHeader() })
     setNaoLidos(res.data.count)
   }, [])
 
@@ -82,7 +88,7 @@ export default function LeadsPage() {
     if (!accessToken) return
     const poll = async () => {
       try {
-        const res = await api.get('/leads/', { params: { page: 1 } })
+        const res = await api.get('/leads/', { params: { page: 1 }, headers: authHeader() })
         const novoTotal = res.data.count
         if (novoTotal > totalRef.current && totalRef.current > 0) {
           setNovosLeads(novoTotal - totalRef.current)

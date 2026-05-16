@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
@@ -60,11 +60,16 @@ export default function ProspectosPage() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
+  const tokenRef = useRef(accessToken)
+  useEffect(() => { tokenRef.current = accessToken }, [accessToken])
+  const authHeader = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {}
+
   const carregar = useCallback(async (pag = 1, f = filtrosAtivos) => {
+    if (!tokenRef.current) return
     setCarregando(true)
     try {
       const params = { page: pag, ...f }
-      const res = await api.get('/prospectos/', { params })
+      const res = await api.get('/prospectos/', { params, headers: authHeader() })
       setProspectos(res.data.results)
       setTotal(res.data.count)
       setTotalPaginas(Math.ceil(res.data.count / 20))
@@ -76,7 +81,7 @@ export default function ProspectosPage() {
   useEffect(() => {
     if (!accessToken) return
     carregar()
-    api.get('/auth/usuarios/').then(r => setUsuarios(r.data.results || r.data)).catch(() => {})
+    api.get('/auth/usuarios/', { headers: authHeader() }).then(r => setUsuarios(r.data.results || r.data)).catch(() => {})
   }, [accessToken])
 
   const filtrar = () => {

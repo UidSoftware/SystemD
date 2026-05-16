@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
@@ -53,24 +53,45 @@ export default function LeadsPage() {
   const [modalConverter, setModalConverter] = useState(null)
   const [dadosConverter, setDadosConverter] = useState({})
   const [salvando, setSalvando] = useState(false)
+  const [novosLeads, setNovosLeads] = useState(0)
 
-  const carregar = useCallback(async (pag = 1, f = filtrosAtivos) => {
-    setCarregando(true)
+  const totalRef = useRef(0)
+  const paginaRef = useRef(1)
+
+  const carregar = useCallback(async (pag = 1, f = filtrosAtivos, silencioso = false) => {
+    if (!silencioso) setCarregando(true)
     try {
       const params = { page: pag, ...f }
       const res = await api.get('/leads/', { params })
       setLeads(res.data.results)
       setTotal(res.data.count)
       setTotalPaginas(Math.ceil(res.data.count / 20))
+      totalRef.current = res.data.count
     } finally {
-      setCarregando(false)
+      if (!silencioso) setCarregando(false)
     }
   }, [filtrosAtivos])
 
   const carregarNaoLidos = useCallback(async () => {
-    const res = await api.get('/leads/', { params: { lido: 'false', page_size: 1 } })
+    const res = await api.get('/leads/', { params: { lido: 'false' } })
     setNaoLidos(res.data.count)
   }, [])
+
+  // Polling: verifica novos leads a cada 30s
+  useEffect(() => {
+    if (!accessToken) return
+    const poll = async () => {
+      try {
+        const res = await api.get('/leads/', { params: { page: 1 } })
+        const novoTotal = res.data.count
+        if (novoTotal > totalRef.current && totalRef.current > 0) {
+          setNovosLeads(novoTotal - totalRef.current)
+        }
+      } catch {}
+    }
+    const intervalo = setInterval(poll, 30000)
+    return () => clearInterval(intervalo)
+  }, [accessToken])
 
   useEffect(() => {
     if (!accessToken) return
@@ -144,9 +165,20 @@ export default function LeadsPage() {
       <div style={{ padding: '24px 28px', maxWidth: 1200, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: novosLeads > 0 ? 12 : 24 }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Leads</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Leads</h1>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#10b981', fontWeight: 600 }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%', background: '#10b981',
+                  boxShadow: '0 0 6px #10b981',
+                  animation: 'pulse 2s infinite',
+                  display: 'inline-block',
+                }} />
+                ao vivo
+              </span>
+            </div>
             <p style={{ fontSize: 13, color: '#a78bca', marginTop: 4 }}>
               {naoLidos > 0 && (
                 <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', borderRadius: 20, padding: '2px 10px', fontWeight: 600, marginRight: 8 }}>
@@ -157,6 +189,23 @@ export default function LeadsPage() {
             </p>
           </div>
         </div>
+
+        {/* Banner novos leads */}
+        {novosLeads > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+          }}>
+            <span style={{ color: '#10b981', fontSize: 13, fontWeight: 600 }}>
+              🔔 {novosLeads} novo{novosLeads > 1 ? 's' : ''} lead{novosLeads > 1 ? 's' : ''} chegou{novosLeads > 1 ? 'ram' : ''}!
+            </span>
+            <button onClick={() => { setNovosLeads(0); carregar(1); carregarNaoLidos() }}
+              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              Ver agora
+            </button>
+          </div>
+        )}
 
         {/* Filtros */}
         <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20 }}>

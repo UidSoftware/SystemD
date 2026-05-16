@@ -84,7 +84,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Entrega `registrado_por` | Campo `read_only` no serializer — preenchido via `perform_create(registrado_por=request.user)` |
 | Multi-tenant Entregas | Todo queryset de CLIENTE **obrigatoriamente** filtra por `empresa=cliente_perfil` — nunca `Entrega.objects.all()` sem filtro |
 | Prospecto sem `tem_entregas` | Campo `tem_entregas` existe só em `Cliente` — nunca adicionar ao Prospecto |
-| `<select>` sem `overflow` no ancestral | `<select>` nativo no Linux fica invisível/clipado dentro de qualquer `overflow` diferente de `visible` — modal: container do conteúdo **nunca** recebe `overflowY:'auto'`/`max-h-*`; card de filtro: sempre adicionar `overflow:'visible'` para sobrescrever o `overflow:'hidden'` do cardStyle |
+| `<select>` — overflow e cor | **Overflow:** `SistemaLayout` não usa `overflow-hidden` no root/content-column (clipa popup nativo no Linux Chrome/Opera); modal nunca usa `overflowY:'auto'`/`max-h-*` no container; card de filtro usa `overflow:'visible'` sobre `cardStyle`. **Cor das options:** browser ignora estilos inline — usar CSS global `select option { background-color:#1a0a2e; color:#f1f5f9 }` em `index.css`. Chrome no Windows/macOS ignora essa regra (limitação do SO) — substituição por componente customizado fica para versão futura |
 
 ---
 

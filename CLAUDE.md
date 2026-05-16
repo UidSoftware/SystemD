@@ -84,6 +84,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Entrega `registrado_por` | Campo `read_only` no serializer — preenchido via `perform_create(registrado_por=request.user)` |
 | Multi-tenant Entregas | Todo queryset de CLIENTE **obrigatoriamente** filtra por `empresa=cliente_perfil` — nunca `Entrega.objects.all()` sem filtro |
 | Prospecto sem `tem_entregas` | Campo `tem_entregas` existe só em `Cliente` — nunca adicionar ao Prospecto |
+| Modal sem `overflow` no container | `<select>` nativo no Linux fica invisível dentro de `overflow-y:auto` — container do conteúdo do modal **nunca** recebe `overflowY:'auto'`/`overflow-y-auto`/`max-h-*`; o overlay (position:fixed, tela toda) é quem limita a altura |
 
 ---
 

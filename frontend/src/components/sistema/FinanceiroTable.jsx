@@ -71,7 +71,7 @@ export function Vazio({ msg = 'Nenhum registro encontrado.' }) {
 export function ModalBase({ titulo, onClose, children, maxW = 'max-w-lg' }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-      <div className={`w-full ${maxW} rounded-2xl p-6 max-h-[90vh] overflow-y-auto`}
+      <div className={`w-full ${maxW} rounded-2xl p-6`}
         style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
         <h2 className="font-bold text-lg mb-5" style={{ color: '#f1f5f9' }}>{titulo}</h2>
         {children}

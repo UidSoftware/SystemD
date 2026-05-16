@@ -218,7 +218,7 @@ export default function UsuariosPage() {
       {/* Modal */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <div className="w-full max-w-lg rounded-2xl p-6 max-h-screen overflow-y-auto" style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
             <h2 className="font-bold text-lg mb-5" style={{ color: '#f1f5f9' }}>
               {editando ? 'Editar usuário' : 'Novo usuário'}
             </h2>

@@ -37,6 +37,16 @@ h1, h2, h3 {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
+select option {
+  background-color: #1a0a2e;
+  color: #f1f5f9;
+}
+
+select option:checked {
+  background-color: #063BF8;
+  color: #ffffff;
+}
+
 @keyframes pulse-whatsapp {
   0%, 100% { box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4); }
   50%       { box-shadow: 0 4px 30px rgba(37, 211, 102, 0.8); }

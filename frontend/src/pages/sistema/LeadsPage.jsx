@@ -195,42 +195,47 @@ export default function LeadsPage() {
         </div>
 
         {/* Tabela */}
-        <div style={cardStyle}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ ...cardStyle, overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 780 }}>
             <thead>
               <tr>
-                {['Data', 'Nome', 'Empresa', 'Email', 'Telefone', 'Origem', 'Status', 'Ações'].map(h => (
+                {['Data', 'Nome', 'Empresa', 'Email', 'Mensagem', 'Status', 'Ações'].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {carregando ? (
-                <tr><td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#a78bca' }}>Carregando...</td></tr>
+                <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#a78bca' }}>Carregando...</td></tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#a78bca' }}>Nenhum lead encontrado</td></tr>
+                <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#a78bca' }}>Nenhum lead encontrado</td></tr>
               ) : leads.map(lead => (
                 <tr key={lead.id}
-                  style={{ background: lead.lido ? 'transparent' : 'rgba(239,68,68,0.04)' }}
+                  style={{ background: lead.lido ? 'transparent' : 'rgba(239,68,68,0.04)', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(6,59,248,0.06)'}
                   onMouseLeave={e => e.currentTarget.style.background = lead.lido ? 'transparent' : 'rgba(239,68,68,0.04)'}
+                  onClick={() => setModalLead({ ...lead })}
                 >
-                  <td style={tdStyle}>{new Date(lead.criado_em).toLocaleDateString('pt-BR')}</td>
-                  <td style={tdStyle}>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{new Date(lead.criado_em).toLocaleDateString('pt-BR')}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                     {!lead.lido && <span style={{ background: '#f87171', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', marginRight: 6 }}>NOVO</span>}
                     {lead.nome}
+                    {lead.telefone && <div style={{ fontSize: 11, color: '#6b6b8a', marginTop: 2 }}>{lead.telefone}</div>}
                   </td>
-                  <td style={tdStyle}>{lead.empresa || '—'}</td>
-                  <td style={tdStyle}>{lead.email}</td>
-                  <td style={tdStyle}>{lead.telefone || '—'}</td>
-                  <td style={tdStyle}>{lead.origem}</td>
-                  <td style={tdStyle}>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{lead.empresa || <span style={{ color: '#6b6b8a' }}>—</span>}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{lead.email}</td>
+                  <td style={{ ...tdStyle, maxWidth: 280 }}>
+                    <span style={{ color: '#e2e8f0', fontSize: 13 }}>
+                      {lead.mensagem?.length > 80 ? lead.mensagem.slice(0, 80) + '…' : lead.mensagem}
+                    </span>
+                  </td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                     <span style={{ background: lead.lido ? badge.LIDO.bg : badge.NAO_LIDO.bg, color: lead.lido ? badge.LIDO.color : badge.NAO_LIDO.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
                       {lead.lido ? 'Lido' : 'Não lido'}
                     </span>
-                    {lead.convertido && <span style={{ marginLeft: 6, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10 }}>Convertido</span>}
+                    {lead.convertido && <span style={{ display: 'block', marginTop: 4, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10, width: 'fit-content' }}>Convertido</span>}
                   </td>
-                  <td style={tdStyle}>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => setModalLead({ ...lead })}
                       style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
                       Ver

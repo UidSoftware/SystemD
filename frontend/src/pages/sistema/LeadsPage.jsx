@@ -38,7 +38,7 @@ const tdStyle = {
 }
 
 export default function LeadsPage() {
-  const { usuario } = useAuth()
+  const { usuario, accessToken } = useAuth()
   const [leads, setLeads] = useState([])
   const [total, setTotal] = useState(0)
   const [naoLidos, setNaoLidos] = useState(0)
@@ -72,7 +72,11 @@ export default function LeadsPage() {
     setNaoLidos(res.data.count)
   }, [])
 
-  useEffect(() => { carregar(1); carregarNaoLidos() }, [])
+  useEffect(() => {
+    if (!accessToken) return
+    carregar(1)
+    carregarNaoLidos()
+  }, [accessToken])
 
   const filtrar = () => {
     setFiltrosAtivos({ ...filtros })

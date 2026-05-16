@@ -40,7 +40,7 @@ const PROSPECTO_VAZIO = {
 }
 
 export default function ProspectosPage() {
-  const { usuario } = useAuth()
+  const { usuario, accessToken } = useAuth()
   const isAdmin = usuario?.perfil === 'ADMIN'
 
   const [prospectos, setProspectos] = useState([])
@@ -74,9 +74,10 @@ export default function ProspectosPage() {
   }, [filtrosAtivos])
 
   useEffect(() => {
+    if (!accessToken) return
     carregar()
     api.get('/auth/usuarios/').then(r => setUsuarios(r.data.results || r.data)).catch(() => {})
-  }, [])
+  }, [accessToken])
 
   const filtrar = () => {
     const f = Object.fromEntries(Object.entries(filtros).filter(([, v]) => v !== ''))

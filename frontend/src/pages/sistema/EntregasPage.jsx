@@ -54,7 +54,7 @@ const ENTREGA_VAZIA = {
 }
 
 export default function EntregasPage() {
-  const { usuario } = useAuth()
+  const { usuario, accessToken } = useAuth()
   const isCliente = usuario?.perfil === 'CLIENTE'
   const isAdmin = usuario?.perfil === 'ADMIN'
   const isInterno = !isCliente
@@ -88,13 +88,14 @@ export default function EntregasPage() {
   }, [filtrosAtivos])
 
   useEffect(() => {
+    if (!accessToken) return
     carregar()
     if (isInterno) {
       api.get('/clientes/', { params: { ativo: true, page_size: 200 } })
         .then(r => setClientes(r.data.results || r.data))
         .catch(() => {})
     }
-  }, [])
+  }, [accessToken])
 
   const filtrar = () => {
     const f = Object.fromEntries(Object.entries(filtros).filter(([, v]) => v !== ''))

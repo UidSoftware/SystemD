@@ -6,7 +6,7 @@ export default function SistemaLayout({ titulo, children }) {
   const [menuAberto, setMenuAberto] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#0a0014' }}>
+    <div className="flex h-screen" style={{ backgroundColor: '#0a0014' }}>
 
       {/* Overlay mobile */}
       {menuAberto && (
@@ -25,7 +25,7 @@ export default function SistemaLayout({ titulo, children }) {
       </div>
 
       {/* Conteúdo */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-col flex-1 min-w-0">
         <Header titulo={titulo} onMenuToggle={() => setMenuAberto(o => !o)} />
         <main className="flex-1 overflow-y-auto">
           {children}

@@ -108,6 +108,8 @@ backend/
 src/
 ├── contexts/
 │   └── AuthContext.jsx          ← JWT + /api/auth/me/ + redirecionarPosLogin + alterar-senha
+│                                  ⚠️ useEffect filho roda antes do pai — pages usam tokenRef
+│                                  para passar Authorization explícito, sem depender do interceptor
 ├── components/sistema/
 │   ├── SistemaLayout.jsx        ← layout base com Sidebar + Header (main overflow-y-auto)
 │   ├── Sidebar.jsx              ← dinâmica por perfil + submenu Financeiro + modal alterar-senha
@@ -115,7 +117,7 @@ src/
 │   └── FinanceiroTable.jsx      ← tabela, modais, badges, formatadores reutilizáveis
 ├── pages/sistema/
 │   ├── DashboardPage.jsx
-│   ├── LeadsPage.jsx            ← listagem + filtros + badge não lidos + converter → Prospecto
+│   ├── LeadsPage.jsx            ← listagem + mensagem na tabela + ao vivo (polling 30s) + converter → Prospecto
 │   ├── ProspectosPage.jsx       ← CRUD + converter → Cliente (só ADMIN)
 │   ├── EntregasPage.jsx         ← multi-tenant + confirmação CLIENTE + exportar PDF/Excel
 │   ├── ClientesPage.jsx         ← toggle tem_entregas + botão Criar/Enviar acesso (só ADMIN)
@@ -578,6 +580,7 @@ docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim 
 | Fase 7 | Financeiro — 12 models + signals + relatórios + 12 telas frontend | ✅ |
 | Fase 8 | Leads + Prospectos + Entregas + Navbar "Entrar" + redirect pós-login | ✅ |
 | Fase 8.1 | Acesso do cliente: criar conta + email de primeiro acesso + alterar senha | ✅ |
+| Fase 8.2 | Leads: mensagem na tabela + ao vivo (polling 30s) + fix F5 tokenRef | ✅ |
 | **Fase 9** | Dashboard + Form Levantamento de Requisitos | ⏳ |
 
 ---
@@ -611,4 +614,4 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 15/05/2026 (noite)*
+*Última atualização: 16/05/2026*

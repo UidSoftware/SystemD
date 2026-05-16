@@ -214,7 +214,7 @@ export default function LeadsPage() {
         )}
 
         {/* Filtros */}
-        <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20 }}>
+        <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20, overflow: 'visible' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <div>
               <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Data início</label>

@@ -191,7 +191,7 @@ export default function ProspectosPage() {
         </div>
 
         {/* Filtros */}
-        <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20 }}>
+        <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20, overflow: 'visible' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             {[
               { label: 'Segmento', field: 'segmento' },

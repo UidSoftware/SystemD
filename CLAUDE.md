@@ -84,6 +84,8 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Entrega `registrado_por` | Campo `read_only` no serializer — preenchido via `perform_create(registrado_por=request.user)` |
 | Multi-tenant Entregas | Todo queryset de CLIENTE **obrigatoriamente** filtra por `empresa=cliente_perfil` — nunca `Entrega.objects.all()` sem filtro |
 | Prospecto sem `tem_entregas` | Campo `tem_entregas` existe só em `Cliente` — nunca adicionar ao Prospecto |
+| Unidades sem menu próprio | `UnidadesPage` existe como rota mas sem item na Sidebar — gerenciamento via modal dentro de `EntregasPage` (botão ⊡ Unidades no header) |
+| Deploy: sempre pull primeiro | Na VPS, `git pull` **antes** de qualquer `docker compose build` — nunca buildar sem sincronizar o código |
 | `<select>` — overflow e cor | **Overflow:** `SistemaLayout` não usa `overflow-hidden` no root/content-column (clipa popup nativo no Linux Chrome/Opera); modal nunca usa `overflowY:'auto'`/`max-h-*` no container; card de filtro usa `overflow:'visible'` sobre `cardStyle`. **Cor das options:** browser ignora estilos inline — usar CSS global `select option { background-color:#1a0a2e; color:#f1f5f9 }` em `index.css`. Chrome no Windows/macOS ignora essa regra (limitação do SO) — substituição por componente customizado fica para versão futura |
 
 ---
@@ -97,7 +99,7 @@ backend/
 ├── clientes/       ← CRUD clientes + tem_entregas + enviar-acesso/ (cria usuário CLIENTE + email)
 ├── vitrine/        ← leads da landing page pública + gestão de Leads
 ├── prospectos/     ← Prospecto (Lead qualificado) + converter → Cliente
-├── entregas/       ← Entrega multi-tenant + confirmação CLIENTE + export PDF/Excel
+├── entregas/       ← Unidade + Entrega multi-tenant + confirmação CLIENTE + export PDF/Excel
 ├── email_client/   ← webmail IMAP/SMTP (sem models — só services/views)
 ├── ordens/         ← OS + FaseOS + Contrato + Chamado + MensagemChamado
 └── financeiro/     ← 12 models financeiros + signals + relatorios + mixins
@@ -120,7 +122,8 @@ src/
 │   ├── DashboardPage.jsx
 │   ├── LeadsPage.jsx            ← listagem + mensagem na tabela + ao vivo (polling 30s) + converter → Prospecto
 │   ├── ProspectosPage.jsx       ← CRUD + converter → Cliente (só ADMIN)
-│   ├── EntregasPage.jsx         ← multi-tenant + confirmação CLIENTE + exportar PDF/Excel
+│   ├── EntregasPage.jsx         ← multi-tenant + Solicitante/Unidade/De/Para/Motoboy + editar/excluir por linha + botão ⊡ Unidades (modal CRUD inline) + exportar PDF/Excel
+│   ├── UnidadesPage.jsx         ← rota existe (/sistema/unidades) mas sem item no menu — gestão via modal dentro de EntregasPage
 │   ├── ClientesPage.jsx         ← toggle tem_entregas + botão Criar/Enviar acesso (só ADMIN)
 │   ├── EmailPage.jsx
 │   ├── OSPage.jsx               ← listagem com busca + filtro + badges
@@ -135,6 +138,7 @@ src/
     ├── osApi.js                 ← OS + contrato + chamados + mensagens
     ├── adminApi.js              ← usuários + setores
     ├── financeiroApi.js         ← todos os endpoints /api/financeiro/
+    ├── entregasApi.js           ← /api/entregas/ + /api/unidades/
     └── portalApi.js             ← portal do cliente (legado — preferir osApi.js)
 ```
 
@@ -233,8 +237,14 @@ class Prospecto(models.Model):
     ativo         = BooleanField(default=True)    # soft delete
 ```
 
-### Entrega (`entregas/models.py`)
+### Unidade + Entrega (`entregas/models.py`)
 ```python
+class Unidade(models.Model):
+    nome      = CharField(max_length=200, unique=True)
+    ativo     = BooleanField(default=True)
+    criado_em = DateTimeField(auto_now_add=True)
+    # ordering: ['nome']
+
 class StatusEntrega(TextChoices):
     PENDENTE | EM_ROTA | ENTREGUE | DEVOLVIDO | CANCELADO
 
@@ -243,7 +253,16 @@ class ConfirmacaoEntrega(TextChoices):
 
 class Entrega(models.Model):
     empresa        = ForeignKey('clientes.Cliente', PROTECT)  # ← campo tenant
-    data, hora, origem, destino, descricao, status, observacoes
+    data           = DateField()
+    hora           = TimeField(null=True, blank=True)
+    solicitante    = CharField(max_length=200, blank=True)     # ← quem solicitou
+    unidade        = ForeignKey(Unidade, null=True, PROTECT, related_name='entregas_unidade')
+    de             = ForeignKey(Unidade, null=True, PROTECT, related_name='entregas_de')
+    para           = ForeignKey(Unidade, null=True, PROTECT, related_name='entregas_para')
+    descricao      = TextField(blank=True)
+    motoboy        = CharField(max_length=200, blank=True)
+    status         = CharField(choices=StatusEntrega, default='PENDENTE')
+    observacoes    = TextField(blank=True)
     registrado_por = ForeignKey('usuarios.Usuario', PROTECT, related_name='entregas_registradas')
     confirmacao    = CharField(choices=ConfirmacaoEntrega, default='PENDENTE')
     confirmacao_motivo = TextField(blank=True)   # obrigatório se NAO_CONFIRMADA
@@ -251,7 +270,10 @@ class Entrega(models.Model):
     confirmado_em  = DateTimeField(null=True)
     ativo          = BooleanField(default=True)  # soft delete
     # ordering: ['-data', '-hora']
+    # Campos unidade/de/para nullable para compatibilidade com registros antigos (origem/destino)
 ```
+
+> ⚠️ **Migração histórica:** A VPS tinha 34 registros com `origem`/`destino` (CharField). A migration `0002` adicionou `Unidade`, `solicitante`, `motoboy`, `de`, `para` como nullable e removeu `origem`/`destino`. Registros antigos ficaram com campos novos vazios — preencher manualmente.
 
 ### OS + relacionados (`ordens/models.py`)
 ```python
@@ -324,9 +346,12 @@ CRUD completo — ADMIN e OPERACIONAL. Campo `tem_entregas` — editar só via A
 |----------|-----------|-----------|
 | `POST clientes/{id}/enviar-acesso/` | ADMIN | Cria usuário CLIENTE (se não existir) + envia email de primeiro acesso |
 
-### Entregas (`/api/entregas/`)
+### Entregas (`/api/entregas/` e `/api/unidades/`)
 | Endpoint | Permissão | Descrição |
 |----------|-----------|-----------|
+| `GET/POST unidades/` | ADMIN, OPERACIONAL | Cadastro de unidades |
+| `PATCH unidades/{id}/` | ADMIN, OPERACIONAL | Editar unidade |
+| `DELETE unidades/{id}/` | ADMIN, OPERACIONAL | Soft delete (ativo=False) |
 | `GET entregas/` | ADMIN, OPERACIONAL, CLIENTE | CLIENTE vê só da própria empresa |
 | `POST entregas/` | ADMIN, OPERACIONAL | Registra entrega |
 | `PATCH entregas/{id}/` | ADMIN, OPERACIONAL | Edita |
@@ -335,7 +360,9 @@ CRUD completo — ADMIN e OPERACIONAL. Campo `tem_entregas` — editar só via A
 | `GET entregas/exportar/pdf/` | Todos autenticados | PDF período + empresa |
 | `GET entregas/exportar/excel/` | Todos autenticados | Excel período + empresa |
 
-Filtros: `?empresa=`, `?data_inicio=`, `?data_fim=`, `?origem=`, `?destino=`, `?status=`, `?confirmacao=`
+Filtros: `?empresa=`, `?data_inicio=`, `?data_fim=`, `?status=`, `?confirmacao=`
+Busca: `?search=` — pesquisa em `solicitante`, `motoboy`, `descricao`
+Unidades ativas para combobox: `GET /api/unidades/?ativas=1`
 
 ### Email (`/api/email/`)
 | Endpoint | Ação |
@@ -533,6 +560,7 @@ make logs             # tail logs
 make createsuperuser  # cria admin
 
 # Produção — rodar na VPS em /root/SytemD/
+git pull origin main                                              # ← SEMPRE PRIMEIRO
 docker compose -f docker-compose.prod.yml build backend
 docker compose -f docker-compose.prod.yml up -d backend
 docker exec sytemd-backend-1 python manage.py migrate
@@ -615,4 +643,4 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 16/05/2026*
+*Última atualização: 18/05/2026*

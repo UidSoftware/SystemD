@@ -14,6 +14,7 @@ import UsuariosPage from './pages/sistema/UsuariosPage'
 import SetoresPage from './pages/sistema/SetoresPage'
 import OSPage from './pages/sistema/OSPage'
 import OSDetailPage from './pages/sistema/OSDetailPage'
+import UnidadesPage from './pages/sistema/UnidadesPage'
 import MeusProjetosPage from './pages/sistema/portal/MeusProjetosPage'
 import SuportePage from './pages/sistema/portal/SuportePage'
 import MinhasFaturasPage from './pages/sistema/portal/MinhasFaturasPage'
@@ -55,9 +56,9 @@ export default function App() {
           <Route path="/sistema/clientes" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><ClientesPage /></PrivateRoute>} />
           <Route path="/sistema/os" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><OSPage /></PrivateRoute>} />
           <Route path="/sistema/os/:id" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><OSDetailPage /></PrivateRoute>} />
-
           {/* Entregas — ADMIN, OPERACIONAL e CLIENTE com tem_entregas */}
           <Route path="/sistema/entregas" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL', 'CLIENTE']}><EntregasPage /></PrivateRoute>} />
+          <Route path="/sistema/unidades" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><UnidadesPage /></PrivateRoute>} />
 
           {/* Admin only */}
           <Route path="/sistema/usuarios" element={<PrivateRoute perfisPermitidos={['ADMIN']}><UsuariosPage /></PrivateRoute>} />

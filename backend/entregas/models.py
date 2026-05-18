@@ -15,17 +15,34 @@ class ConfirmacaoEntrega(models.TextChoices):
     NAO_CONFIRMADA = 'NAO_CONFIRMADA', 'Não confirmada'
 
 
+class Unidade(models.Model):
+    nome      = models.CharField(max_length=200, unique=True)
+    ativo     = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Unidade'
+        verbose_name_plural = 'Unidades'
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome
+
+
 class Entrega(models.Model):
-    empresa = models.ForeignKey(
+    empresa    = models.ForeignKey(
         'clientes.Cliente',
         on_delete=models.PROTECT,
         related_name='entregas',
     )
     data        = models.DateField()
     hora        = models.TimeField(null=True, blank=True)
-    origem      = models.CharField(max_length=255)
-    destino     = models.CharField(max_length=255)
+    solicitante = models.CharField(max_length=200)
+    unidade     = models.ForeignKey(Unidade, on_delete=models.PROTECT, related_name='entregas_unidade')
+    de          = models.ForeignKey(Unidade, on_delete=models.PROTECT, related_name='entregas_de')
+    para        = models.ForeignKey(Unidade, on_delete=models.PROTECT, related_name='entregas_para')
     descricao   = models.TextField(blank=True)
+    motoboy     = models.CharField(max_length=200)
     status      = models.CharField(
         max_length=15,
         choices=StatusEntrega.choices,
@@ -37,7 +54,6 @@ class Entrega(models.Model):
         related_name='entregas_registradas',
     )
     observacoes = models.TextField(blank=True)
-
     confirmacao = models.CharField(
         max_length=20,
         choices=ConfirmacaoEntrega.choices,
@@ -51,7 +67,6 @@ class Entrega(models.Model):
         related_name='entregas_confirmadas',
     )
     confirmado_em = models.DateTimeField(null=True, blank=True)
-
     ativo         = models.BooleanField(default=True)
     criado_em     = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -62,4 +77,4 @@ class Entrega(models.Model):
         ordering = ['-data', '-hora']
 
     def __str__(self):
-        return f"{self.empresa.nome_empresa} — {self.data} — {self.destino}"
+        return f"{self.empresa.nome_empresa} — {self.data}"

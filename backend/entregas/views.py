@@ -4,18 +4,36 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Entrega, ConfirmacaoEntrega
-from .serializers import EntregaSerializer
+from rest_framework.permissions import IsAuthenticated
+from .models import Unidade, Entrega, ConfirmacaoEntrega
+from .serializers import UnidadeSerializer, EntregaSerializer
 from .export_pdf import exportar_pdf
 from .export_excel import exportar_excel
 from usuarios.permissions import IsAdmin, IsAdminOrOperacional, IsAdminOperacionalOrCliente
+
+
+class UnidadeViewSet(viewsets.ModelViewSet):
+    serializer_class = UnidadeSerializer
+    permission_classes = [IsAdminOrOperacional]
+
+    def get_queryset(self):
+        qs = Unidade.objects.all()
+        if self.request.query_params.get('ativas'):
+            return qs.filter(ativo=True)
+        return qs
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class EntregaViewSet(viewsets.ModelViewSet):
     serializer_class = EntregaSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'confirmacao']
-    search_fields = ['origem', 'destino', 'descricao']
+    search_fields = ['solicitante', 'motoboy', 'descricao']
     ordering_fields = ['data', 'criado_em']
     ordering = ['-data', '-hora']
 
@@ -32,16 +50,15 @@ class EntregaViewSet(viewsets.ModelViewSet):
         user = self.request.user
         data_inicio = self.request.query_params.get('data_inicio')
         data_fim = self.request.query_params.get('data_fim')
-        origem = self.request.query_params.get('origem')
-        destino = self.request.query_params.get('destino')
-
         if user.perfil == 'CLIENTE':
             cliente = getattr(user, 'cliente_perfil', None)
             if not cliente:
                 return Entrega.objects.none()
-            qs = Entrega.objects.filter(empresa=cliente, ativo=True)
+            qs = Entrega.objects.filter(empresa=cliente, ativo=True).select_related(
+                'empresa', 'registrado_por', 'unidade', 'de', 'para')
         else:
-            qs = Entrega.objects.filter(ativo=True).select_related('empresa', 'registrado_por')
+            qs = Entrega.objects.filter(ativo=True).select_related(
+                'empresa', 'registrado_por', 'unidade', 'de', 'para')
             empresa_id = self.request.query_params.get('empresa')
             if empresa_id:
                 qs = qs.filter(empresa_id=empresa_id)
@@ -50,10 +67,6 @@ class EntregaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(data__gte=data_inicio)
         if data_fim:
             qs = qs.filter(data__lte=data_fim)
-        if origem:
-            qs = qs.filter(origem__icontains=origem)
-        if destino:
-            qs = qs.filter(destino__icontains=destino)
         return qs
 
     def perform_create(self, serializer):

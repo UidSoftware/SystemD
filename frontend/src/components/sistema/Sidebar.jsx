@@ -26,7 +26,6 @@ const menuPorPerfil = {
     { label: 'Clientes',      path: '/sistema/clientes',      icone: '◎' },
     { label: 'OS',            path: '/sistema/os',            icone: '⊟' },
     { label: 'Entregas',      path: '/sistema/entregas',      icone: '📦' },
-    { label: 'Unidades',      path: '/sistema/unidades',      icone: '⊡' },
     { label: 'Financeiro',    path: '/sistema/financeiro',    icone: '$', submenu: menuFinanceiro },
     { label: 'Email',         path: '/sistema/email',         icone: '✉' },
     { label: 'Usuários',      path: '/sistema/usuarios',      icone: '👤' },
@@ -39,7 +38,6 @@ const menuPorPerfil = {
     { label: 'Clientes',   path: '/sistema/clientes',   icone: '◎' },
     { label: 'OS',         path: '/sistema/os',         icone: '⊟' },
     { label: 'Entregas',   path: '/sistema/entregas',   icone: '📦' },
-    { label: 'Unidades',   path: '/sistema/unidades',   icone: '⊡' },
     { label: 'Email',      path: '/sistema/email',      icone: '✉' },
   ],
   FINANCEIRO: [

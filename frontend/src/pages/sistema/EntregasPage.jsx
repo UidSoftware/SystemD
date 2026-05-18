@@ -78,6 +78,12 @@ export default function EntregasPage() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
+  const [modalUnidades, setModalUnidades] = useState(false)
+  const [unidadeForm, setUnidadeForm] = useState({ nome: '', ativo: true })
+  const [editandoUnidade, setEditandoUnidade] = useState(null)
+  const [salvandoUnidade, setSalvandoUnidade] = useState(false)
+  const [erroUnidade, setErroUnidade] = useState('')
+
   const tokenRef = useRef(accessToken)
   useEffect(() => { tokenRef.current = accessToken }, [accessToken])
   const authHeader = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {}
@@ -194,6 +200,54 @@ export default function EntregasPage() {
     carregar(pagina)
   }
 
+  const recarregarUnidades = () =>
+    api.get('/unidades/', { params: { ativas: 1 }, headers: authHeader() })
+      .then(r => setUnidades(r.data.results ?? r.data))
+      .catch(() => {})
+
+  const abrirNovaUnidade = () => {
+    setEditandoUnidade(null)
+    setUnidadeForm({ nome: '', ativo: true })
+    setErroUnidade('')
+  }
+
+  const editarUnidade = (u) => {
+    setEditandoUnidade(u)
+    setUnidadeForm({ nome: u.nome, ativo: u.ativo })
+    setErroUnidade('')
+  }
+
+  const salvarUnidade = async () => {
+    if (!unidadeForm.nome.trim()) { setErroUnidade('Nome é obrigatório.'); return }
+    setSalvandoUnidade(true)
+    setErroUnidade('')
+    try {
+      if (editandoUnidade) {
+        await api.patch(`/unidades/${editandoUnidade.id}/`, unidadeForm, { headers: authHeader() })
+      } else {
+        await api.post('/unidades/', unidadeForm, { headers: authHeader() })
+      }
+      setEditandoUnidade(null)
+      setUnidadeForm({ nome: '', ativo: true })
+      api.get('/unidades/', { headers: authHeader() })
+        .then(r => setUnidades(r.data.results ?? r.data))
+        .catch(() => {})
+    } catch (err) {
+      const d = err.response?.data
+      setErroUnidade(d ? Object.values(d).flat().join(' ') : 'Erro ao salvar.')
+    } finally {
+      setSalvandoUnidade(false)
+    }
+  }
+
+  const desativarUnidade = async (u) => {
+    if (!confirm(`Desativar "${u.nome}"?`)) return
+    await api.delete(`/unidades/${u.id}/`, { headers: authHeader() })
+    api.get('/unidades/', { headers: authHeader() })
+      .then(r => setUnidades(r.data.results ?? r.data))
+      .catch(() => {})
+  }
+
   const exportar = async (tipo) => {
     const params = new URLSearchParams({ ...filtrosAtivos })
     const res = await api.get(`/entregas/exportar/${tipo}/?${params.toString()}`, { responseType: 'blob', headers: authHeader() })
@@ -235,10 +289,16 @@ export default function EntregasPage() {
               Exportar Excel
             </button>
             {isInterno && (
-              <button onClick={abrirNovo}
-                style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                + Nova entrega
-              </button>
+              <>
+                <button onClick={() => { setModalUnidades(true); abrirNovaUnidade() }}
+                  style={{ background: 'rgba(107,143,255,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
+                  ⊡ Unidades
+                </button>
+                <button onClick={abrirNovo}
+                  style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  + Nova entrega
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -493,6 +553,69 @@ export default function EntregasPage() {
                 style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
                 {salvando ? 'Salvando...' : 'Salvar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Unidades */}
+      {modalUnidades && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, margin: 0 }}>Unidades</h2>
+              <button onClick={() => setModalUnidades(false)}
+                style={{ background: 'none', border: 'none', color: '#a78bca', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            </div>
+
+            {/* Form nova / editar unidade */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <input value={unidadeForm.nome}
+                onChange={e => setUnidadeForm(f => ({ ...f, nome: e.target.value }))}
+                placeholder="Nome da unidade"
+                style={{ ...inputStyle, flex: 1 }}
+                onKeyDown={e => e.key === 'Enter' && salvarUnidade()}
+              />
+              <button onClick={salvarUnidade} disabled={salvandoUnidade}
+                style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', opacity: salvandoUnidade ? 0.6 : 1 }}>
+                {editandoUnidade ? 'Salvar' : '+ Adicionar'}
+              </button>
+              {editandoUnidade && (
+                <button onClick={() => { setEditandoUnidade(null); setUnidadeForm({ nome: '', ativo: true }) }}
+                  style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer' }}>
+                  ✕
+                </button>
+              )}
+            </div>
+            {erroUnidade && <p style={{ color: '#f87171', fontSize: 12, marginBottom: 8 }}>{erroUnidade}</p>}
+
+            {/* Lista */}
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {unidades.length === 0 ? (
+                <p style={{ color: '#a78bca', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Nenhuma unidade cadastrada.</p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <tbody>
+                    {unidades.map((u, i) => (
+                      <tr key={u.id} style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                        <td style={{ padding: '8px 4px', color: '#f1f5f9' }}>{u.nome}</td>
+                        <td style={{ padding: '8px 4px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                            <button onClick={() => editarUnidade(u)}
+                              style={{ background: 'none', border: 'none', color: '#6b8fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                              Editar
+                            </button>
+                            <button onClick={() => desativarUnidade(u)}
+                              style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                              Desativar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

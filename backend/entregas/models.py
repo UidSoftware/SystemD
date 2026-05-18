@@ -37,12 +37,12 @@ class Entrega(models.Model):
     )
     data        = models.DateField()
     hora        = models.TimeField(null=True, blank=True)
-    solicitante = models.CharField(max_length=200)
-    unidade     = models.ForeignKey(Unidade, on_delete=models.PROTECT, related_name='entregas_unidade')
-    de          = models.ForeignKey(Unidade, on_delete=models.PROTECT, related_name='entregas_de')
-    para        = models.ForeignKey(Unidade, on_delete=models.PROTECT, related_name='entregas_para')
+    solicitante = models.CharField(max_length=200, blank=True, default='')
+    unidade     = models.ForeignKey(Unidade, null=True, blank=True, on_delete=models.PROTECT, related_name='entregas_unidade')
+    de          = models.ForeignKey(Unidade, null=True, blank=True, on_delete=models.PROTECT, related_name='entregas_de')
+    para        = models.ForeignKey(Unidade, null=True, blank=True, on_delete=models.PROTECT, related_name='entregas_para')
     descricao   = models.TextField(blank=True)
-    motoboy     = models.CharField(max_length=200)
+    motoboy     = models.CharField(max_length=200, blank=True, default='')
     status      = models.CharField(
         max_length=15,
         choices=StatusEntrega.choices,

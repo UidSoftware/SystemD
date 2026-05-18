@@ -4,6 +4,7 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
+    """Estado original — schema com origem/destino (aplicado na VPS em 2026-05-15)."""
 
     initial = True
 
@@ -14,28 +15,14 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Unidade',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nome', models.CharField(max_length=200, unique=True)),
-                ('ativo', models.BooleanField(default=True)),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-            ],
-            options={
-                'verbose_name': 'Unidade',
-                'verbose_name_plural': 'Unidades',
-                'ordering': ['nome'],
-            },
-        ),
-        migrations.CreateModel(
             name='Entrega',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('data', models.DateField()),
                 ('hora', models.TimeField(blank=True, null=True)),
-                ('solicitante', models.CharField(max_length=200)),
+                ('origem', models.CharField(max_length=255)),
+                ('destino', models.CharField(max_length=255)),
                 ('descricao', models.TextField(blank=True)),
-                ('motoboy', models.CharField(max_length=200)),
                 ('status', models.CharField(
                     choices=[('PENDENTE', 'Pendente'), ('EM_ROTA', 'Em rota'), ('ENTREGUE', 'Entregue'), ('DEVOLVIDO', 'Devolvido'), ('CANCELADO', 'Cancelado')],
                     default='PENDENTE', max_length=15,
@@ -51,9 +38,6 @@ class Migration(migrations.Migration):
                 ('criado_em', models.DateTimeField(auto_now_add=True)),
                 ('atualizado_em', models.DateTimeField(auto_now=True)),
                 ('empresa', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entregas', to='clientes.cliente')),
-                ('unidade', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entregas_unidade', to='entregas.unidade')),
-                ('de', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entregas_de', to='entregas.unidade')),
-                ('para', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entregas_para', to='entregas.unidade')),
                 ('registrado_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entregas_registradas', to=settings.AUTH_USER_MODEL)),
                 ('confirmado_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='entregas_confirmadas', to=settings.AUTH_USER_MODEL)),
             ],

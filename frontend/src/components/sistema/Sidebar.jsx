@@ -20,6 +20,7 @@ const menuFinanceiro = [
 
 const menuNovoProjeto = [
   { label: 'Leads',               path: '/sistema/office/novo-projeto/leads' },
+  { label: 'Prospectos',          path: '/sistema/prospectos' },
   { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista' },
   { label: 'Arquitetura Técnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica' },
 ]
@@ -36,7 +37,6 @@ const menuPorPerfil = {
   ADMIN: [
     { label: 'Dashboard',     path: '/sistema/',              icone: '⊞' },
     { label: 'Office',        path: '/sistema/office',         icone: '🏢', submenu: menuOffice },
-    { label: 'Prospectos',    path: '/sistema/prospectos',    icone: '🎯' },
     { label: 'Clientes',      path: '/sistema/clientes',      icone: '◎' },
     { label: 'OS',            path: '/sistema/os',            icone: '⊟' },
     { label: 'Entregas',      path: '/sistema/entregas',      icone: '📦' },

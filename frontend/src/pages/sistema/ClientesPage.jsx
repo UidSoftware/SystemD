@@ -122,7 +122,7 @@ export default function ClientesPage() {
         </div>
 
         {/* Cards — mobile */}
-        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="md:hidden flex flex-col gap-3">
           {clientesFiltrados.length === 0 ? (
             <p style={{ color: '#6b6b8a', textAlign: 'center', padding: '40px 0', fontSize: 14 }}>
               Nenhum cliente encontrado

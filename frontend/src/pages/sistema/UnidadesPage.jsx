@@ -95,7 +95,7 @@ export default function UnidadesPage() {
         ) : (
           <>
             {/* Mobile cards */}
-            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="md:hidden flex flex-col gap-3">
               {unidades.map(u => (
                 <div key={u.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>

@@ -147,7 +147,7 @@ export default function OSPage() {
         ) : (
           <>
             {/* Mobile cards */}
-            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="md:hidden flex flex-col gap-3">
               {ordens.map(os => (
                 <div key={os.id}
                   onClick={() => navigate(`/sistema/os/${os.id}`)}

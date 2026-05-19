@@ -362,7 +362,7 @@ export default function EntregasPage() {
         </p>
 
         {/* Cards — mobile */}
-        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="md:hidden flex flex-col gap-3">
           {carregando ? (
             <p style={{ color: '#a78bca', textAlign: 'center', padding: 32, fontSize: 13 }}>Carregando...</p>
           ) : entregas.length === 0 ? (

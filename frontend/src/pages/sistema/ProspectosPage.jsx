@@ -229,7 +229,7 @@ export default function ProspectosPage() {
         </div>
 
         {/* Mobile cards */}
-        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="md:hidden flex flex-col gap-3">
           {carregando ? (
             <div style={{ textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</div>
           ) : prospectos.length === 0 ? (

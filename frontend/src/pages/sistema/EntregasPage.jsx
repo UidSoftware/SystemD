@@ -361,8 +361,73 @@ export default function EntregasPage() {
           {total > 0 ? `${total} entrega${total !== 1 ? 's' : ''} encontrada${total !== 1 ? 's' : ''}` : 'Nenhuma entrega encontrada'}
         </p>
 
-        {/* Tabela */}
-        <div style={{ ...cardStyle, overflowX: 'auto' }}>
+        {/* Cards — mobile */}
+        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {carregando ? (
+            <p style={{ color: '#a78bca', textAlign: 'center', padding: 32, fontSize: 13 }}>Carregando...</p>
+          ) : entregas.length === 0 ? (
+            <p style={{ color: '#6b6b8a', textAlign: 'center', padding: 32, fontSize: 13 }}>Nenhuma entrega encontrada</p>
+          ) : entregas.map(e => {
+            const stBadge = STATUS_BADGE[e.status] || STATUS_BADGE.PENDENTE
+            const confBadge = CONF_BADGE[e.confirmacao] || CONF_BADGE.PENDENTE
+            return (
+              <div key={e.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
+                {/* Confirmação — CLIENTE */}
+                {!isInterno && e.status === 'ENTREGUE' && e.confirmacao === 'PENDENTE' && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <button onClick={() => confirmar(e)}
+                      style={{ flex: 1, padding: '10px 0', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      ✓ Confirmar
+                    </button>
+                    <button onClick={() => { setModalMotivo(e); setMotivo('') }}
+                      style={{ flex: 1, padding: '10px 0', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      ✗ Recusar
+                    </button>
+                  </div>
+                )}
+                {/* Cabeçalho do card */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 15 }}>{e.data ? e.data.split('-').reverse().join('/') : '—'}</span>
+                    {e.hora && <span style={{ color: '#a78bca', fontSize: 13 }}>{e.hora.slice(0, 5)}</span>}
+                    <span style={{ background: stBadge.bg, color: stBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{e.status_display}</span>
+                    {!isInterno && e.confirmacao !== 'PENDENTE' && (
+                      <span title={e.confirmacao_motivo || undefined} style={{ background: confBadge.bg, color: confBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{confBadge.label}</span>
+                    )}
+                  </div>
+                </div>
+                {/* Detalhes */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', fontSize: 13 }}>
+                  {e.unidade_nome && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Unidade</span><br/><span style={{ color: '#e2d9f3' }}>{e.unidade_nome}</span></div>}
+                  {e.de_nome && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>De</span><br/><span style={{ color: '#e2d9f3' }}>{e.de_nome}</span></div>}
+                  {e.para_nome && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Para</span><br/><span style={{ color: '#e2d9f3' }}>{e.para_nome}</span></div>}
+                  {e.motoboy && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Motoboy</span><br/><span style={{ color: '#e2d9f3' }}>{e.motoboy}</span></div>}
+                  {e.solicitante && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Solicitante</span><br/><span style={{ color: '#e2d9f3' }}>{e.solicitante}</span></div>}
+                  {isInterno && e.empresa_nome && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Empresa</span><br/><span style={{ color: '#e2d9f3' }}>{e.empresa_nome}</span></div>}
+                </div>
+                {e.descricao && <p style={{ color: '#a78bca', fontSize: 12, marginTop: 8 }}>{e.descricao}</p>}
+                {/* Ações — INTERNO */}
+                {isInterno && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
+                    <button onClick={() => abrirEdicao(e)}
+                      style={{ flex: 1, padding: '8px 0', background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: '1px solid rgba(6,59,248,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      Editar
+                    </button>
+                    {isAdmin && (
+                      <button onClick={() => excluir(e)}
+                        style={{ flex: 1, padding: '8px 0', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        Excluir
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Tabela — desktop */}
+        <div className="hidden md:block" style={{ ...cardStyle, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
             <thead>
               <tr>

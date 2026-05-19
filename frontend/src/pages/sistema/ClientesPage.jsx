@@ -15,6 +15,18 @@ const camposVazios = {
   origem: '', observacoes: '', dominio_email: '', tem_entregas: false,
 }
 
+const inputStyle = {
+  backgroundColor: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: '#f1f5f9',
+  width: '100%',
+  borderRadius: 8,
+  padding: '8px 12px',
+  fontSize: 14,
+  outline: 'none',
+  fontFamily: 'inherit',
+}
+
 export default function ClientesPage() {
   const { usuario } = useAuth()
   const isAdmin = usuario?.perfil === 'ADMIN'
@@ -59,7 +71,7 @@ export default function ClientesPage() {
   }
 
   const enviarAcesso = async (c) => {
-    const acao = c.usuario ? 'Enviar email de acesso' : 'Criar conta e enviar email de acesso'
+    const acao = c.usuario ? 'Reenviar email de acesso' : 'Criar conta e enviar email'
     if (!window.confirm(`${acao} para "${c.nome_empresa}" (${c.email})?`)) return
     try {
       const res = await api.post(`/clientes/${c.id}/enviar-acesso/`)
@@ -75,81 +87,124 @@ export default function ClientesPage() {
     setConfirmando(null)
   }
 
-  const inputStyle = {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: '#f1f5f9',
-  }
+  const camposForm = [
+    { label: 'Nome da empresa *', key: 'nome_empresa', required: true, col2: true },
+    { label: 'Nome do contato *', key: 'nome_contato', required: true },
+    { label: 'E-mail *', key: 'email', required: true, type: 'email' },
+    { label: 'Telefone *', key: 'telefone', required: true },
+    { label: 'WhatsApp', key: 'whatsapp' },
+    { label: 'Segmento *', key: 'segmento', required: true },
+    { label: 'Cidade', key: 'cidade' },
+    { label: 'UF', key: 'estado' },
+    { label: 'CNPJ/CPF', key: 'cnpj_cpf' },
+    { label: 'Origem *', key: 'origem', required: true },
+    { label: 'Domínio de email', key: 'dominio_email', col2: true, placeholder: 'Ex: empresacliente.com.br' },
+  ]
 
   return (
     <SistemaLayout titulo="Clientes">
-      <div className="flex flex-col h-full overflow-auto px-8 py-6">
+      <div style={{ padding: '20px 16px', maxWidth: 1400, margin: '0 auto' }}>
 
-        <div className="flex items-center justify-between mb-6 gap-4">
+        {/* Header */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="Buscar por nome ou segmento..."
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            className="rounded-lg px-4 py-2 text-sm outline-none w-72"
-            style={inputStyle}
+            style={{ ...inputStyle, flex: 1, minWidth: 200 }}
           />
-          <button
-            onClick={abrirNovo}
-            className="px-5 py-2 rounded-lg text-sm font-semibold"
-            style={{ backgroundColor: '#063BF8', color: '#fff' }}
-          >
+          <button onClick={abrirNovo}
+            style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8,
+              padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             + Novo cliente
           </button>
         </div>
 
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-          <table className="w-full text-sm">
+        {/* Cards — mobile */}
+        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {clientesFiltrados.length === 0 ? (
+            <p style={{ color: '#6b6b8a', textAlign: 'center', padding: '40px 0', fontSize: 14 }}>
+              Nenhum cliente encontrado
+            </p>
+          ) : clientesFiltrados.map(c => (
+            <div key={c.id} style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 12, padding: '16px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div>
+                  <p style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{c.nome_empresa}</p>
+                  <span style={{
+                    background: badgeColor(c.segmento) + '33', color: badgeColor(c.segmento),
+                    borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600,
+                  }}>{c.segmento}</span>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', margin: '12px 0', fontSize: 13 }}>
+                <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Contato</span><br/><span style={{ color: '#e2d9f3' }}>{c.nome_contato}</span></div>
+                <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Telefone</span><br/><a href={`tel:${c.telefone}`} style={{ color: '#6b8fff', textDecoration: 'none' }}>{c.telefone}</a></div>
+                <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Email</span><br/><span style={{ color: '#e2d9f3', fontSize: 12 }}>{c.email}</span></div>
+                {c.cidade && <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Cidade</span><br/><span style={{ color: '#e2d9f3' }}>{c.cidade}{c.estado ? ` / ${c.estado}` : ''}</span></div>}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
+                <button onClick={() => abrirEditar(c)}
+                  style={{ flex: 1, padding: '8px 0', background: 'rgba(6,59,248,0.15)', color: '#6b8fff',
+                    border: '1px solid rgba(6,59,248,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Editar
+                </button>
+                {isAdmin && (
+                  <button onClick={() => enviarAcesso(c)}
+                    style={{ flex: 1, padding: '8px 0', background: 'rgba(16,185,129,0.12)', color: '#10b981',
+                      border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    {c.usuario ? '✉ Reenviar' : '+ Acesso'}
+                  </button>
+                )}
+                <button onClick={() => setConfirmando(c.id)}
+                  style={{ flex: 1, padding: '8px 0', background: 'rgba(239,68,68,0.1)', color: '#f87171',
+                    border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Desativar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabela — desktop */}
+        <div className="hidden md:block" style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+              <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
                 {['Empresa', 'Segmento', 'Contato', 'Telefone', 'Email', 'Ações'].map(h => (
-                  <th key={h} className="text-left px-5 py-3 font-medium" style={{ color: '#a78bca' }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontWeight: 600,
+                    color: '#a78bca', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {clientesFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12" style={{ color: '#6b6b8a' }}>
-                    Nenhum cliente encontrado
-                  </td>
-                </tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: '#6b6b8a' }}>Nenhum cliente encontrado</td></tr>
               ) : clientesFiltrados.map(c => (
-                <tr key={c.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td className="px-5 py-4 font-medium" style={{ color: '#f1f5f9' }}>{c.nome_empresa}</td>
-                  <td className="px-5 py-4">
-                    <span className="px-2 py-1 rounded-full text-xs font-semibold"
-                      style={{ backgroundColor: badgeColor(c.segmento) + '33', color: badgeColor(c.segmento) }}>
-                      {c.segmento}
-                    </span>
+                <tr key={c.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(6,59,248,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <td style={{ padding: '14px 20px', color: '#f1f5f9', fontWeight: 600 }}>{c.nome_empresa}</td>
+                  <td style={{ padding: '14px 20px' }}>
+                    <span style={{ background: badgeColor(c.segmento) + '33', color: badgeColor(c.segmento),
+                      borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{c.segmento}</span>
                   </td>
-                  <td className="px-5 py-4" style={{ color: '#e2d9f3' }}>{c.nome_contato}</td>
-                  <td className="px-5 py-4" style={{ color: '#e2d9f3' }}>{c.telefone}</td>
-                  <td className="px-5 py-4">
-                    {c.email_ativo ? (
-                      <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: '#34d399' }}>
-                        <span>✉</span> {c.dominio_email || 'ativo'}
-                      </span>
-                    ) : c.dominio_email ? (
-                      <span className="text-xs" style={{ color: '#6b6b8a' }}>{c.dominio_email}</span>
-                    ) : (
-                      <span className="text-xs" style={{ color: '#6b6b8a' }}>—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex gap-3 flex-wrap">
-                      <button onClick={() => abrirEditar(c)} className="text-xs font-medium" style={{ color: '#063BF8' }}>Editar</button>
+                  <td style={{ padding: '14px 20px', color: '#e2d9f3' }}>{c.nome_contato}</td>
+                  <td style={{ padding: '14px 20px', color: '#e2d9f3' }}>{c.telefone}</td>
+                  <td style={{ padding: '14px 20px', color: '#6b6b8a', fontSize: 12 }}>{c.email}</td>
+                  <td style={{ padding: '14px 20px' }}>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button onClick={() => abrirEditar(c)} style={{ background: 'none', border: 'none', color: '#6b8fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>Editar</button>
                       {isAdmin && (
-                        <button onClick={() => enviarAcesso(c)} className="text-xs font-medium" style={{ color: '#10b981' }}>
+                        <button onClick={() => enviarAcesso(c)} style={{ background: 'none', border: 'none', color: '#10b981', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
                           {c.usuario ? 'Enviar acesso' : 'Criar acesso'}
                         </button>
                       )}
-                      <button onClick={() => setConfirmando(c.id)} className="text-xs font-medium" style={{ color: '#f87171' }}>Desativar</button>
+                      <button onClick={() => setConfirmando(c.id)} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>Desativar</button>
                     </div>
                   </td>
                 </tr>
@@ -158,12 +213,14 @@ export default function ClientesPage() {
           </table>
         </div>
 
+        {/* Paginação */}
         {totalPaginas > 1 && (
-          <div className="flex justify-center gap-2 mt-6">
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
             {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(pg => (
               <button key={pg} onClick={() => setPagina(pg)}
-                className="w-8 h-8 rounded-lg text-sm font-medium"
-                style={{ backgroundColor: pg === pagina ? '#063BF8' : 'rgba(255,255,255,0.06)', color: pg === pagina ? '#fff' : '#a78bca' }}>
+                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
+                  background: pg === pagina ? '#063BF8' : 'rgba(255,255,255,0.06)',
+                  color: pg === pagina ? '#fff' : '#a78bca' }}>
                 {pg}
               </button>
             ))}
@@ -171,64 +228,53 @@ export default function ClientesPage() {
         )}
       </div>
 
+      {/* Modal novo/editar */}
       {modalAberto && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 px-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <div className="w-full max-w-2xl rounded-2xl p-8 overflow-y-auto max-h-[90vh]"
-            style={{ backgroundColor: '#12002a', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <h2 className="font-display font-bold text-xl mb-6" style={{ color: '#f1f5f9' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 640, background: '#12002a',
+            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
+            padding: '24px', overflowY: 'auto', maxHeight: '90vh' }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
               {editando ? 'Editar cliente' : 'Novo cliente'}
             </h2>
-            <form onSubmit={salvar} className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Nome da empresa *', key: 'nome_empresa', required: true, col: 2 },
-                { label: 'Nome do contato *', key: 'nome_contato', required: true },
-                { label: 'E-mail *', key: 'email', required: true, type: 'email' },
-                { label: 'Telefone *', key: 'telefone', required: true },
-                { label: 'WhatsApp', key: 'whatsapp' },
-                { label: 'Segmento *', key: 'segmento', required: true },
-                { label: 'Cidade', key: 'cidade' },
-                { label: 'UF', key: 'estado' },
-                { label: 'CNPJ/CPF', key: 'cnpj_cpf' },
-                { label: 'Origem *', key: 'origem', required: true },
-                { label: 'Domínio de email', key: 'dominio_email', col: 2,
-                  placeholder: 'Ex: empresacliente.com.br' },
-              ].map(({ label, key, required, type = 'text', col, placeholder }) => (
-                <div key={key} className="space-y-1" style={{ gridColumn: col === 2 ? 'span 2' : undefined }}>
-                  <label className="text-xs" style={{ color: '#a78bca' }}>{label}</label>
-                  <input type={type} value={form[key] || ''}
-                    onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    required={required}
-                    placeholder={placeholder || ''}
-                    className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                    style={inputStyle} />
+            <form onSubmit={salvar}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                {camposForm.map(({ label, key, required, type = 'text', col2, placeholder }) => (
+                  <div key={key} style={{ gridColumn: col2 ? '1 / -1' : undefined }}>
+                    <label style={{ display: 'block', fontSize: 11, color: '#a78bca', marginBottom: 5 }}>{label}</label>
+                    <input type={type} value={form[key] || ''}
+                      onChange={e => setForm({ ...form, [key]: e.target.value })}
+                      required={required} placeholder={placeholder || ''}
+                      style={inputStyle} />
+                  </div>
+                ))}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: 11, color: '#a78bca', marginBottom: 5 }}>Observações</label>
+                  <textarea value={form.observacoes}
+                    onChange={e => setForm({ ...form, observacoes: e.target.value })}
+                    rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
-              ))}
-              <div className="space-y-1" style={{ gridColumn: 'span 2' }}>
-                <label className="text-xs" style={{ color: '#a78bca' }}>Observações</label>
-                <textarea value={form.observacoes}
-                  onChange={e => setForm({ ...form, observacoes: e.target.value })}
-                  rows={3} className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
-                  style={inputStyle} />
+                {isAdmin && (
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="checkbox" id="tem_entregas" checked={!!form.tem_entregas}
+                      onChange={e => setForm({ ...form, tem_entregas: e.target.checked })}
+                      style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                    <label htmlFor="tem_entregas" style={{ fontSize: 14, color: '#f1f5f9', cursor: 'pointer' }}>
+                      Acesso ao módulo de Entregas
+                    </label>
+                  </div>
+                )}
               </div>
-              {isAdmin && (
-                <div className="flex items-center gap-3" style={{ gridColumn: 'span 2' }}>
-                  <input type="checkbox" id="tem_entregas" checked={!!form.tem_entregas}
-                    onChange={e => setForm({ ...form, tem_entregas: e.target.checked })} />
-                  <label htmlFor="tem_entregas" className="text-sm" style={{ color: '#f1f5f9' }}>
-                    Acesso ao módulo de Entregas
-                  </label>
-                  <span style={{ fontSize: 11, color: '#a78bca' }}>(cliente será redirecionado para /entregas/ após login)</span>
-                </div>
-              )}
-              <div className="flex gap-3 justify-end" style={{ gridColumn: 'span 2' }}>
+              <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setModalAberto(false)}
-                  className="px-5 py-2 rounded-lg text-sm"
-                  style={{ color: '#a78bca', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.06)', color: '#a78bca',
+                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
                   Cancelar
                 </button>
                 <button type="submit" disabled={salvando}
-                  className="px-5 py-2 rounded-lg text-sm font-semibold"
-                  style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.7 : 1 }}>
+                  style={{ padding: '10px 24px', background: '#063BF8', color: '#fff', border: 'none',
+                    borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
                   {salvando ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
@@ -237,20 +283,24 @@ export default function ClientesPage() {
         </div>
       )}
 
+      {/* Modal confirmar desativar */}
       {confirmando && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <div className="rounded-2xl p-8 w-80 text-center"
-            style={{ backgroundColor: '#12002a', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <p className="font-medium mb-6" style={{ color: '#f1f5f9' }}>Desativar este cliente?</p>
-            <div className="flex gap-3 justify-center">
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#12002a', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 16, padding: '28px 24px', width: '100%', maxWidth: 320, textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+            <p style={{ color: '#f1f5f9', fontWeight: 600, marginBottom: 8 }}>Desativar cliente?</p>
+            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 24 }}>Esta ação pode ser revertida pelo admin.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setConfirmando(null)}
-                className="px-5 py-2 rounded-lg text-sm"
-                style={{ color: '#a78bca', border: '1px solid rgba(255,255,255,0.1)' }}>
+                style={{ flex: 1, padding: '10px 0', background: 'rgba(255,255,255,0.06)', color: '#a78bca',
+                  border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
                 Cancelar
               </button>
               <button onClick={() => desativar(confirmando)}
-                className="px-5 py-2 rounded-lg text-sm font-semibold"
-                style={{ backgroundColor: '#dc2626', color: '#fff' }}>
+                style={{ flex: 1, padding: '10px 0', background: '#dc2626', color: '#fff',
+                  border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                 Desativar
               </button>
             </div>

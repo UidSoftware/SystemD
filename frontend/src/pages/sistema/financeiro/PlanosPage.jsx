@@ -6,6 +6,9 @@ import { financeiroApi } from '../../../services/financeiroApi'
 const TIPO_PLANO = { mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral' }
 const formVazio = { serv: '', plan_tipo_plano: 'mensal', plan_valor_plano: '' }
 
+const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+const btnRemover = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+
 export default function PlanosPage() {
   const [dados, setDados] = useState([])
   const [servicos, setServicos] = useState([])
@@ -53,9 +56,9 @@ export default function PlanosPage() {
     { key: 'plan_tipo_plano', label: 'Tipo', render: r => TIPO_PLANO[r.plan_tipo_plano], muted: true },
     { key: 'plan_valor_plano', label: 'Valor mensal', render: r => formatMoeda(r.plan_valor_plano) },
     { key: '_acoes', label: 'Ações', render: r => (
-      <div className="flex gap-3">
-        <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
-        <button onClick={e => { e.stopPropagation(); deletar(r) }} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>Remover</button>
+      <div className="flex gap-2 w-full">
+        <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} style={btnEditar}>Editar</button>
+        <button onClick={e => { e.stopPropagation(); deletar(r) }} style={btnRemover}>Remover</button>
       </div>
     )},
   ]

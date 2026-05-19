@@ -4,6 +4,9 @@ import { adminApi } from '../../services/adminApi'
 
 const formVazio = { nome: '', descricao: '', ativo: true }
 
+const labelStyle = { fontSize: 11, color: '#6b6b8a' }
+const valueStyle = { fontSize: 13, color: '#e2d9f3' }
+
 export default function SetoresPage() {
   const [setores, setSetores] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -93,39 +96,79 @@ export default function SetoresPage() {
         ) : setores.length === 0 ? (
           <div className="text-center py-20" style={{ color: '#a78bca' }}>Nenhum setor cadastrado.</div>
         ) : (
-          <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ backgroundColor: '#1a0a2e' }}>
-                  {['Nome', 'Descrição', 'Usuários', 'Status', 'Ações'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 font-semibold" style={{ color: '#a78bca' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {setores.map((s, i) => (
-                  <tr key={s.id}
-                    style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td className="px-4 py-3 font-medium" style={{ color: '#f1f5f9' }}>{s.nome}</td>
-                    <td className="px-4 py-3" style={{ color: '#a78bca' }}>{s.descricao || '—'}</td>
-                    <td className="px-4 py-3 text-center" style={{ color: '#a78bca' }}>{s.num_usuarios}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ backgroundColor: s.ativo ? '#10b98122' : '#FF000022', color: s.ativo ? '#10b981' : '#FF0000' }}>
-                        {s.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-3">
-                        <button onClick={() => abrirEdicao(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
-                        {s.ativo && <button onClick={() => desativar(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
-                      </div>
-                    </td>
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {setores.map(s => (
+                <div key={s.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{s.nome}</div>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{ backgroundColor: s.ativo ? '#10b98122' : '#FF000022', color: s.ativo ? '#10b981' : '#FF0000' }}>
+                      {s.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
+                    <div>
+                      <div style={labelStyle}>Descrição</div>
+                      <div style={valueStyle}>{s.descricao || '—'}</div>
+                    </div>
+                    <div>
+                      <div style={labelStyle}>Usuários</div>
+                      <div style={valueStyle}>{s.num_usuarios}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => abrirEdicao(s)}
+                      style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                      Editar
+                    </button>
+                    {s.ativo && (
+                      <button onClick={() => desativar(s)}
+                        style={{ flex: 1, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                        Desativar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ backgroundColor: '#1a0a2e' }}>
+                    {['Nome', 'Descrição', 'Usuários', 'Status', 'Ações'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 font-semibold" style={{ color: '#a78bca' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {setores.map((s, i) => (
+                    <tr key={s.id}
+                      style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td className="px-4 py-3 font-medium" style={{ color: '#f1f5f9' }}>{s.nome}</td>
+                      <td className="px-4 py-3" style={{ color: '#a78bca' }}>{s.descricao || '—'}</td>
+                      <td className="px-4 py-3 text-center" style={{ color: '#a78bca' }}>{s.num_usuarios}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ backgroundColor: s.ativo ? '#10b98122' : '#FF000022', color: s.ativo ? '#10b981' : '#FF0000' }}>
+                          {s.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-3">
+                          <button onClick={() => abrirEdicao(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
+                          {s.ativo && <button onClick={() => desativar(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

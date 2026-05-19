@@ -5,6 +5,9 @@ import { financeiroApi } from '../../../services/financeiroApi'
 
 const formVazio = { forn_nome_empresa: '', forn_nome_dono: '', forn_cnpj: '', forn_endereco: '', forn_telefone: '', forn_email: '', forn_ativo: true }
 
+const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+const btnDesativar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+
 export default function FornecedoresPage() {
   const [dados, setDados] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -57,9 +60,9 @@ export default function FornecedoresPage() {
       </span>
     )},
     { key: '_acoes', label: 'Ações', render: r => (
-      <div className="flex gap-3">
-        <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
-        {r.forn_ativo && <button onClick={e => { e.stopPropagation(); deletar(r) }} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
+      <div className="flex gap-2 w-full">
+        <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} style={btnEditar}>Editar</button>
+        {r.forn_ativo && <button onClick={e => { e.stopPropagation(); deletar(r) }} style={btnDesativar}>Desativar</button>}
       </div>
     )},
   ]

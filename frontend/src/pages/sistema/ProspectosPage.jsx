@@ -32,6 +32,9 @@ const tdStyle = {
   borderBottom: '1px solid rgba(255,255,255,0.04)',
 }
 
+const labelStyle = { fontSize: 11, color: '#6b6b8a' }
+const valueStyle = { fontSize: 13, color: '#e2d9f3' }
+
 const PROSPECTO_VAZIO = {
   lead: null,
   nome_empresa: '', nome_contato: '', email: '', telefone: '',
@@ -225,8 +228,84 @@ export default function ProspectosPage() {
           </div>
         </div>
 
-        {/* Tabela */}
-        <div style={cardStyle}>
+        {/* Mobile cards */}
+        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {carregando ? (
+            <div style={{ textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</div>
+          ) : prospectos.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhum prospecto encontrado</div>
+          ) : prospectos.map(p => (
+            <div key={p.id} style={{ ...cardStyle, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{p.nome_empresa}</div>
+                  <div style={{ fontSize: 12, color: '#a78bca', marginTop: 2 }}>{p.nome_contato}</div>
+                </div>
+                {p.convertido
+                  ? <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>Convertido</span>
+                  : <span style={{ background: 'rgba(6,59,248,0.12)', color: '#6b8fff', borderRadius: 20, padding: '2px 10px', fontSize: 11 }}>Ativo</span>
+                }
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
+                <div>
+                  <div style={labelStyle}>Segmento</div>
+                  <div style={valueStyle}>{p.segmento || '—'}</div>
+                </div>
+                <div>
+                  <div style={labelStyle}>Cidade</div>
+                  <div style={valueStyle}>{p.cidade || '—'}</div>
+                </div>
+                <div>
+                  <div style={labelStyle}>Email</div>
+                  <div style={{ ...valueStyle, wordBreak: 'break-all' }}>{p.email}</div>
+                </div>
+                {p.telefone && (
+                  <div>
+                    <div style={labelStyle}>Telefone</div>
+                    <div style={valueStyle}>{p.telefone}</div>
+                  </div>
+                )}
+                {p.responsavel_nome && (
+                  <div>
+                    <div style={labelStyle}>Responsável</div>
+                    <div style={valueStyle}>{p.responsavel_nome}</div>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => abrirEditar(p)}
+                  style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                  Ver/Editar
+                </button>
+                {isAdmin && !p.convertido && (
+                  <button onClick={() => abrirConverter(p)}
+                    style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                    → Cliente
+                  </button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => excluir(p.id)}
+                    style={{ flex: 1, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                    Excluir
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 8 }}>
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => { setPagina(p); carregar(p) }}
+                  style={{ background: p === pagina ? '#063BF8' : 'rgba(255,255,255,0.06)', color: p === pagina ? '#fff' : '#a78bca', border: 'none', borderRadius: 6, width: 32, height: 32, cursor: 'pointer', fontSize: 13 }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block" style={cardStyle}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -295,7 +374,7 @@ export default function ProspectosPage() {
       {/* Modal cadastro/edição */}
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 540, padding: 28 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 540, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
               {modoEdicao ? 'Editar Prospecto' : 'Novo Prospecto'}
             </h2>
@@ -353,7 +432,7 @@ export default function ProspectosPage() {
       {/* Modal converter em cliente */}
       {modalConverter && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Converter em Cliente</h2>
             <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>Revise os dados. O Cliente será criado com essas informações.</p>
 

@@ -35,6 +35,9 @@ const formVazio = {
   data_inicio: '', data_entrega: '', observacoes: '',
 }
 
+const labelStyle = { fontSize: 11, color: '#6b6b8a' }
+const valueStyle = { fontSize: 13, color: '#e2d9f3' }
+
 export default function OSPage() {
   const navigate = useNavigate()
   const [ordens, setOrdens] = useState([])
@@ -133,7 +136,6 @@ export default function OSPage() {
           </button>
         </div>
 
-        {/* tabela */}
         {carregando ? (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -143,40 +145,80 @@ export default function OSPage() {
             {busca || filtroStatus ? 'Nenhuma OS encontrada com estes filtros.' : 'Nenhuma OS cadastrada.'}
           </div>
         ) : (
-          <div className="rounded-xl overflow-auto" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ backgroundColor: '#1a0a2e' }}>
-                  {['Cliente', 'Título', 'Status', 'Responsável', 'Valor total', 'Entrega', ''].map(h => (
-                    <th key={h} className="text-left px-4 py-3 font-semibold whitespace-nowrap" style={{ color: '#a78bca' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ordens.map((os, i) => (
-                  <tr key={os.id}
-                    onClick={() => navigate(`/sistema/os/${os.id}`)}
-                    className="cursor-pointer transition-colors"
-                    style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(6,59,248,0.06)'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'}
-                  >
-                    <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#f1f5f9' }}>{os.cliente_nome}</td>
-                    <td className="px-4 py-3 max-w-xs truncate" style={{ color: '#f1f5f9' }}>{os.titulo}</td>
-                    <td className="px-4 py-3"><BadgeStatus status={os.status} /></td>
-                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>{os.responsavel_nome || '—'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>{formatarMoeda(os.valor_total)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>
-                      {os.data_entrega ? new Date(os.data_entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs" style={{ color: '#6b8fff' }}>Ver →</span>
-                    </td>
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {ordens.map(os => (
+                <div key={os.id}
+                  onClick={() => navigate(`/sistema/os/${os.id}`)}
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16, cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div style={{ flex: 1, marginRight: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{os.titulo}</div>
+                      <div style={{ fontSize: 12, color: '#a78bca', marginTop: 2 }}>{os.cliente_nome}</div>
+                    </div>
+                    <BadgeStatus status={os.status} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
+                    <div>
+                      <div style={labelStyle}>Responsável</div>
+                      <div style={valueStyle}>{os.responsavel_nome || '—'}</div>
+                    </div>
+                    <div>
+                      <div style={labelStyle}>Valor total</div>
+                      <div style={valueStyle}>{formatarMoeda(os.valor_total)}</div>
+                    </div>
+                    <div>
+                      <div style={labelStyle}>Entrega</div>
+                      <div style={valueStyle}>{os.data_entrega ? new Date(os.data_entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => navigate(`/sistema/os/${os.id}`)}
+                      style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                      Ver detalhes
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-xl overflow-auto" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ backgroundColor: '#1a0a2e' }}>
+                    {['Cliente', 'Título', 'Status', 'Responsável', 'Valor total', 'Entrega', ''].map(h => (
+                      <th key={h} className="text-left px-4 py-3 font-semibold whitespace-nowrap" style={{ color: '#a78bca' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {ordens.map((os, i) => (
+                    <tr key={os.id}
+                      onClick={() => navigate(`/sistema/os/${os.id}`)}
+                      className="cursor-pointer transition-colors"
+                      style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(6,59,248,0.06)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'}
+                    >
+                      <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#f1f5f9' }}>{os.cliente_nome}</td>
+                      <td className="px-4 py-3 max-w-xs truncate" style={{ color: '#f1f5f9' }}>{os.titulo}</td>
+                      <td className="px-4 py-3"><BadgeStatus status={os.status} /></td>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>{os.responsavel_nome || '—'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>{formatarMoeda(os.valor_total)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>
+                        {os.data_entrega ? new Date(os.data_entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs" style={{ color: '#6b8fff' }}>Ver →</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* paginação */}
@@ -196,7 +238,7 @@ export default function OSPage() {
       {/* Modal Nova OS */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <div className="w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 className="font-bold text-lg mb-5" style={{ color: '#f1f5f9' }}>Nova Ordem de Serviço</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

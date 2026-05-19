@@ -12,6 +12,9 @@ const PERFIS = [
 
 const formVazio = { nome: '', email: '', perfil: 'OPERACIONAL', setor_id: null, senha: '', ativo: true }
 
+const labelStyle = { fontSize: 11, color: '#6b6b8a' }
+const valueStyle = { fontSize: 13, color: '#e2d9f3' }
+
 function BadgePerfil({ perfil }) {
   const cfg = PERFIS.find(p => p.value === perfil) || { label: perfil, cor: '#a78bca' }
   return (
@@ -155,7 +158,6 @@ export default function UsuariosPage() {
           </button>
         </div>
 
-        {/* tabela */}
         {carregando ? (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -163,42 +165,96 @@ export default function UsuariosPage() {
         ) : usuarios.length === 0 ? (
           <div className="text-center py-20" style={{ color: '#a78bca' }}>Nenhum usuário encontrado.</div>
         ) : (
-          <div className="rounded-xl overflow-auto" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ backgroundColor: '#1a0a2e' }}>
-                  {['Nome', 'Email', 'Perfil', 'Setor', 'Email corp.', 'Status', 'Ações'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 font-semibold whitespace-nowrap" style={{ color: '#a78bca' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {usuarios.map((u, i) => (
-                  <tr key={u.id}
-                    style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#f1f5f9' }}>{u.nome}</td>
-                    <td className="px-4 py-3" style={{ color: '#a78bca' }}>{u.email}</td>
-                    <td className="px-4 py-3"><BadgePerfil perfil={u.perfil} /></td>
-                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>{u.setor?.nome || '—'}</td>
-                    <td className="px-4 py-3" style={{ color: '#a78bca' }}>{u.email_corporativo || '—'}</td>
-                    <td className="px-4 py-3">
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {usuarios.map(u => (
+                <div key={u.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{u.nome}</div>
+                      <div style={{ fontSize: 12, color: '#a78bca', marginTop: 2 }}>{u.email}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      <BadgePerfil perfil={u.perfil} />
                       <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
                         style={{ backgroundColor: u.ativo ? '#10b98122' : '#FF000022', color: u.ativo ? '#10b981' : '#FF0000' }}>
                         {u.ativo ? 'Ativo' : 'Inativo'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-3">
-                        <button onClick={() => abrirEdicao(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
-                        {u.ativo && <button onClick={() => enviarAcesso(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#10b981' }}>Enviar acesso</button>}
-                        {u.ativo && <button onClick={() => desativar(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
+                    <div>
+                      <div style={labelStyle}>Setor</div>
+                      <div style={valueStyle}>{u.setor?.nome || '—'}</div>
+                    </div>
+                    {u.email_corporativo && (
+                      <div>
+                        <div style={labelStyle}>Email corp.</div>
+                        <div style={{ ...valueStyle, wordBreak: 'break-all' }}>{u.email_corporativo}</div>
                       </div>
-                    </td>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => abrirEdicao(u)}
+                      style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                      Editar
+                    </button>
+                    {u.ativo && (
+                      <button onClick={() => enviarAcesso(u)}
+                        style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                        Enviar acesso
+                      </button>
+                    )}
+                    {u.ativo && (
+                      <button onClick={() => desativar(u)}
+                        style={{ flex: 1, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                        Desativar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-xl overflow-auto" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ backgroundColor: '#1a0a2e' }}>
+                    {['Nome', 'Email', 'Perfil', 'Setor', 'Email corp.', 'Status', 'Ações'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 font-semibold whitespace-nowrap" style={{ color: '#a78bca' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {usuarios.map((u, i) => (
+                    <tr key={u.id}
+                      style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#f1f5f9' }}>{u.nome}</td>
+                      <td className="px-4 py-3" style={{ color: '#a78bca' }}>{u.email}</td>
+                      <td className="px-4 py-3"><BadgePerfil perfil={u.perfil} /></td>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#a78bca' }}>{u.setor?.nome || '—'}</td>
+                      <td className="px-4 py-3" style={{ color: '#a78bca' }}>{u.email_corporativo || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ backgroundColor: u.ativo ? '#10b98122' : '#FF000022', color: u.ativo ? '#10b981' : '#FF0000' }}>
+                          {u.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-3">
+                          <button onClick={() => abrirEdicao(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
+                          {u.ativo && <button onClick={() => enviarAcesso(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#10b981' }}>Enviar acesso</button>}
+                          {u.ativo && <button onClick={() => desativar(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* paginação */}
@@ -218,7 +274,7 @@ export default function UsuariosPage() {
       {/* Modal */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <div className="w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 className="font-bold text-lg mb-5" style={{ color: '#f1f5f9' }}>
               {editando ? 'Editar usuário' : 'Novo usuário'}
             </h2>

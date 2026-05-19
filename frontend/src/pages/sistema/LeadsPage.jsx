@@ -37,6 +37,9 @@ const tdStyle = {
   borderBottom: '1px solid rgba(255,255,255,0.04)',
 }
 
+const labelStyle = { fontSize: 11, color: '#6b6b8a' }
+const valueStyle = { fontSize: 13, color: '#e2d9f3' }
+
 export default function LeadsPage() {
   const { usuario, accessToken } = useAuth()
   const [leads, setLeads] = useState([])
@@ -56,7 +59,6 @@ export default function LeadsPage() {
   const [novosLeads, setNovosLeads] = useState(0)
 
   const totalRef = useRef(0)
-  // ref garante que carregar sempre lê o token atual, sem depender do interceptor do AuthContext
   const tokenRef = useRef(accessToken)
   useEffect(() => { tokenRef.current = accessToken }, [accessToken])
 
@@ -83,7 +85,6 @@ export default function LeadsPage() {
     setNaoLidos(res.data.count)
   }, [])
 
-  // Polling: verifica novos leads a cada 30s
   useEffect(() => {
     if (!accessToken) return
     const poll = async () => {
@@ -253,8 +254,87 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* Tabela */}
-        <div style={{ ...cardStyle, overflowX: 'auto' }}>
+        {/* Mobile cards */}
+        <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {carregando ? (
+            <div style={{ textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</div>
+          ) : leads.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhum lead encontrado</div>
+          ) : leads.map(lead => (
+            <div key={lead.id} style={{ ...cardStyle, padding: 16, background: lead.lido ? 'rgba(255,255,255,0.03)' : 'rgba(239,68,68,0.05)' }}
+              onClick={() => setModalLead({ ...lead })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {!lead.lido && <span style={{ background: '#f87171', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>NOVO</span>}
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{lead.nome}</span>
+                  </div>
+                  {lead.empresa && <div style={{ fontSize: 12, color: '#a78bca', marginTop: 2 }}>{lead.empresa}</div>}
+                </div>
+                <span style={{ background: lead.lido ? badge.LIDO.bg : badge.NAO_LIDO.bg, color: lead.lido ? badge.LIDO.color : badge.NAO_LIDO.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {lead.lido ? 'Lido' : 'Não lido'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
+                <div>
+                  <div style={labelStyle}>Data</div>
+                  <div style={valueStyle}>{new Date(lead.criado_em).toLocaleDateString('pt-BR')}</div>
+                </div>
+                <div>
+                  <div style={labelStyle}>Email</div>
+                  <div style={{ ...valueStyle, wordBreak: 'break-all' }}>{lead.email}</div>
+                </div>
+                {lead.telefone && (
+                  <div>
+                    <div style={labelStyle}>Telefone</div>
+                    <div style={valueStyle}>{lead.telefone}</div>
+                  </div>
+                )}
+                {lead.origem && (
+                  <div>
+                    <div style={labelStyle}>Origem</div>
+                    <div style={valueStyle}>{lead.origem}</div>
+                  </div>
+                )}
+              </div>
+              {lead.mensagem && (
+                <div style={{ fontSize: 12, color: '#a78bca', marginBottom: 10, lineHeight: 1.4 }}>
+                  {lead.mensagem.length > 80 ? lead.mensagem.slice(0, 80) + '…' : lead.mensagem}
+                </div>
+              )}
+              {lead.convertido && (
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10 }}>Convertido</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+                <button onClick={() => setModalLead({ ...lead })}
+                  style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                  Ver
+                </button>
+                {!lead.convertido && (
+                  <button onClick={() => abrirConverter(lead)}
+                    style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                    Converter
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {totalPaginas > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 8 }}>
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => { setPagina(p); carregar(p) }}
+                  style={{ background: p === pagina ? '#063BF8' : 'rgba(255,255,255,0.06)', color: p === pagina ? '#fff' : '#a78bca', border: 'none', borderRadius: 6, width: 32, height: 32, cursor: 'pointer', fontSize: 13 }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block" style={{ ...cardStyle, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 780 }}>
             <thead>
               <tr>

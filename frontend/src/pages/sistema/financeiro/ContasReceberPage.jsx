@@ -21,6 +21,9 @@ const formVazio = {
   conta: '', plano_contas: '',
 }
 
+const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+const btnCancelar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+
 export default function ContasReceberPage() {
   const [dados, setDados] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -103,9 +106,9 @@ export default function ContasReceberPage() {
     { key: 'rec_valor_total', label: 'Valor', render: r => <span style={{ color: '#10b981', fontWeight: 600 }}>{formatMoeda(r.rec_valor_total)}</span> },
     { key: 'rec_status', label: 'Status', render: r => <BadgeStatus status={r.rec_status} config={STATUS_CFG} /> },
     { key: '_acoes', label: 'Ações', render: r => (
-      <div className="flex gap-3">
-        <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
-        {r.rec_status !== 'cancelado' && <button onClick={e => { e.stopPropagation(); deletar(r) }} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>Cancelar</button>}
+      <div className="flex gap-2 w-full">
+        <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} style={btnEditar}>Editar</button>
+        {r.rec_status !== 'cancelado' && <button onClick={e => { e.stopPropagation(); deletar(r) }} style={btnCancelar}>Cancelar</button>}
       </div>
     )},
   ]

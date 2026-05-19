@@ -63,6 +63,10 @@ class EntregaViewSet(viewsets.ModelViewSet):
             if empresa_id:
                 qs = qs.filter(empresa_id=empresa_id)
 
+        unidade_id = self.request.query_params.get('unidade')
+        if unidade_id:
+            from django.db.models import Q
+            qs = qs.filter(Q(unidade_id=unidade_id) | Q(de_id=unidade_id) | Q(para_id=unidade_id))
         if data_inicio:
             qs = qs.filter(data__gte=data_inicio)
         if data_fim:

@@ -68,7 +68,7 @@ export default function EntregasPage() {
   const [clientes, setClientes] = useState([])
   const [unidades, setUnidades] = useState([])
 
-  const [filtros, setFiltros] = useState({ data_inicio: '', data_fim: '', status: '', empresa: '' })
+  const [filtros, setFiltros] = useState({ data_inicio: '', data_fim: '', status: '', empresa: '', unidade: '' })
   const [filtrosAtivos, setFiltrosAtivos] = useState({})
 
   const [modal, setModal] = useState(null)
@@ -122,7 +122,7 @@ export default function EntregasPage() {
   }
 
   const limpar = () => {
-    setFiltros({ data_inicio: '', data_fim: '', status: '', empresa: '' })
+    setFiltros({ data_inicio: '', data_fim: '', status: '', empresa: '', unidade: '' })
     setFiltrosAtivos({})
     setPagina(1)
     carregar(1, {})

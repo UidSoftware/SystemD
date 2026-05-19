@@ -505,6 +505,61 @@ Não usamos Radix UI, TanStack Query ou outras libs de componente. Tudo em inlin
 
 ---
 
+## Menu Office — integração com o pipeline
+
+O SystemD tem um menu **Office** (somente ADMIN) que integra o pipeline de desenvolvimento.
+
+```
+Office
+├── Escritório      → iframe office.uidsoftware.com.br
+├── Board           → Kanban/Scrum (em breve)
+├── Agents          → status do time (em breve)
+├── Activity Feed   → log de eventos (em breve)
+└── Novo Projeto
+    ├── Leads       → LeadsPage — lista leads do banco
+    ├── Entrevista  → levantamento de requisitos (em breve)
+    └── Arquitetura Técnica → form → salva em ordens_arquiteturatecnica
+```
+
+- ADMIN: sem Leads no menu principal (acessa via Office → Novo Projeto → Leads)
+- OPERACIONAL: Leads permanece no menu principal em /sistema/leads
+
+### ArquiteturaTecnica (ordens/models.py)
+
+Novo model para o formulário de Arquitetura Técnica do pipeline:
+- Campos: projeto, cliente, versao, data_levantamento, responsavel
+- Backend stack: linguagem, framework, banco, autenticacao, padrao_api
+- Frontend stack: frontend_fw, build_tool, estilizacao, estado_global, server_state
+- Infraestrutura: ambiente_deploy, servidor_web, docker, ssl, cicd, pwa, dominio_uid
+- Observações: padrao_rotas, perfis_acesso, integracoes, restricoes, notas_claude
+
+Endpoint: GET/POST /api/arquitetura-tecnica/ — permissão: IsAdminOrOperacional
+Tabela: ordens_arquiteturatecnica
+O Planner lê esta tabela via MCP após o formulário ser salvo.
+
+---
+
+## MCP PostgreSQL — acesso do Planner ao banco
+
+O banco está exposto em 127.0.0.1:5433 para o Planner (Claude Code na VPS).
+Configurado em docker-compose.prod.yml (ports: 127.0.0.1:5433:5432) + /root/.claude.json
+
+Verificar: claude mcp list → systemd: ... ✓ Connected
+
+Queries principais do Planner:
+```sql
+-- Leads novos
+SELECT * FROM vitrine_lead WHERE convertido = false ORDER BY criado_em DESC;
+-- Arquitetura Técnica mais recente
+SELECT * FROM ordens_arquiteturatecnica ORDER BY criado_em DESC LIMIT 1;
+-- Criar OS
+INSERT INTO ordens_os (cliente_id, titulo, status, ...) VALUES (...);
+-- Marcar lead convertido
+UPDATE vitrine_lead SET convertido = true WHERE id = X;
+```
+
+---
+
 ## Infra VPS (`209.50.241.122`)
 
 | Projeto | Porta interna | Domínio |
@@ -514,10 +569,12 @@ Não usamos Radix UI, TanStack Query ou outras libs de componente. Tudo em inlin
 | **SystemD** | **8002** | uidsoftware.com.br |
 | Mailcow HTTP | 8080 | — |
 | Mailcow HTTPS | 8443 | mail.uidsoftware.com.br |
+| **Office Uid** | **8004** | office.uidsoftware.com.br |
 | Novos clientes | 8003+ | — |
 
 - Deploy: `/root/SytemD/`
 - SSL: certbot com renovação automática no nginx-proxy
+- PostgreSQL MCP: exposto em 127.0.0.1:5433 para o Planner (não público)
 
 ---
 
@@ -615,4 +672,4 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 16/05/2026*
+*Última atualização: 19/05/2026*

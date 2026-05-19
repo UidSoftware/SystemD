@@ -265,7 +265,7 @@ export default function EntregasPage() {
   }
 
   const colunasInterno = ['Data', 'Hora', 'Solicitante', 'Unidade', 'De', 'Para', 'Descrição', 'Motoboy', 'Status', 'Empresa', 'Ações']
-  const colunasCliente = ['Data', 'Hora', 'Solicitante', 'Unidade', 'De', 'Para', 'Descrição', 'Motoboy', 'Status', 'Confirmação']
+  const colunasCliente = ['Confirmação', 'Data', 'Unidade', 'De', 'Para', 'Motoboy', 'Status']
 
   return (
     <SistemaLayout>
@@ -336,6 +336,14 @@ export default function EntregasPage() {
                 </select>
               </div>
             )}
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Unidade</label>
+              <select style={inputStyle} value={filtros.unidade}
+                onChange={e => setFiltros(f => ({ ...f, unidade: e.target.value }))}>
+                <option value="">Todas</option>
+                {unidades.filter(u => u.ativo).map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+              </select>
+            </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
               <button onClick={filtrar}
                 style={{ flex: 1, background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -375,21 +383,21 @@ export default function EntregasPage() {
                   <tr key={e.id}
                     onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(6,59,248,0.06)'}
                     onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
-                    <td style={tdStyle}>{e.data ? e.data.split('-').reverse().join('/') : '—'}</td>
-                    <td style={tdStyle}>{e.hora ? e.hora.slice(0, 5) : '—'}</td>
-                    <td style={tdStyle}>{e.solicitante}</td>
-                    <td style={tdStyle}>{e.unidade_nome}</td>
-                    <td style={tdStyle}>{e.de_nome}</td>
-                    <td style={tdStyle}>{e.para_nome}</td>
-                    <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.descricao || '—'}</td>
-                    <td style={tdStyle}>{e.motoboy}</td>
-                    <td style={tdStyle}>
-                      <span style={{ background: stBadge.bg, color: stBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
-                        {e.status_display}
-                      </span>
-                    </td>
                     {isInterno ? (
                       <>
+                        <td style={tdStyle}>{e.data ? e.data.split('-').reverse().join('/') : '—'}</td>
+                        <td style={tdStyle}>{e.hora ? e.hora.slice(0, 5) : '—'}</td>
+                        <td style={tdStyle}>{e.solicitante}</td>
+                        <td style={tdStyle}>{e.unidade_nome}</td>
+                        <td style={tdStyle}>{e.de_nome}</td>
+                        <td style={tdStyle}>{e.para_nome}</td>
+                        <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.descricao || '—'}</td>
+                        <td style={tdStyle}>{e.motoboy}</td>
+                        <td style={tdStyle}>
+                          <span style={{ background: stBadge.bg, color: stBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
+                            {e.status_display}
+                          </span>
+                        </td>
                         <td style={tdStyle}>{e.empresa_nome}</td>
                         <td style={tdStyle}>
                           <div style={{ display: 'flex', gap: 10 }}>
@@ -407,25 +415,37 @@ export default function EntregasPage() {
                         </td>
                       </>
                     ) : (
-                      <td style={tdStyle}>
-                        {e.status === 'ENTREGUE' && e.confirmacao === 'PENDENTE' ? (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button onClick={() => confirmar(e)}
-                              style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 11, cursor: 'pointer' }}>
-                              ✓ Confirmar
-                            </button>
-                            <button onClick={() => { setModalMotivo(e); setMotivo('') }}
-                              style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 11, cursor: 'pointer' }}>
-                              ✗ Não confirmar
-                            </button>
-                          </div>
-                        ) : (
-                          <span title={e.confirmacao_motivo || undefined}
-                            style={{ background: confBadge.bg, color: confBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
-                            {confBadge.label}
+                      <>
+                        <td style={tdStyle}>
+                          {e.status === 'ENTREGUE' && e.confirmacao === 'PENDENTE' ? (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => confirmar(e)}
+                                style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                ✓ Confirmar
+                              </button>
+                              <button onClick={() => { setModalMotivo(e); setMotivo('') }}
+                                style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                ✗ Recusar
+                              </button>
+                            </div>
+                          ) : (
+                            <span title={e.confirmacao_motivo || undefined}
+                              style={{ background: confBadge.bg, color: confBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
+                              {confBadge.label}
+                            </span>
+                          )}
+                        </td>
+                        <td style={tdStyle}>{e.data ? e.data.split('-').reverse().join('/') : '—'}</td>
+                        <td style={tdStyle}>{e.unidade_nome}</td>
+                        <td style={tdStyle}>{e.de_nome}</td>
+                        <td style={tdStyle}>{e.para_nome}</td>
+                        <td style={tdStyle}>{e.motoboy}</td>
+                        <td style={tdStyle}>
+                          <span style={{ background: stBadge.bg, color: stBadge.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
+                            {e.status_display}
                           </span>
-                        )}
-                      </td>
+                        </td>
+                      </>
                     )}
                   </tr>
                 )

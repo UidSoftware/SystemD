@@ -18,10 +18,23 @@ const menuFinanceiro = [
   { label: 'Extrato',         path: '/sistema/financeiro/extrato' },
 ]
 
+const menuNovoProjeto = [
+  { label: 'Leads',               path: '/sistema/office/novo-projeto/leads' },
+  { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista' },
+  { label: 'Arquitetura Técnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica' },
+]
+
+const menuOffice = [
+  { label: 'Escritório',    path: '/sistema/office/escritorio' },
+  { label: 'Board',         path: '/sistema/office/board' },
+  { label: 'Agents',        path: '/sistema/office/agents' },
+  { label: 'Activity Feed', path: '/sistema/office/activity' },
+  { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', submenu: menuNovoProjeto },
+]
+
 const menuPorPerfil = {
   ADMIN: [
     { label: 'Dashboard',     path: '/sistema/',              icone: '⊞' },
-    { label: 'Leads',         path: '/sistema/leads',         icone: '📥' },
     { label: 'Prospectos',    path: '/sistema/prospectos',    icone: '🎯' },
     { label: 'Clientes',      path: '/sistema/clientes',      icone: '◎' },
     { label: 'OS',            path: '/sistema/os',            icone: '⊟' },
@@ -30,6 +43,7 @@ const menuPorPerfil = {
     { label: 'Email',         path: '/sistema/email',         icone: '✉' },
     { label: 'Usuários',      path: '/sistema/usuarios',      icone: '👤' },
     { label: 'Configurações', path: '/sistema/configuracoes', icone: '⚙' },
+    { label: 'Office',        path: '/sistema/office',         icone: '🏢', submenu: menuOffice },
   ],
   OPERACIONAL: [
     { label: 'Dashboard',  path: '/sistema/',           icone: '⊞' },
@@ -96,6 +110,10 @@ export default function Sidebar({ onClose }) {
 
   const financeiroAberto = location.pathname.startsWith('/sistema/financeiro')
   const [finOpen, setFinOpen] = useState(financeiroAberto)
+  const officeAberto = location.pathname.startsWith('/sistema/office')
+  const [officeOpen, setOfficeOpen] = useState(officeAberto)
+  const novoProjAberto = location.pathname.startsWith('/sistema/office/novo-projeto')
+  const [novoProjOpen, setNovoProjOpen] = useState(novoProjAberto)
   const [modalSenha, setModalSenha] = useState(false)
   const [senhaForm, setSenhaForm] = useState({ atual: '', nova: '', confirmar: '' })
   const [senhaErro, setSenhaErro] = useState('')
@@ -149,24 +167,49 @@ export default function Sidebar({ onClose }) {
           const isExactDash = item.path === '/sistema/' && location.pathname === '/sistema/'
 
           if (isFinItem) {
+            const isOffice = item.path === '/sistema/office'
+            const isOpen = isOffice ? officeOpen : finOpen
+            const isAberto = isOffice ? officeAberto : financeiroAberto
+            const toggleOpen = isOffice ? () => setOfficeOpen(o => !o) : () => setFinOpen(o => !o)
             return (
               <div key={item.path}>
-                <button
-                  onClick={() => setFinOpen(o => !o)}
-                  style={{ ...itemBase, ...(financeiroAberto ? itemAtivo : {}) }}
-                >
+                <button onClick={toggleOpen}
+                  style={{ ...itemBase, ...(isAberto ? itemAtivo : {}) }}>
                   <span>{item.icone}</span>
                   <span className="flex-1">{item.label}</span>
-                  <span style={{ fontSize: '0.7rem', color: '#a78bca' }}>{finOpen ? '▲' : '▼'}</span>
+                  <span style={{ fontSize: '0.7rem', color: '#a78bca' }}>{isOpen ? '▲' : '▼'}</span>
                 </button>
-                {finOpen && (
+                {isOpen && (
                   <div style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                    {item.submenu.map(sub => (
-                      <NavLink key={sub.path} to={sub.path} onClick={onClose}
-                        style={({ isActive }) => ({ ...subitemBase, color: isActive ? '#f1f5f9' : '#a78bca', borderLeft: isActive ? '2px solid #063BF8' : '2px solid transparent' })}>
-                        {sub.label}
-                      </NavLink>
-                    ))}
+                    {item.submenu.map(sub => {
+                      if (sub.submenu) {
+                        return (
+                          <div key={sub.path}>
+                            <button onClick={() => setNovoProjOpen(o => !o)}
+                              style={{ ...subitemBase, display: 'flex', alignItems: 'center', width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: novoProjAberto ? '#f1f5f9' : '#a78bca' }}>
+                              <span style={{ flex: 1 }}>{sub.label}</span>
+                              <span style={{ fontSize: '0.65rem', marginRight: 8 }}>{novoProjOpen ? '▲' : '▼'}</span>
+                            </button>
+                            {novoProjOpen && (
+                              <div style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
+                                {sub.submenu.map(ssub => (
+                                  <NavLink key={ssub.path} to={ssub.path} onClick={onClose}
+                                    style={({ isActive }) => ({ ...subitemBase, paddingLeft: 60, fontSize: '0.75rem', color: isActive ? '#f1f5f9' : '#a78bca', borderLeft: isActive ? '2px solid #063BF8' : '2px solid transparent' })}>
+                                    {ssub.label}
+                                  </NavLink>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
+                      return (
+                        <NavLink key={sub.path} to={sub.path} onClick={onClose}
+                          style={({ isActive }) => ({ ...subitemBase, color: isActive ? '#f1f5f9' : '#a78bca', borderLeft: isActive ? '2px solid #063BF8' : '2px solid transparent' })}>
+                          {sub.label}
+                        </NavLink>
+                      )
+                    })}
                   </div>
                 )}
               </div>

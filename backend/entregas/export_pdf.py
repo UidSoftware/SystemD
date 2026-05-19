@@ -33,20 +33,23 @@ def exportar_pdf(entregas, empresa, data_inicio, data_fim):
         elements.append(Paragraph(f'Período: {data_inicio or "—"} a {data_fim or "—"}', sub_style))
     elements.append(Spacer(1, 0.4 * cm))
 
-    header = ['Data', 'Hora', 'Origem', 'Destino', 'Descrição', 'Status', 'Confirmação']
+    header = ['Data', 'Hora', 'Solicitante', 'Unidade', 'De', 'Para', 'Motoboy', 'Descrição', 'Status', 'Confirmação']
     rows = [header]
     for e in entregas:
         rows.append([
             str(e.data),
             str(e.hora)[:5] if e.hora else '—',
-            e.origem[:35] + '…' if len(e.origem) > 35 else e.origem,
-            e.destino[:35] + '…' if len(e.destino) > 35 else e.destino,
-            e.descricao[:40] + '…' if len(e.descricao) > 40 else (e.descricao or '—'),
+            e.solicitante or '—',
+            e.unidade.nome if e.unidade else '—',
+            e.de.nome if e.de else '—',
+            e.para.nome if e.para else '—',
+            e.motoboy or '—',
+            e.descricao[:40] + '…' if e.descricao and len(e.descricao) > 40 else (e.descricao or '—'),
             e.get_status_display(),
             e.get_confirmacao_display(),
         ])
 
-    col_widths = [2.5 * cm, 1.8 * cm, 5 * cm, 5 * cm, 6 * cm, 2.5 * cm, 3 * cm]
+    col_widths = [2.5*cm, 1.8*cm, 3.5*cm, 3*cm, 3.5*cm, 3.5*cm, 3*cm, 5*cm, 2.5*cm, 3*cm]
     table = Table(rows, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), UID_BLUE),

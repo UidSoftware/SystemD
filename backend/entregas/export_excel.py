@@ -22,7 +22,7 @@ def exportar_excel(entregas, empresa, data_inicio, data_fim):
     ws['A3'].font = Font(color='FF6b6b8a', italic=True)
     ws.append([])
 
-    headers = ['Empresa', 'Data', 'Hora', 'Origem', 'Destino', 'Descrição', 'Status', 'Confirmação', 'Motivo']
+    headers = ['Empresa', 'Data', 'Hora', 'Solicitante', 'Unidade', 'De', 'Para', 'Motoboy', 'Descrição', 'Status', 'Confirmação', 'Motivo']
     ws.append(headers)
     header_row = ws.max_row
     for col_num, _ in enumerate(headers, 1):
@@ -38,12 +38,15 @@ def exportar_excel(entregas, empresa, data_inicio, data_fim):
             e.empresa.nome_empresa,
             str(e.data),
             str(e.hora)[:5] if e.hora else '',
-            e.origem,
-            e.destino,
-            e.descricao,
+            e.solicitante or '',
+            e.unidade.nome if e.unidade else '',
+            e.de.nome if e.de else '',
+            e.para.nome if e.para else '',
+            e.motoboy or '',
+            e.descricao or '',
             e.get_status_display(),
             e.get_confirmacao_display(),
-            e.confirmacao_motivo,
+            e.confirmacao_motivo or '',
         ]
         ws.append(row)
         cur_row = ws.max_row
@@ -54,7 +57,7 @@ def exportar_excel(entregas, empresa, data_inicio, data_fim):
             if i % 2 == 1:
                 cell.fill = alt_fill
 
-    col_widths = [25, 12, 8, 30, 30, 35, 14, 16, 30]
+    col_widths = [25, 12, 8, 20, 18, 20, 20, 18, 35, 14, 16, 30]
     for col_num, width in enumerate(col_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col_num).column_letter].width = width
 

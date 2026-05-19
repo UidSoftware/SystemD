@@ -35,6 +35,7 @@ const menuOffice = [
 const menuPorPerfil = {
   ADMIN: [
     { label: 'Dashboard',     path: '/sistema/',              icone: '⊞' },
+    { label: 'Office',        path: '/sistema/office',         icone: '🏢', submenu: menuOffice },
     { label: 'Prospectos',    path: '/sistema/prospectos',    icone: '🎯' },
     { label: 'Clientes',      path: '/sistema/clientes',      icone: '◎' },
     { label: 'OS',            path: '/sistema/os',            icone: '⊟' },
@@ -43,7 +44,6 @@ const menuPorPerfil = {
     { label: 'Email',         path: '/sistema/email',         icone: '✉' },
     { label: 'Usuários',      path: '/sistema/usuarios',      icone: '👤' },
     { label: 'Configurações', path: '/sistema/configuracoes', icone: '⚙' },
-    { label: 'Office',        path: '/sistema/office',         icone: '🏢', submenu: menuOffice },
   ],
   OPERACIONAL: [
     { label: 'Dashboard',  path: '/sistema/',           icone: '⊞' },

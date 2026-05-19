@@ -101,8 +101,8 @@ Todas as páginas de listagem usam o padrão:
 
 ### Estrutura dos cards
 ```jsx
-// Mobile — cards
-<div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+// Mobile — cards (CORRETO: sem inline display — conflita com md:hidden)
+<div className="md:hidden flex flex-col gap-3">
   {items.map(item => (
     <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
       {/* campos em grid 1fr 1fr */}
@@ -126,6 +126,11 @@ Todas as páginas de listagem usam o padrão:
 ### Páginas convertidas
 Leads, Prospectos, OS, Clientes, Entregas, Usuários, Setores, Unidades,
 MinhasFaturas + financeiro via FinanceiroTable.jsx (componente compartilhado)
+
+### Armadilha: inline display sobrescreve md:hidden
+`style={{ display: 'flex' }}` tem precedência sobre classes Tailwind.
+O correto é usar SOMENTE classes: `className="md:hidden flex flex-col gap-3"`.
+Nunca combinar `className="md:hidden"` com `style={{ display: 'flex' }}`.
 
 ### FinanceiroTable.jsx
 Componente reutilizável em `src/components/sistema/FinanceiroTable.jsx`.
@@ -578,19 +583,23 @@ Não usamos Radix UI, TanStack Query ou outras libs de componente. Tudo em inlin
 O SystemD tem um menu **Office** (somente ADMIN) que integra o pipeline de desenvolvimento.
 
 ```
-Office
+Office  (logo após Dashboard — somente ADMIN)
 ├── Escritório      → iframe office.uidsoftware.com.br
 ├── Board           → Kanban/Scrum (em breve)
 ├── Agents          → status do time (em breve)
 ├── Activity Feed   → log de eventos (em breve)
-└── Novo Projeto
-    ├── Leads       → LeadsPage — lista leads do banco
-    ├── Entrevista  → levantamento de requisitos (em breve)
+└── Novo Projeto    → fluxo completo de aquisição
+    ├── Leads               → LeadsPage (leads do banco)
+    ├── Prospectos          → ProspectosPage (lead qualificado)
+    ├── Entrevista          → levantamento de requisitos (em breve)
     └── Arquitetura Técnica → form → salva em ordens_arquiteturatecnica
 ```
 
-- ADMIN: sem Leads no menu principal (acessa via Office → Novo Projeto → Leads)
-- OPERACIONAL: Leads permanece no menu principal em /sistema/leads
+**Fluxo de aquisição:** Lead → Prospecto → Entrevista → Arquitetura Técnica → pipeline agents
+
+**Perfis por menu:**
+- ADMIN: sem Leads e Prospectos no menu principal — acessam via Office → Novo Projeto
+- OPERACIONAL: Leads e Prospectos permanecem no menu principal
 
 ### ArquiteturaTecnica (ordens/models.py)
 
@@ -711,6 +720,7 @@ docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim 
 | Fase 9 | Menu Office integrado + MCP PostgreSQL + Novo Projeto (ArquiteturaTecnica) | ✅ |
 | Fase 9.1 | Mobile-first em todas as páginas (cards + tabela responsiva) | ✅ |
 | Fase 9.2 | Exports PDF/Excel corrigidos + filtro unidade Entregas + confirmação CLIENTE | ✅ |
+| Fase 9.3 | Fluxo Novo Projeto: Leads→Prospectos→Entrevista→Arquitetura Técnica | ✅ |
 | **Fase 10** | Dashboard real + Pipeline agents via Office | ⏳ |
 
 ---

@@ -90,6 +90,47 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 
 ---
 
+
+---
+
+## Padrão Mobile First (aplicado em todas as telas)
+
+Todas as páginas de listagem usam o padrão:
+- **Mobile** (`md:hidden`): cards com campos principais em grid 2 colunas e botões full-width
+- **Desktop** (`hidden md:block`): tabela completa
+
+### Estrutura dos cards
+```jsx
+// Mobile — cards
+<div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+  {items.map(item => (
+    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
+      {/* campos em grid 1fr 1fr */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
+        <div><span style={{ color: '#6b6b8a', fontSize: 11 }}>Label</span><br/><span style={{ color: '#e2d9f3' }}>Valor</span></div>
+      </div>
+      {/* botoes full-width */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button style={{ flex: 1, padding: '8px 0', borderRadius: 8 }}>Ação</button>
+      </div>
+    </div>
+  ))}
+</div>
+
+// Desktop — tabela
+<div className="hidden md:block">
+  <table>...</table>
+</div>
+```
+
+### Páginas convertidas
+Leads, Prospectos, OS, Clientes, Entregas, Usuários, Setores, Unidades,
+MinhasFaturas + financeiro via FinanceiroTable.jsx (componente compartilhado)
+
+### FinanceiroTable.jsx
+Componente reutilizável em `src/components/sistema/FinanceiroTable.jsx`.
+Já inclui mobile cards — todas as 8 telas financeiras herdam automaticamente.
+
 ## Estrutura de apps (backend)
 
 ```
@@ -667,7 +708,10 @@ docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim 
 | Fase 8 | Leads + Prospectos + Entregas + Navbar "Entrar" + redirect pós-login | ✅ |
 | Fase 8.1 | Acesso do cliente: criar conta + email de primeiro acesso + alterar senha | ✅ |
 | Fase 8.2 | Leads: mensagem na tabela + ao vivo (polling 30s) + fix F5 tokenRef | ✅ |
-| **Fase 9** | Dashboard + Form Levantamento de Requisitos | ⏳ |
+| Fase 9 | Menu Office integrado + MCP PostgreSQL + Novo Projeto (ArquiteturaTecnica) | ✅ |
+| Fase 9.1 | Mobile-first em todas as páginas (cards + tabela responsiva) | ✅ |
+| Fase 9.2 | Exports PDF/Excel corrigidos + filtro unidade Entregas + confirmação CLIENTE | ✅ |
+| **Fase 10** | Dashboard real + Pipeline agents via Office | ⏳ |
 
 ---
 

@@ -753,5 +753,60 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 ```
 
 ---
+
+## Agents da Fábrica Uid (UidOffice — VPS)
+
+Os agents estão em `/opt/uid-office/.claude/agents/` na VPS e em `/home/uidsoftware/CODE/UidOffice/.claude/agents/` local.
+
+| Agent | Papel | Quando usar |
+|-------|-------|-------------|
+| **Planner** | Lead Agent / Gerente de Projeto | Iniciar projeto, orquestrar pipeline, status de sprint |
+| **Analista** | Levantamento de requisitos | Elicitar, modelar, documentar requisitos |
+| **doc-generator** | Documentação técnica | Gerar 8 documentos padrão após análise |
+| **Blueprint** | Arquiteto de software | Definir estrutura técnica, ADRs, plano de fases |
+| **Forge** | Dev Backend (Django) | Implementar models, migrations, serializers, viewsets |
+| **Loom** | Dev Frontend (React) | Implementar telas, componentes, integração API |
+| **Sentinel** | QA / Testes | Validar deploy antes de ir a produção |
+| **Pilot** | DevOps / Deploy | Fazer deploy na VPS |
+| **Brush** | Design / UX | Identidade visual, componentes |
+
+### Como invocar agents na VPS
+
+```bash
+# Carregar credenciais do Office e rodar agent
+cd /opt/uid-office && export $(cat .env | xargs) && cd /diretorio-projeto
+claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
+
+# O Office usa CLAUDE_CODE_OAUTH_TOKEN (não claude login)
+# claude login NÃO funciona em servidor headless (sem browser)
+# Sempre exportar as vars do /opt/uid-office/.env antes de rodar
+```
+
+### Permissões da VPS (`/root/.claude/settings.json`)
+
+```json
+"permissions": {
+  "allow": [
+    "mcp__systemd__query",
+    "mcp__systemd__list_tables",
+    "mcp__systemd__describe_table",
+    "mcp__systemd__list_schemas",
+    "Bash(docker exec*)",
+    "Bash(docker ps*)",
+    "Bash(docker logs*)"
+  ]
+}
+```
+
+### Primeiro teste da pipeline (19/05/2026)
+Pipeline completo testado usando Studio Fluir como caso real:
+- **Planner** — recebeu análise de ciclo/PSE, gerou plano com 6 tarefas e briefings para Forge e Loom
+- **Forge** — executou B1 (fix ciclo), B2 (endpoint PSE), B3 (migration backfill), B4 (filtro datas)
+- **Loom** — executou F1 (simplificação MinistrarAulaPage), F2 (filtro turma RelPressaoPage)
+- **Sentinel** — validou deploy na VPS, 5/5 checks passaram, dado real confirmado em produção
+
+Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → Escritório** (iframe de office.uidsoftware.com.br). Hooks registram todos os eventos em tempo real.
+
+---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 18/05/2026*
+*Última atualização: 19/05/2026*

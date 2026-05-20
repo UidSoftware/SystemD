@@ -787,16 +787,30 @@ claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
 ```json
 "permissions": {
   "allow": [
-    "mcp__systemd__query",
-    "mcp__systemd__list_tables",
-    "mcp__systemd__describe_table",
-    "mcp__systemd__list_schemas",
-    "Bash(docker exec*)",
-    "Bash(docker ps*)",
-    "Bash(docker logs*)"
+    "mcp__systemd__query", "mcp__systemd__list_tables",
+    "mcp__systemd__describe_table", "mcp__systemd__list_schemas",
+    "Bash(docker exec*)", "Bash(docker ps*)", "Bash(docker logs*)",
+    "Read(/var/www/studio-fluir/**)", "Bash(find /var/www*)",
+    "Bash(ls /var/www*)", "Bash(wc -l /var/www*)",
+    "Bash(grep -n*)", "Bash(grep -r*)"
   ]
 }
 ```
+
+### Como os bonequinhos aparecem no Office
+
+O Office (pixel art) mostra personagens trabalhando via hooks `SubagentStart`/`SubagentStop`.
+**Regra crítica:** personagens SÓ aparecem quando o Agent tool é realmente chamado.
+
+```
+❌ claude -p "tarefa simples" → Claude responde direto, sem subagente, sem bonequinho
+❌ claude -p "spawne X como subagente para fazer Y" → Claude faz Y direto, ignora instrução
+✅ claude -p "execute DUAS tarefas em PARALELO: subagente 1 faz A, subagente 2 faz B"
+   → Claude usa Agent tool naturalmente para paralelizar → bonequinhos saem do elevador
+```
+
+O segredo: tarefas genuinamente paralelas forçam o uso do Agent tool.
+Tarefa única = Claude faz direto. Duas tarefas distintas simultâneas = subagentes reais.
 
 ### Primeiro teste da pipeline (19/05/2026)
 Pipeline completo testado usando Studio Fluir como caso real:

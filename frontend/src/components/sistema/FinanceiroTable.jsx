@@ -9,7 +9,7 @@ export function FinanceiroTable({ colunas, dados, onRowClick }) {
   return (
     <>
       {/* Mobile cards */}
-      <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="md:hidden flex flex-col" style={{ gap: 12 }}>
         {dados.map((row, i) => (
           <div key={row.id ?? i}
             onClick={() => onRowClick?.(row)}

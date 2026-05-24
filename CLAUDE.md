@@ -89,6 +89,9 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | `<select>` — overflow e cor | **Overflow:** `SistemaLayout` não usa `overflow-hidden` no root/content-column (clipa popup nativo no Linux Chrome/Opera); modal nunca usa `overflowY:'auto'`/`max-h-*` no container; card de filtro usa `overflow:'visible'` sobre `cardStyle`. **Cor das options:** browser ignora estilos inline — usar CSS global `select option { background-color:#1a0a2e; color:#f1f5f9 }` em `index.css`. Chrome no Windows/macOS ignora essa regra (limitação do SO) — substituição por componente customizado fica para versão futura |
 | `FinanceiroTable` — botões `_acoes` | Nunca usar `flex:1` nem `w-full` nos botões da coluna `_acoes` — o `FinanceiroTable` reutiliza o mesmo render em mobile (cards) e desktop (tabela); com `flex:1`+`w-full` os botões ocupam 100% da célula na tabela desktop. Padrão correto: `{ padding: '5px 10px', borderRadius: 8, ... }` sem `flex`. O componente cuida do layout mobile automaticamente via `mobile-acoes-row` |
 | Migrations com permissão root | Migrations geradas por `docker exec ... makemigrations` ficam com owner `root`. Git não consegue criar/sobrescrever esses arquivos no `git pull`. Corrigir antes do pull: `sudo chown -R $USER:$USER backend/<app>/migrations/` |
+| `unique=True, null=True, blank=True` — string vazia | Campo com essas três flags aceita `NULL` múltiplo no PostgreSQL, mas `''` (string vazia) viola a constraint única. Serializers com esses campos **obrigatoriamente** precisam de `validate_<field>` convertendo `''` → `None`. Ex: `forn_cnpj` em `FornecedorSerializer`. Sem isso: `POST` com campo vazio → `IntegrityError` → 500. |
+| AuthContext — interceptor permanente via `tokenRef` | O interceptor Axios está em `useEffect([])` (roda uma vez) e lê `tokenRef.current`, que é atualizado **síncrono no render** (`tokenRef.current = accessToken`). Nunca mover o interceptor para `useEffect([accessToken])` — effects de filhos rodam antes de pais, causando requests sem token (401) na montagem inicial das páginas. |
+| Soft delete financeiro — botão "Desativar" | Nos módulos financeiros (`BaseModel`), o `AuditMixin.perform_destroy` seta `deleted_at` (não `forn_ativo`). Registro some da listagem mas permanece no banco. **Restaurar via shell:** `instance.deleted_at = None; instance.deleted_by = None; instance.save(update_fields=['deleted_at', 'deleted_by'])` |
 
 ---
 
@@ -831,4 +834,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 24/05/2026*
+*Última atualização: 24/05/2026 (noite)*

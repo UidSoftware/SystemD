@@ -9,8 +9,8 @@ const formVazio = {
   folha_valor_liquido: '', folha_observacoes: '',
 }
 
-const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
-const btnRemover = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
+const btnRemover = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
 
 export default function FolhaPagamentoPage() {
   const [dados, setDados] = useState([])
@@ -71,7 +71,7 @@ export default function FolhaPagamentoPage() {
     { key: 'folha_descontos', label: 'Descontos', render: r => formatMoeda(r.folha_descontos), muted: true },
     { key: 'folha_valor_liquido', label: 'Líquido', render: r => <span style={{ color: '#10b981', fontWeight: 600 }}>{formatMoeda(r.folha_valor_liquido)}</span> },
     { key: '_acoes', label: 'Ações', render: r => (
-      <div className="flex gap-2 w-full">
+      <div className="flex gap-2">
         <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} style={btnEditar}>Editar</button>
         <button onClick={e => { e.stopPropagation(); deletar(r) }} style={btnRemover}>Remover</button>
       </div>

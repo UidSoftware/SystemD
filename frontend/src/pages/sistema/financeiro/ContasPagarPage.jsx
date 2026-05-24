@@ -20,8 +20,8 @@ const formVazio = {
   conta: '', plano_contas: '', forn: '',
 }
 
-const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
-const btnCancelar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
+const btnCancelar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
 
 export default function ContasPagarPage() {
   const [dados, setDados] = useState([])
@@ -104,7 +104,7 @@ export default function ContasPagarPage() {
     { key: 'pag_valor_total', label: 'Valor', render: r => formatMoeda(r.pag_valor_total) },
     { key: 'pag_status', label: 'Status', render: r => <BadgeStatus status={r.pag_status} config={STATUS_CFG} /> },
     { key: '_acoes', label: 'Ações', render: r => (
-      <div className="flex gap-2 w-full">
+      <div className="flex gap-2">
         <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} style={btnEditar}>Editar</button>
         {r.pag_status !== 'cancelado' && <button onClick={e => { e.stopPropagation(); deletar(r) }} style={btnCancelar}>Cancelar</button>}
       </div>

@@ -6,8 +6,8 @@ import { financeiroApi } from '../../../services/financeiroApi'
 const TIPOS = { corrente: 'Conta Corrente', poupanca: 'Poupança', caixa: 'Caixa Físico' }
 const formVazio = { cont_nome: '', cont_tipo: 'corrente', cont_saldo_inicial: '', cont_ativo: true }
 
-const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
-const btnDesativar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer', flex: 1 }
+const btnEditar = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
+const btnDesativar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
 
 export default function ContasPage() {
   const [dados, setDados] = useState([])
@@ -60,7 +60,7 @@ export default function ContasPage() {
       </span>
     )},
     { key: '_acoes', label: 'Ações', render: r => (
-      <div className="flex gap-2 w-full">
+      <div className="flex gap-2">
         <button onClick={e => { e.stopPropagation(); abrirEdicao(r) }} style={btnEditar}>Editar</button>
         {r.cont_ativo && <button onClick={e => { e.stopPropagation(); deletar(r) }} style={btnDesativar}>Desativar</button>}
       </div>

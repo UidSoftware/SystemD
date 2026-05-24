@@ -8,6 +8,8 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const timerRef = useRef(null)
+  const tokenRef = useRef(null)
+  tokenRef.current = accessToken  // atualizado síncrono no render, antes dos effects filhos
 
   const agendarRenovacao = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -42,14 +44,18 @@ export function AuthProvider({ children }) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
+  // Interceptor permanente — lê tokenRef que é sempre atualizado no render
   useEffect(() => {
     const interceptor = api.interceptors.request.use((config) => {
-      if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
+      if (tokenRef.current) config.headers.Authorization = `Bearer ${tokenRef.current}`
       return config
     })
-    if (accessToken) buscarPerfil()
     return () => api.interceptors.request.eject(interceptor)
-  }, [accessToken])
+  }, [])
+
+  useEffect(() => {
+    if (accessToken) buscarPerfil()
+  }, [accessToken, buscarPerfil])
 
   const login = async (email, senha) => {
     const res = await api.post('/auth/token/', { email, password: senha })

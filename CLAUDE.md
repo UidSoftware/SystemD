@@ -87,6 +87,8 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Unidades sem menu próprio | `UnidadesPage` existe como rota mas sem item na Sidebar — gerenciamento via modal dentro de `EntregasPage` (botão ⊡ Unidades no header) |
 | Deploy: sempre pull primeiro | Na VPS, `git pull` **antes** de qualquer `docker compose build` — nunca buildar sem sincronizar o código |
 | `<select>` — overflow e cor | **Overflow:** `SistemaLayout` não usa `overflow-hidden` no root/content-column (clipa popup nativo no Linux Chrome/Opera); modal nunca usa `overflowY:'auto'`/`max-h-*` no container; card de filtro usa `overflow:'visible'` sobre `cardStyle`. **Cor das options:** browser ignora estilos inline — usar CSS global `select option { background-color:#1a0a2e; color:#f1f5f9 }` em `index.css`. Chrome no Windows/macOS ignora essa regra (limitação do SO) — substituição por componente customizado fica para versão futura |
+| `FinanceiroTable` — botões `_acoes` | Nunca usar `flex:1` nem `w-full` nos botões da coluna `_acoes` — o `FinanceiroTable` reutiliza o mesmo render em mobile (cards) e desktop (tabela); com `flex:1`+`w-full` os botões ocupam 100% da célula na tabela desktop. Padrão correto: `{ padding: '5px 10px', borderRadius: 8, ... }` sem `flex`. O componente cuida do layout mobile automaticamente via `mobile-acoes-row` |
+| Migrations com permissão root | Migrations geradas por `docker exec ... makemigrations` ficam com owner `root`. Git não consegue criar/sobrescrever esses arquivos no `git pull`. Corrigir antes do pull: `sudo chown -R $USER:$USER backend/<app>/migrations/` |
 
 ---
 
@@ -135,6 +137,8 @@ Nunca combinar `className="md:hidden"` com `style={{ display: 'flex' }}`.
 ### FinanceiroTable.jsx
 Componente reutilizável em `src/components/sistema/FinanceiroTable.jsx`.
 Já inclui mobile cards — todas as 8 telas financeiras herdam automaticamente.
+
+**Armadilha interna do componente:** o container mobile deve ser `className="md:hidden flex flex-col"` com `style={{ gap: 12 }}`. Nunca adicionar `display: 'flex'` no inline style — teria precedência sobre `md:hidden` e exibiria os cards em cima da tabela desktop em qualquer resolução.
 
 ## Estrutura de apps (backend)
 
@@ -687,7 +691,11 @@ docker exec sytemd-backend-1 python manage.py loaddata setores
 
 ### Corrigir permissões de arquivos criados pelo Docker
 ```bash
-docker run --rm -v /home/uidsoftware/CODE/SystemD/backend:/app python:3.12-slim chown -R 1000:1000 /app/<diretorio>/
+# No dev local (migrations geradas pelo container ficam como root)
+sudo chown -R $USER:$USER backend/<app>/migrations/
+
+# Na VPS (caso necessário)
+docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000 /app/<diretorio>/
 ```
 
 ---
@@ -823,4 +831,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 19/05/2026*
+*Última atualização: 24/05/2026*

@@ -57,6 +57,10 @@ class PlanoContasSerializer(serializers.ModelSerializer):
 
 class FornecedorSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk', read_only=True)
+    forn_cnpj = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    def validate_forn_cnpj(self, value):
+        return value.strip() or None
 
     class Meta:
         model = Fornecedor

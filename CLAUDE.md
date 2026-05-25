@@ -67,7 +67,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 
 | Regra | Detalhe |
 |-------|---------|
-| Nunca SSH/credenciais no CLAUDE.md | Aliases SSH, IPs, usuários, senhas e chaves **jamais** neste arquivo — ele é versionado e público no GitHub. Guardar em `~/.ssh/config` (local) ou `memory/` (Claude) |
+| Nunca SSH/credenciais no CLAUDE.md | Aliases SSH, IPs, usuários, senhas e chaves **jamais** neste arquivo — ele é versionado e público no GitHub. Guardar em `.env` (gitignored) — ver seção `# Infra — acesso VPS` |
 | Nunca SQLite | Sempre PostgreSQL |
 | Nunca FloatField | Sempre `DecimalField` para qualquer campo monetário |
 | Nunca hardcodar credenciais | Sempre `.env` via `python-decouple` |

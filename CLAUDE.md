@@ -67,7 +67,6 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 
 | Regra | Detalhe |
 |-------|---------|
-| Nunca SSH/credenciais no CLAUDE.md | Aliases SSH, IPs, usuários, senhas e chaves **jamais** neste arquivo — ele é versionado e público no GitHub. Guardar em `.env` (gitignored) — ver seção `# Infra — acesso VPS` |
 | Nunca SQLite | Sempre PostgreSQL |
 | Nunca FloatField | Sempre `DecimalField` para qualquer campo monetário |
 | Nunca hardcodar credenciais | Sempre `.env` via `python-decouple` |
@@ -833,21 +832,6 @@ Pipeline completo testado usando Studio Fluir como caso real:
 
 Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → Escritório** (iframe de office.uidsoftware.com.br). Hooks registram todos os eventos em tempo real.
 
-### Sincronização local ↔ GitHub ↔ VPS
-
-Os agents (Forge, Loom, etc.) fazem commits e push direto ao GitHub durante a execução.
-Após qualquer rodada de agents, verificar se local e VPS estão sincronizados:
-
-```bash
-# Verificar os 3 ambientes
-git fetch origin && git status                          # local
-ssh vps-pcuidsoftware-root "cd /root/SytemD && git fetch origin && git status"
-
-# Atualizar ambos se necessário
-git pull
-ssh vps-pcuidsoftware-root "cd /root/SytemD && git pull origin main"
-```
-
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 25/05/2026*
+*Última atualização: 24/05/2026 (noite)*

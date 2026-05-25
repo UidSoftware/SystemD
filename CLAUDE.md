@@ -67,6 +67,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 
 | Regra | Detalhe |
 |-------|---------|
+| Nunca SSH/credenciais no CLAUDE.md | Aliases SSH, IPs, usuários, senhas e chaves **jamais** neste arquivo — ele é versionado e público no GitHub. Guardar em `~/.ssh/config` (local) ou `memory/` (Claude) |
 | Nunca SQLite | Sempre PostgreSQL |
 | Nunca FloatField | Sempre `DecimalField` para qualquer campo monetário |
 | Nunca hardcodar credenciais | Sempre `.env` via `python-decouple` |
@@ -657,7 +658,6 @@ UPDATE vitrine_lead SET convertido = true WHERE id = X;
 | Novos clientes | 8003+ | — |
 
 - Deploy: `/root/SytemD/`
-- SSH alias local: `vps-pcuidsoftware-root` → `ssh vps-pcuidsoftware-root` (configurado em `~/.ssh/config`)
 - SSL: certbot com renovação automática no nginx-proxy
 - PostgreSQL MCP: exposto em 127.0.0.1:5433 para o Planner (não público)
 
@@ -673,9 +673,6 @@ make makemigrations   # gera migrations
 make shell            # shell Django
 make logs             # tail logs
 make createsuperuser  # cria admin
-
-# Acesso à VPS
-ssh vps-pcuidsoftware-root
 
 # Produção — rodar na VPS em /root/SytemD/
 git pull origin main                                              # ← SEMPRE PRIMEIRO

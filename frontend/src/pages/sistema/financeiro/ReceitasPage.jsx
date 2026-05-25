@@ -84,9 +84,15 @@ export default function ReceitasPage() {
   }
 
   const colunas = [
-    { key: 'descricao', label: 'Descrição' },
+    { key: 'descricao', label: 'Descrição', render: r => (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {r.os && <span title={`OS: ${r.os_titulo || r.os}`} style={{ fontSize: 12 }}>🔗</span>}
+        {r.descricao}
+      </span>
+    )},
     { key: 'tipo', label: 'Tipo', render: r => <BadgeStatus status={r.tipo} config={TIPO_CFG} /> },
     { key: 'cliente_nome', label: 'Cliente', render: r => r.cliente_nome || '—', muted: true },
+    { key: 'os_titulo', label: 'OS', render: r => r.os_titulo ? <span style={{ fontSize: 12, color: '#6b8fff' }}>{r.os_titulo}</span> : <span style={{ color: '#6b6b8a' }}>—</span>, muted: true },
     { key: 'valor_liquido', label: 'Valor', render: r => formatMoeda(r.valor_liquido) },
     { key: 'vencimento', label: 'Vencimento', render: r => formatData(r.vencimento), muted: true },
     { key: 'status', label: 'Status', render: r => <BadgeStatus status={r.status} config={STATUS_CFG} /> },

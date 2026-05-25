@@ -4,18 +4,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
 
 const menuFinanceiro = [
-  { label: 'Livro Caixa',     path: '/sistema/financeiro/livro-caixa' },
-  { label: 'Contas a Pagar',  path: '/sistema/financeiro/contas-pagar' },
-  { label: 'Contas a Receber',path: '/sistema/financeiro/contas-receber' },
+  { label: 'Visão Geral',     path: '/sistema/financeiro/visao-geral' },
+  { label: 'Receitas',        path: '/sistema/financeiro/receitas' },
+  { label: 'Despesas',        path: '/sistema/financeiro/despesas' },
+  { label: 'Aportes',         path: '/sistema/financeiro/aportes' },
   { label: 'Contas Bancárias',path: '/sistema/financeiro/contas' },
-  { label: 'Fornecedores',    path: '/sistema/financeiro/fornecedores' },
-  { label: 'Serviços',        path: '/sistema/financeiro/servicos' },
-  { label: 'Planos',          path: '/sistema/financeiro/planos' },
-  { label: 'Folha Pgto',      path: '/sistema/financeiro/folha' },
-  { label: 'Transferência',   path: '/sistema/financeiro/transferencia' },
+  { label: 'Livro Caixa',     path: '/sistema/financeiro/livro-caixa' },
   { label: 'DRE',             path: '/sistema/financeiro/dre' },
-  { label: 'Fluxo de Caixa',  path: '/sistema/financeiro/fluxo-caixa' },
-  { label: 'Extrato',         path: '/sistema/financeiro/extrato' },
+  { label: 'Por Cliente',     path: '/sistema/financeiro/por-cliente' },
 ]
 
 const menuNovoProjeto = [

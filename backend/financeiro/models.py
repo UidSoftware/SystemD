@@ -1,514 +1,215 @@
-"""
-Módulo Financeiro — models genéricos.
+from decimal import Decimal
 
-Adaptações em relação ao projeto de origem (NosFluir):
-- AlunoPlano renomeado para ClientePlano; tabela aluno_plano → cliente_plano.
-- FKs de domínio (Aluno, Funcionario) substituídas por campos genéricos de ID + nome.
-- ContasReceber: sem FK Aluno; usa rec_cliente_id (IntegerField) + rec_nome_pagador.
-- FolhaPagamento: sem FK Funcionario; usa funcionario_id + funcionario_nome.
-- Pedido: sem FK Aluno; usa ped_cliente_id + ped_nome_cliente (já existia).
-- PedidoItem: sem FK AlunoPlano; usa ClientePlano.
-
-Para referenciar o model de Cliente do seu projeto, use rec_cliente_id / ped_cliente_id
-e os campos de nome correspondentes.
-"""
-
+from django.conf import settings
 from django.db import models
 
-from financeiro.mixins import BaseModel
 
-
-class Conta(BaseModel):
-    """Conta bancária ou caixa físico."""
-    TIPO_CHOICES = [
-        ('corrente', 'Conta Corrente'),
-        ('poupanca', 'Poupança'),
-        ('caixa',    'Caixa Físico'),
-    ]
-
-    cont_id            = models.AutoField(primary_key=True)
-    cont_nome          = models.CharField('nome', max_length=100)
-    cont_tipo          = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES)
-    cont_saldo_inicial = models.DecimalField('saldo inicial', max_digits=10, decimal_places=2, default=0)
-    cont_ativo         = models.BooleanField('ativo', default=True)
+class BaseFinanceiro(models.Model):
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    criado_por    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    ativo = models.BooleanField(default=True)
 
     class Meta:
-        db_table = 'conta'
-        verbose_name = 'Conta'
-        verbose_name_plural = 'Contas'
-        ordering = ['cont_nome']
+        abstract = True
+
+
+# ──────────────────────────────────────────────
+# Conta
+# ──────────────────────────────────────────────
+
+class TipoConta(models.TextChoices):
+    CORRENTE = 'CORRENTE', 'Conta Corrente'
+    POUPANCA = 'POUPANCA', 'Poupança'
+    CAIXA    = 'CAIXA',    'Caixa'
+    CARTEIRA = 'CARTEIRA', 'Carteira Digital'
+
+
+class Conta(BaseFinanceiro):
+    nome          = models.CharField(max_length=100)
+    tipo          = models.CharField(max_length=20, choices=TipoConta.choices)
+    banco         = models.CharField(max_length=100, blank=True)
+    agencia       = models.CharField(max_length=20, blank=True)
+    numero        = models.CharField(max_length=30, blank=True)
+    saldo_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'fin_conta'
+        ordering = ['nome']
 
     def __str__(self):
-        return f"{self.cont_nome} ({self.get_cont_tipo_display()})"
+        return self.nome
 
 
-class PlanoContas(BaseModel):
-    """Classificação contábil dos lançamentos financeiros."""
-    TIPO_CHOICES = [
-        ('receita_operacional',     'Receita Operacional'),
-        ('receita_nao_operacional', 'Receita Não Operacional'),
-        ('despesa_operacional',     'Despesa Operacional'),
-        ('despesa_nao_operacional', 'Despesa Não Operacional'),
-        ('transferencia',           'Transferência'),
-    ]
+# ──────────────────────────────────────────────
+# Aporte
+# ──────────────────────────────────────────────
 
-    plc_id     = models.AutoField(primary_key=True)
-    plc_codigo = models.CharField('código', max_length=20, unique=True)
-    plc_nome   = models.CharField('nome', max_length=100)
-    plc_tipo   = models.CharField('tipo', max_length=30, choices=TIPO_CHOICES)
-    plc_ativo  = models.BooleanField('ativo', default=True)
+class TipoAporte(models.TextChoices):
+    CAPITAL_SOCIAL = 'CAPITAL_SOCIAL', 'Capital Social'
+    SOCIO          = 'SOCIO',          'Aporte de Sócio'
+    INVESTIDOR     = 'INVESTIDOR',     'Aporte de Investidor'
+    EMPRESTIMO     = 'EMPRESTIMO',     'Empréstimo'
+
+
+class Aporte(BaseFinanceiro):
+    tipo        = models.CharField(max_length=20, choices=TipoAporte.choices)
+    descricao   = models.CharField(max_length=255)
+    valor       = models.DecimalField(max_digits=12, decimal_places=2)
+    conta       = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='aportes')
+    data        = models.DateField()
+    responsavel = models.CharField(max_length=150)
+    observacoes = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'plano_contas'
-        verbose_name = 'Plano de Contas'
-        verbose_name_plural = 'Plano de Contas'
-        ordering = ['plc_codigo']
+        db_table = 'fin_aporte'
+        ordering = ['-data']
 
     def __str__(self):
-        return f"{self.plc_codigo} — {self.plc_nome}"
+        return f'{self.descricao} — R$ {self.valor}'
 
 
-class Fornecedor(BaseModel):
-    """Cadastro de fornecedores de produtos e serviços."""
-    forn_id           = models.AutoField(primary_key=True)
-    forn_nome_empresa = models.CharField('razão social / nome fantasia', max_length=200)
-    forn_nome_dono    = models.CharField('nome do responsável', max_length=150, null=True, blank=True)
-    forn_cnpj         = models.CharField('CNPJ', max_length=18, unique=True, null=True, blank=True)
-    forn_endereco     = models.CharField('endereço', max_length=300, null=True, blank=True)
-    forn_telefone     = models.CharField('telefone', max_length=20, null=True, blank=True)
-    forn_email        = models.EmailField('e-mail', max_length=150, null=True, blank=True)
-    forn_ativo        = models.BooleanField('ativo', default=True)
+# ──────────────────────────────────────────────
+# Receita
+# ──────────────────────────────────────────────
+
+class TipoReceita(models.TextChoices):
+    ENTRADA_CONTRATO = 'ENTRADA_CONTRATO', 'Entrada de Contrato'
+    MENSALIDADE      = 'MENSALIDADE',      'Mensalidade'
+    CONSULTORIA      = 'CONSULTORIA',      'Consultoria Avulsa'
+    OUTRO            = 'OUTRO',            'Outro'
+
+
+class StatusReceita(models.TextChoices):
+    PENDENTE  = 'PENDENTE',  'Pendente'
+    RECEBIDO  = 'RECEBIDO',  'Recebido'
+    CANCELADO = 'CANCELADO', 'Cancelado'
+    ATRASADO  = 'ATRASADO',  'Atrasado'
+
+
+class Receita(BaseFinanceiro):
+    tipo           = models.CharField(max_length=20, choices=TipoReceita.choices)
+    descricao      = models.CharField(max_length=255)
+    cliente        = models.ForeignKey(
+        'clientes.Cliente', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='receitas',
+    )
+    os             = models.ForeignKey(
+        'ordens.OS', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='receitas',
+    )
+    valor_bruto    = models.DecimalField(max_digits=12, decimal_places=2)
+    desconto       = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_liquido  = models.DecimalField(max_digits=12, decimal_places=2)
+    conta          = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='receitas')
+    vencimento     = models.DateField()
+    recebimento    = models.DateField(null=True, blank=True)
+    status         = models.CharField(max_length=20, choices=StatusReceita.choices, default='PENDENTE')
+    referencia_mes = models.DateField(null=True, blank=True)
+    observacoes    = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'fornecedor'
-        verbose_name = 'Fornecedor'
-        verbose_name_plural = 'Fornecedores'
-        ordering = ['forn_nome_empresa']
-
-    def __str__(self):
-        return self.forn_nome_empresa
-
-
-class ServicoProduto(BaseModel):
-    """Catálogo de serviços."""
-    serv_id          = models.AutoField(primary_key=True)
-    serv_nome        = models.CharField('nome', max_length=125)
-    serv_descricao   = models.TextField('descrição', null=True, blank=True)
-    serv_valor_base  = models.DecimalField('valor base', max_digits=10, decimal_places=2)
-    serv_ativo       = models.BooleanField('ativo', default=True)
-
-    class Meta:
-        db_table = 'servico_produto'
-        verbose_name = 'Serviço'
-        verbose_name_plural = 'Serviços'
-        ordering = ['serv_nome']
-
-    def __str__(self):
-        return self.serv_nome
-
-
-class ContasPagar(BaseModel):
-    """Controle de contas a pagar (despesas)."""
-    STATUS_CHOICES = [
-        ('pendente',  'Pendente'),
-        ('pago',      'Pago'),
-        ('vencido',   'Vencido'),
-        ('cancelado', 'Cancelado'),
-    ]
-    TIPO_CHOICES = [
-        ('aluguel',   'Aluguel'),
-        ('prolabore', 'Pró-labore'),
-        ('material',  'Material/Equipamento'),
-        ('marketing', 'Marketing'),
-        ('servico',   'Serviço Terceiro'),
-        ('taxa',      'Taxa Bancária'),
-        ('outros',    'Outros'),
-    ]
-
-    pag_id              = models.AutoField(primary_key=True)
-    forn                = models.ForeignKey(
-        Fornecedor, on_delete=models.PROTECT,
-        null=True, blank=True, verbose_name='fornecedor'
-    )
-    serv                = models.ForeignKey(
-        ServicoProduto, on_delete=models.SET_NULL,
-        null=True, blank=True, verbose_name='serviço'
-    )
-    plano_contas        = models.ForeignKey(
-        'PlanoContas', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='contas_pagar', verbose_name='plano de contas'
-    )
-    conta               = models.ForeignKey(
-        'Conta', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='contas_pagar', verbose_name='conta de saída'
-    )
-    cpa_tipo            = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES, null=True, blank=True)
-    cpa_nome_credor     = models.CharField('nome do credor', max_length=200, null=True, blank=True)
-    pag_data_emissao    = models.DateTimeField('data de emissão')
-    pag_data_vencimento = models.DateTimeField('data de vencimento')
-    pag_data_pagamento  = models.DateTimeField('data de pagamento', null=True, blank=True)
-    pag_descricao       = models.CharField('descrição', max_length=300)
-    pag_quantidade      = models.IntegerField('quantidade', default=1)
-    pag_valor_unitario  = models.DecimalField('valor unitário', max_digits=10, decimal_places=2)
-    # RN001: valor_total = quantidade × valor_unitario (sem desconto)
-    pag_valor_total     = models.DecimalField('valor total', max_digits=10, decimal_places=2)
-    pag_status          = models.CharField('status', max_length=20, choices=STATUS_CHOICES, default='pendente')
-    pag_forma_pagamento = models.CharField('forma de pagamento', max_length=50, null=True, blank=True)
-    pag_observacoes     = models.TextField('observações', null=True, blank=True)
-
-    class Meta:
-        db_table = 'contas_pagar'
-        verbose_name = 'Conta a Pagar'
-        verbose_name_plural = 'Contas a Pagar'
-        ordering = ['pag_data_vencimento']
-
-    def __str__(self):
-        return f'{self.pag_descricao} — R$ {self.pag_valor_total}'
-
-
-class ContasReceber(BaseModel):
-    """
-    Controle de contas a receber (receitas).
-
-    Adaptação genérica:
-    - FK Aluno removida. Use rec_cliente_id para armazenar o ID do cliente
-      no sistema e rec_nome_pagador para o nome.
-    - aplano substituído por FK ClientePlano (nullable).
-    """
-    STATUS_CHOICES = [
-        ('pendente',  'Pendente'),
-        ('recebido',  'Recebido'),
-        ('vencido',   'Vencido'),
-        ('cancelado', 'Cancelado'),
-    ]
-    PLANO_TIPO_CHOICES = [
-        ('mensal',      'Mensal'),
-        ('trimestral',  'Trimestral'),
-        ('semestral',   'Semestral'),
-    ]
-    TIPO_CHOICES = [
-        ('mensalidade', 'Mensalidade'),
-        ('avaliacao',   'Avaliação Física'),
-        ('consultoria', 'Consultoria Online'),
-        ('personal',    'Personal'),
-        ('produto',     'Venda de Produto'),
-        ('rendimento',  'Rendimento'),
-        ('outros',      'Outros'),
-    ]
-
-    rec_id              = models.AutoField(primary_key=True)
-    # Campo genérico — armazene aqui o PK do model de cliente do seu projeto
-    rec_cliente_id      = models.IntegerField('ID do cliente', null=True, blank=True)
-    aplano              = models.ForeignKey(
-        'ClientePlano', on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='cobrancas', verbose_name='plano do cliente'
-    )
-    serv                = models.ForeignKey(
-        ServicoProduto, on_delete=models.SET_NULL,
-        null=True, blank=True, verbose_name='serviço'
-    )
-    plano_contas        = models.ForeignKey(
-        'PlanoContas', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='contas_receber', verbose_name='plano de contas'
-    )
-    conta               = models.ForeignKey(
-        'Conta', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='contas_receber', verbose_name='conta de destino'
-    )
-    rec_tipo            = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES, null=True, blank=True)
-    rec_nome_pagador    = models.CharField('nome do pagador', max_length=200, null=True, blank=True)
-    rec_data_emissao    = models.DateTimeField('data de emissão')
-    rec_data_vencimento = models.DateTimeField('data de vencimento')
-    rec_data_recebimento= models.DateTimeField('data de recebimento', null=True, blank=True)
-    rec_descricao       = models.CharField('descrição', max_length=300)
-    rec_quantidade      = models.IntegerField('quantidade', default=1)
-    rec_valor_unitario  = models.DecimalField('valor unitário', max_digits=10, decimal_places=2)
-    rec_desconto        = models.DecimalField('desconto', max_digits=10, decimal_places=2, default=0)
-    # RN002: valor_total = (quantidade × valor_unitario) - desconto
-    rec_valor_total     = models.DecimalField('valor total', max_digits=10, decimal_places=2)
-    rec_status          = models.CharField('status', max_length=20, choices=STATUS_CHOICES, default='pendente')
-    rec_forma_recebimento = models.CharField('forma de recebimento', max_length=50, null=True, blank=True)
-    rec_plano_tipo      = models.CharField(
-        'tipo de plano', max_length=20, choices=PLANO_TIPO_CHOICES, null=True, blank=True
-    )
-    rec_observacoes     = models.TextField('observações', null=True, blank=True)
-
-    class Meta:
-        db_table = 'contas_receber'
-        verbose_name = 'Conta a Receber'
-        verbose_name_plural = 'Contas a Receber'
-        ordering = ['rec_data_vencimento']
-
-    def __str__(self):
-        return f'{self.rec_descricao} — R$ {self.rec_valor_total}'
-
-
-class PlanosPagamentos(BaseModel):
-    """Template de plano — catálogo de planos disponíveis."""
-    TIPO_PLANO_CHOICES = [
-        ('mensal',      'Mensal'),
-        ('trimestral',  'Trimestral'),
-        ('semestral',   'Semestral'),
-    ]
-
-    plan_id         = models.AutoField(primary_key=True)
-    serv            = models.ForeignKey(ServicoProduto, on_delete=models.PROTECT, verbose_name='serviço')
-    plan_tipo_plano = models.CharField('tipo do plano', max_length=20, choices=TIPO_PLANO_CHOICES)
-    plan_valor_plano= models.DecimalField('valor mensal', max_digits=10, decimal_places=2)
-
-    class Meta:
-        db_table = 'planos_pagamentos'
-        verbose_name = 'Plano de Pagamento'
-        verbose_name_plural = 'Planos de Pagamento'
-        ordering = ['serv__serv_nome', 'plan_tipo_plano']
-
-    def __str__(self):
-        return f'{self.serv.serv_nome} — {self.get_plan_tipo_plano_display()}'
-
-
-class ClientePlano(BaseModel):
-    """
-    Contrato individual: cliente vinculado a um plano.
-
-    Adaptação genérica (era AlunoPlano com FK para Aluno):
-    - cli_id: armazena o PK do modelo de cliente do seu projeto (IntegerField).
-    - cli_nome: nome do cliente para exibição sem JOIN externo.
-    - Prefixo cplano_ (era aplano_).
-    - PK: cplano_id.
-    """
-    cplano_id              = models.AutoField(primary_key=True)
-    # Referencie aqui o PK do seu model de cliente (sem FK — genérico)
-    cli_id                 = models.IntegerField('ID do cliente')
-    cli_nome               = models.CharField('nome do cliente', max_length=200)
-    plano                  = models.ForeignKey(
-        PlanosPagamentos, on_delete=models.PROTECT,
-        related_name='clientes', verbose_name='plano'
-    )
-    cplano_dia_vencimento  = models.IntegerField('dia de vencimento', null=True, blank=True)
-    cplano_data_inicio     = models.DateField('data de início')
-    cplano_data_fim        = models.DateField('data de término', null=True, blank=True)
-    cplano_ativo           = models.BooleanField('ativo', default=True)
-    cplano_observacoes     = models.TextField('observações', null=True, blank=True)
-
-    class Meta:
-        db_table = 'cliente_plano'
-        verbose_name = 'Plano do Cliente'
-        verbose_name_plural = 'Planos dos Clientes'
-        ordering = ['-cplano_data_inicio']
-
-    def __str__(self):
-        return f"{self.cli_nome} — {self.plano} ({'ativo' if self.cplano_ativo else 'inativo'})"
-
-
-class LivroCaixa(BaseModel):
-    """
-    Registro imutável de todos os lançamentos financeiros.
-    NUNCA editar ou deletar — correções via estorno.
-    Implementado via ReadCreateViewSet no Django.
-    """
-    TIPO_CHOICES = [
-        ('entrada', 'Entrada'),
-        ('saida',   'Saída'),
-    ]
-    ORIGEM_TIPO_CHOICES = [
-        ('contas_pagar',    'Contas a Pagar'),
-        ('contas_receber',  'Contas a Receber'),
-        ('folha_pagamento', 'Folha de Pagamento'),
-        ('pedido',          'Pedido'),
-        ('manual',          'Manual'),
-    ]
-    TIPO_MOVIMENTO_CHOICES = [
-        ('entrada',       'Entrada'),
-        ('saida',         'Saída'),
-        ('transferencia', 'Transferência'),
-    ]
-
-    lica_id              = models.AutoField(primary_key=True)
-    lica_data_lancamento = models.DateTimeField('data do lançamento', auto_now_add=True)
-    lica_tipo_lancamento = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES)
-    lica_historico       = models.CharField('histórico', max_length=300)
-    lica_valor           = models.DecimalField('valor', max_digits=10, decimal_places=2)
-    lica_categoria       = models.CharField('categoria', max_length=100, null=True, blank=True)
-    lica_origem_tipo     = models.CharField(
-        'origem', max_length=20, choices=ORIGEM_TIPO_CHOICES, null=True, blank=True
-    )
-    # IntegerField polimórfico — armazena o ID da origem (ContasPagar, ContasReceber, etc.)
-    lica_origem_id       = models.IntegerField('ID de origem', null=True, blank=True)
-    lica_saldo_anterior  = models.DecimalField('saldo anterior', max_digits=10, decimal_places=2)
-    lica_saldo_atual     = models.DecimalField('saldo atual', max_digits=10, decimal_places=2)
-    lica_forma_pagamento = models.CharField('forma de pagamento', max_length=50, null=True, blank=True)
-    conta                = models.ForeignKey(
-        'Conta', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='lancamentos', verbose_name='conta'
-    )
-    conta_destino        = models.ForeignKey(
-        'Conta', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='lancamentos_destino', verbose_name='conta destino'
-    )
-    plano_contas         = models.ForeignKey(
-        'PlanoContas', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='lancamentos', verbose_name='plano de contas'
-    )
-    lcx_tipo_movimento   = models.CharField(
-        'tipo de movimento', max_length=20, choices=TIPO_MOVIMENTO_CHOICES, null=True, blank=True
-    )
-    lcx_competencia      = models.DateField('data de competência', null=True, blank=True)
-    lcx_documento        = models.CharField('documento/comprovante', max_length=100, null=True, blank=True)
-
-    class Meta:
-        db_table = 'livro_caixa'
-        verbose_name = 'Livro Caixa'
-        verbose_name_plural = 'Livro Caixa'
-        ordering = ['-lica_id']
-
-    def __str__(self):
-        return f'{self.get_lica_tipo_lancamento_display()} R$ {self.lica_valor} — {self.lica_historico}'
-
-
-class FolhaPagamento(BaseModel):
-    """
-    Controle da folha de pagamento.
-
-    Adaptação genérica (era FK Funcionario):
-    - funcionario_id: PK do model de funcionário do seu projeto (IntegerField).
-    - funcionario_nome: nome para exibição sem JOIN externo.
-    - unique_together usa funcionario_id no lugar da FK.
-    """
-    STATUS_CHOICES = [
-        ('pendente',  'Pendente'),
-        ('pago',      'Pago'),
-        ('cancelado', 'Cancelado'),
-    ]
-
-    fopa_id              = models.AutoField(primary_key=True)
-    # Referencie aqui o PK do seu model de funcionário (sem FK — genérico)
-    funcionario_id       = models.IntegerField('ID do funcionário')
-    funcionario_nome     = models.CharField('nome do funcionário', max_length=200)
-    fopa_mes_referencia  = models.IntegerField('mês de referência')
-    fopa_ano_referencia  = models.IntegerField('ano de referência')
-    fopa_salario_base    = models.DecimalField('salário base', max_digits=10, decimal_places=2)
-    fopa_descontos       = models.DecimalField('descontos', max_digits=10, decimal_places=2, default=0)
-    # RN009: valor_liquido = salario_base - descontos
-    fopa_valor_liquido   = models.DecimalField('valor líquido', max_digits=10, decimal_places=2)
-    fopa_data_pagamento  = models.DateField('data de pagamento', null=True, blank=True)
-    fopa_status          = models.CharField('status', max_length=20, choices=STATUS_CHOICES, default='pendente')
-
-    class Meta:
-        db_table = 'folha_pagamento'
-        verbose_name = 'Folha de Pagamento'
-        verbose_name_plural = 'Folhas de Pagamento'
-        # RN008: único por funcionário + mês + ano
-        unique_together = [['funcionario_id', 'fopa_mes_referencia', 'fopa_ano_referencia']]
-        ordering = ['-fopa_ano_referencia', '-fopa_mes_referencia']
-
-    def __str__(self):
-        return f'{self.funcionario_nome} — {self.fopa_mes_referencia:02d}/{self.fopa_ano_referencia}'
-
-
-class Produto(BaseModel):
-    """Catálogo de produtos físicos com controle de estoque."""
-    prod_id             = models.AutoField(primary_key=True)
-    prod_nome           = models.CharField('nome', max_length=200)
-    prod_descricao      = models.TextField('descrição', null=True, blank=True)
-    prod_valor_venda    = models.DecimalField('valor de venda', max_digits=10, decimal_places=2)
-    prod_estoque_atual  = models.IntegerField('estoque atual', default=0)
-    prod_estoque_minimo = models.IntegerField('estoque mínimo', default=5)
-    prod_ativo          = models.BooleanField('ativo', default=True)
-
-    class Meta:
-        db_table = 'produto'
-        verbose_name = 'Produto'
-        verbose_name_plural = 'Produtos'
-        ordering = ['prod_nome']
-
-    def __str__(self):
-        return f"{self.prod_nome} (estoque: {self.prod_estoque_atual})"
-
-
-class Pedido(BaseModel):
-    """
-    Venda de produtos/serviços/planos.
-
-    Adaptação genérica (era FK Aluno):
-    - ped_cliente_id: PK do model de cliente do seu projeto (IntegerField).
-    - ped_nome_cliente: nome do cliente para exibição sem JOIN.
-    """
-    STATUS_CHOICES = [
-        ('pendente',  'Pendente'),
-        ('pago',      'Pago'),
-        ('cancelado', 'Cancelado'),
-    ]
-    FORMA_CHOICES = [
-        ('pix',      'PIX'),
-        ('dinheiro', 'Dinheiro'),
-        ('cartao',   'Cartão'),
-        ('boleto',   'Boleto'),
-    ]
-
-    ped_id               = models.AutoField(primary_key=True)
-    # Referencie aqui o PK do seu model de cliente (sem FK — genérico)
-    ped_cliente_id       = models.IntegerField('ID do cliente', null=True, blank=True)
-    ped_nome_cliente     = models.CharField('nome do cliente', max_length=200, null=True, blank=True)
-    ped_numero           = models.CharField('número', max_length=20, unique=True)
-    ped_data             = models.DateField('data')
-    ped_total            = models.DecimalField('total', max_digits=10, decimal_places=2, default=0)
-    ped_forma_pagamento  = models.CharField('forma de pagamento', max_length=20, choices=FORMA_CHOICES, null=True, blank=True)
-    ped_status           = models.CharField('status', max_length=20, choices=STATUS_CHOICES, default='pendente')
-    ped_pagamento_futuro = models.BooleanField('pagamento futuro', default=False)
-    ped_num_parcelas     = models.IntegerField('número de parcelas', default=1)
-    conta                = models.ForeignKey(
-        'Conta', on_delete=models.PROTECT,
-        null=True, blank=True, verbose_name='conta'
-    )
-    ped_observacoes      = models.TextField('observações', null=True, blank=True)
-
-    class Meta:
-        db_table = 'pedido'
-        verbose_name = 'Pedido'
-        verbose_name_plural = 'Pedidos'
-        ordering = ['-ped_data', '-ped_numero']
+        db_table = 'fin_receita'
+        ordering = ['vencimento']
 
     def save(self, *args, **kwargs):
-        if not self.ped_numero:
-            ultimo = Pedido.objects.order_by('-ped_numero').first()
-            if ultimo and ultimo.ped_numero:
-                try:
-                    num = int(ultimo.ped_numero.split('-')[1]) + 1
-                except (IndexError, ValueError):
-                    num = 1
-            else:
-                num = 1
-            self.ped_numero = f"PED-{num:04d}"
+        self.valor_liquido = self.valor_bruto - (self.desconto or Decimal('0'))
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.ped_numero} — R$ {self.ped_total}"
+        return f'{self.descricao} — R$ {self.valor_liquido}'
 
 
-class PedidoItem(BaseModel):
-    """Item de um pedido (produto, serviço ou plano)."""
-    TIPO_CHOICES = [
-        ('produto', 'Produto'),
-        ('servico', 'Serviço'),
-        ('plano',   'Plano'),
-    ]
+# ──────────────────────────────────────────────
+# Despesa
+# ──────────────────────────────────────────────
 
-    item_id             = models.AutoField(primary_key=True)
-    pedido              = models.ForeignKey(Pedido, on_delete=models.PROTECT, related_name='itens')
-    item_tipo           = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES)
-    prod                = models.ForeignKey('Produto',        on_delete=models.PROTECT, null=True, blank=True)
-    serv                = models.ForeignKey('ServicoProduto', on_delete=models.PROTECT, null=True, blank=True)
-    cplano              = models.ForeignKey('ClientePlano',   on_delete=models.PROTECT, null=True, blank=True)
-    item_descricao      = models.CharField('descrição', max_length=200)
-    item_quantidade     = models.IntegerField('quantidade', default=1)
-    item_valor_unitario = models.DecimalField('valor unitário', max_digits=10, decimal_places=2)
-    item_valor_total    = models.DecimalField('valor total', max_digits=10, decimal_places=2)
+class TipoDespesa(models.TextChoices):
+    FIXA      = 'FIXA',      'Despesa Fixa'
+    VARIAVEL  = 'VARIAVEL',  'Despesa Variável'
+    PROLABORE = 'PROLABORE', 'Pró-labore'
+    IMPOSTO   = 'IMPOSTO',   'Imposto / DAS'
+    OUTRO     = 'OUTRO',     'Outro'
+
+
+class StatusDespesa(models.TextChoices):
+    PENDENTE  = 'PENDENTE',  'Pendente'
+    PAGO      = 'PAGO',      'Pago'
+    CANCELADO = 'CANCELADO', 'Cancelado'
+    ATRASADO  = 'ATRASADO',  'Atrasado'
+
+
+class Despesa(BaseFinanceiro):
+    tipo          = models.CharField(max_length=20, choices=TipoDespesa.choices)
+    descricao     = models.CharField(max_length=255)
+    fornecedor    = models.CharField(max_length=150, blank=True)
+    valor_bruto   = models.DecimalField(max_digits=12, decimal_places=2)
+    desconto      = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_liquido = models.DecimalField(max_digits=12, decimal_places=2)
+    conta         = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='despesas')
+    vencimento    = models.DateField()
+    pagamento     = models.DateField(null=True, blank=True)
+    status        = models.CharField(max_length=20, choices=StatusDespesa.choices, default='PENDENTE')
+    referencia_mes = models.DateField(null=True, blank=True)
+    comprovante   = models.FileField(upload_to='despesas/', blank=True)
+    observacoes   = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'pedido_item'
-        verbose_name = 'Item do Pedido'
-        verbose_name_plural = 'Itens do Pedido'
+        db_table = 'fin_despesa'
+        ordering = ['vencimento']
+
+    def save(self, *args, **kwargs):
+        self.valor_liquido = self.valor_bruto - (self.desconto or Decimal('0'))
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.item_descricao} × {self.item_quantidade}"
+        return f'{self.descricao} — R$ {self.valor_liquido}'
+
+
+# ──────────────────────────────────────────────
+# LivroCaixa (imutável)
+# ──────────────────────────────────────────────
+
+class TipoLancamento(models.TextChoices):
+    ENTRADA = 'ENTRADA', 'Entrada'
+    SAIDA   = 'SAIDA',   'Saída'
+
+
+class OrigemLancamento(models.TextChoices):
+    APORTE  = 'APORTE',  'Aporte'
+    RECEITA = 'RECEITA', 'Receita'
+    DESPESA = 'DESPESA', 'Despesa'
+    MANUAL  = 'MANUAL',  'Lançamento Manual'
+
+
+class LivroCaixa(models.Model):
+    """Imutável — nunca expor PUT/PATCH/DELETE. Correções via estorno."""
+    conta          = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='lancamentos')
+    tipo           = models.CharField(max_length=10, choices=TipoLancamento.choices)
+    origem         = models.CharField(max_length=10, choices=OrigemLancamento.choices)
+    origem_id      = models.PositiveIntegerField(null=True, blank=True)
+    descricao      = models.CharField(max_length=255)
+    valor          = models.DecimalField(max_digits=12, decimal_places=2)
+    data           = models.DateField()
+    saldo_anterior = models.DecimalField(max_digits=12, decimal_places=2)
+    saldo_atual    = models.DecimalField(max_digits=12, decimal_places=2)
+    criado_em      = models.DateTimeField(auto_now_add=True)
+    criado_por     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    estornado      = models.BooleanField(default=False)
+    estorno_de     = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='estornos',
+    )
+
+    class Meta:
+        db_table = 'fin_livro_caixa'
+        ordering = ['-data', '-criado_em']
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} R$ {self.valor} — {self.descricao}'

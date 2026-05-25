@@ -1,175 +1,90 @@
-"""
-Signals do módulo financeiro — versão genérica.
-
-Adaptações em relação ao projeto de origem (NosFluir):
-- Referências a AlunoPlano → ClientePlano.
-- ContasReceber.alu removido; usa rec_cliente_id e rec_nome_pagador.
-- Pedido.alu removido; usa ped_cliente_id e ped_nome_cliente.
-- Signal processar_pedido: ContasReceber criada sem FK aluno, usando rec_cliente_id.
-"""
-
-import calendar
-from datetime import date as _date
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import ContasPagar, ContasReceber, LivroCaixa, Pedido
+from .models import Aporte, Despesa, LivroCaixa, Receita
 
 
-def _add_months(dt, months):
-    if dt is None:
-        return None
-    m = dt.month - 1 + months
-    year = dt.year + m // 12
-    month = m % 12 + 1
-    day = min(dt.day, calendar.monthrange(year, month)[1])
-    return _date(year, month, day)
+def _ultimo_saldo(conta):
+    ultimo = (
+        LivroCaixa.objects.select_for_update()
+        .filter(conta=conta)
+        .order_by('-data', '-criado_em')
+        .first()
+    )
+    if ultimo:
+        return ultimo.saldo_atual
+    return conta.saldo_inicial
 
 
-@receiver(post_save, sender=ContasPagar)
-def lancar_contas_pagar(sender, instance, **kwargs):
-    """
-    Cria lançamento de SAÍDA no Livro Caixa quando uma Conta a Pagar é marcada como 'pago'.
-    Pró-labore não gera lançamento automático.
-    Usa select_for_update() para evitar race condition no cálculo de saldo.
-    """
-    if instance.pag_status != 'pago':
-        return
-
-    # Pró-labore não gera lançamento automático — registrado manualmente
-    if instance.cpa_tipo == 'prolabore':
-        return
-
+def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, criado_por=None):
     with transaction.atomic():
-        ultimo = LivroCaixa.objects.select_for_update().order_by('-lica_id').first()
-
-        if LivroCaixa.objects.filter(
-            lica_origem_tipo='contas_pagar',
-            lica_origem_id=instance.pag_id,
-        ).exists():
+        if LivroCaixa.objects.filter(origem=origem, origem_id=origem_id).exists():
             return
-
-        saldo_anterior = ultimo.lica_saldo_atual if ultimo else Decimal('0.00')
-
-        LivroCaixa.objects.create(
-            lica_tipo_lancamento='saida',
-            lcx_tipo_movimento='saida',
-            lica_historico=f'Pagamento: {instance.pag_descricao}',
-            lica_valor=instance.pag_valor_total,
-            lica_origem_tipo='contas_pagar',
-            lica_origem_id=instance.pag_id,
-            lica_saldo_anterior=saldo_anterior,
-            lica_saldo_atual=saldo_anterior - instance.pag_valor_total,
-            lica_forma_pagamento=instance.pag_forma_pagamento,
-            conta=instance.conta,
-            plano_contas=instance.plano_contas,
-            lcx_competencia=instance.pag_data_vencimento.date() if instance.pag_data_vencimento else None,
-            created_by=instance.updated_by or instance.created_by,
-        )
-
-
-@receiver(post_save, sender=ContasReceber)
-def lancar_contas_receber(sender, instance, **kwargs):
-    """
-    Cria lançamento de ENTRADA no Livro Caixa quando uma Conta a Receber é marcada como 'recebido'.
-    Usa select_for_update() para evitar race condition no cálculo de saldo.
-    """
-    if instance.rec_status != 'recebido':
-        return
-
-    with transaction.atomic():
-        ultimo = LivroCaixa.objects.select_for_update().order_by('-lica_id').first()
-
-        if LivroCaixa.objects.filter(
-            lica_origem_tipo='contas_receber',
-            lica_origem_id=instance.rec_id,
-        ).exists():
-            return
-
-        saldo_anterior = ultimo.lica_saldo_atual if ultimo else Decimal('0.00')
-
-        LivroCaixa.objects.create(
-            lica_tipo_lancamento='entrada',
-            lcx_tipo_movimento='entrada',
-            lica_historico=f'Recebimento: {instance.rec_descricao}',
-            lica_valor=instance.rec_valor_total,
-            lica_origem_tipo='contas_receber',
-            lica_origem_id=instance.rec_id,
-            lica_saldo_anterior=saldo_anterior,
-            lica_saldo_atual=saldo_anterior + instance.rec_valor_total,
-            lica_forma_pagamento=instance.rec_forma_recebimento,
-            conta=instance.conta,
-            plano_contas=instance.plano_contas,
-            lcx_competencia=instance.rec_data_vencimento.date() if instance.rec_data_vencimento else None,
-            created_by=instance.updated_by or instance.created_by,
-        )
-
-
-@receiver(post_save, sender=Pedido)
-def processar_pedido(sender, instance, **kwargs):
-    """
-    Ao confirmar pagamento (status='pago'):
-    - Produtos: reduz estoque.
-    - Pagamento à vista: cria lançamento no LivroCaixa.
-    - Pagamento futuro: cria ContasReceber (parcelas).
-    """
-    if instance.ped_status != 'pago':
-        return
-
-    with transaction.atomic():
-        if LivroCaixa.objects.filter(lica_origem_tipo='pedido', lica_origem_id=instance.ped_id).exists():
-            return
-
-        # Reduz estoque dos produtos
-        for item in instance.itens.select_related('prod').all():
-            if item.item_tipo == 'produto' and item.prod:
-                from django.db.models import F
-                item.prod.__class__.objects.filter(pk=item.prod.pk).update(
-                    prod_estoque_atual=F('prod_estoque_atual') - item.item_quantidade
-                )
-
-        if not instance.ped_pagamento_futuro:
-            ultimo = LivroCaixa.objects.select_for_update().order_by('-lica_id').first()
-            saldo_ant = ultimo.lica_saldo_atual if ultimo else Decimal('0.00')
-            LivroCaixa.objects.create(
-                lica_tipo_lancamento='entrada',
-                lcx_tipo_movimento='entrada',
-                lica_historico=f'Pedido {instance.ped_numero}',
-                lica_valor=instance.ped_total,
-                lica_origem_tipo='pedido',
-                lica_origem_id=instance.ped_id,
-                lica_saldo_anterior=saldo_ant,
-                lica_saldo_atual=saldo_ant + instance.ped_total,
-                conta=instance.conta,
-                lica_forma_pagamento=instance.ped_forma_pagamento,
-                lcx_competencia=instance.ped_data,
-                created_by=instance.updated_by or instance.created_by,
-            )
+        saldo_anterior = _ultimo_saldo(conta)
+        if tipo == 'ENTRADA':
+            saldo_atual = saldo_anterior + valor
         else:
-            num = max(1, instance.ped_num_parcelas or 1)
-            valor_base = (instance.ped_total / num).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
-            resto = instance.ped_total - valor_base * num
-            user = instance.updated_by or instance.created_by
-            for i in range(num):
-                valor   = valor_base + (resto if i == num - 1 else Decimal('0.00'))
-                sufixo  = f' {i + 1}/{num}' if num > 1 else ''
-                vencimento = _add_months(instance.ped_data, i + 1) if num > 1 else instance.ped_data
-                ContasReceber.objects.create(
-                    rec_cliente_id=instance.ped_cliente_id,
-                    rec_nome_pagador=instance.ped_nome_cliente,
-                    rec_tipo='produto',
-                    rec_descricao=f'Pedido {instance.ped_numero}{sufixo}',
-                    rec_valor_unitario=valor,
-                    rec_quantidade=1,
-                    rec_desconto=Decimal('0.00'),
-                    rec_valor_total=valor,
-                    rec_data_emissao=instance.ped_data,
-                    rec_data_vencimento=vencimento,
-                    rec_status='pendente',
-                    conta=instance.conta,
-                    created_by=user,
-                    updated_by=user,
-                )
+            saldo_atual = saldo_anterior - valor
+        LivroCaixa.objects.create(
+            conta=conta,
+            tipo=tipo,
+            origem=origem,
+            origem_id=origem_id,
+            descricao=descricao,
+            valor=valor,
+            data=data,
+            saldo_anterior=saldo_anterior,
+            saldo_atual=saldo_atual,
+            criado_por=criado_por,
+        )
+
+
+@receiver(post_save, sender=Aporte)
+def aporte_para_livro_caixa(sender, instance, created, **kwargs):
+    if not created:
+        return
+    _gerar_lancamento(
+        conta=instance.conta,
+        tipo='ENTRADA',
+        origem='APORTE',
+        origem_id=instance.id,
+        descricao=f'Aporte: {instance.descricao}',
+        valor=instance.valor,
+        data=instance.data,
+        criado_por=instance.criado_por,
+    )
+
+
+@receiver(post_save, sender=Receita)
+def receita_para_livro_caixa(sender, instance, **kwargs):
+    if instance.status != 'RECEBIDO' or not instance.recebimento:
+        return
+    _gerar_lancamento(
+        conta=instance.conta,
+        tipo='ENTRADA',
+        origem='RECEITA',
+        origem_id=instance.id,
+        descricao=instance.descricao,
+        valor=instance.valor_liquido,
+        data=instance.recebimento,
+        criado_por=instance.criado_por,
+    )
+
+
+@receiver(post_save, sender=Despesa)
+def despesa_para_livro_caixa(sender, instance, **kwargs):
+    if instance.status != 'PAGO' or not instance.pagamento:
+        return
+    _gerar_lancamento(
+        conta=instance.conta,
+        tipo='SAIDA',
+        origem='DESPESA',
+        origem_id=instance.id,
+        descricao=instance.descricao,
+        valor=instance.valor_liquido,
+        data=instance.pagamento,
+        criado_por=instance.criado_por,
+    )

@@ -183,7 +183,8 @@ src/
 │   ├── OSDetailPage.jsx         ← 4 abas: Resumo, Timeline, Contrato, Chamados
 │   ├── UsuariosPage.jsx         ← CRUD admin + badges de perfil
 │   ├── SetoresPage.jsx
-│   ├── financeiro/              ← 12 telas (contas, livro-caixa, contas-pagar, etc.)
+│   ├── financeiro/              ← 8 telas: VisaoGeral, Receitas, Despesas, Aportes,
+│   │                              ContasPage, LivroCaixa, DRE, PorCliente
 │   └── portal/                  ← MeusProjetos, Suporte, MinhasFaturas (perfil CLIENTE)
 └── services/
     ├── api.js                   ← instância Axios base
@@ -351,13 +352,36 @@ class MensagemChamado(models.Model):  # imutável — histórico preservado
     chamado, autor, mensagem, criado_em
 ```
 
-### Financeiro (`financeiro/models.py`) — todos herdam de `BaseModel`
+### Financeiro (`financeiro/models.py`) — herdam de `BaseFinanceiro`
+```python
+class BaseFinanceiro(models.Model):  # abstract
+    criado_em, atualizado_em, criado_por(FK Usuario), ativo(BooleanField)
+
+class Conta(BaseFinanceiro):     # db_table='fin_conta'
+    nome, tipo(CORRENTE/POUPANCA/CAIXA/CARTEIRA), banco, agencia, numero, saldo_inicial
+
+class Aporte(BaseFinanceiro):    # db_table='fin_aporte'
+    tipo(CAPITAL_SOCIAL/SOCIO/INVESTIDOR/EMPRESTIMO), descricao, valor
+    conta(FK), data, responsavel, observacoes
+
+class Receita(BaseFinanceiro):   # db_table='fin_receita'
+    tipo(ENTRADA_CONTRATO/MENSALIDADE/CONSULTORIA/OUTRO)
+    status(PENDENTE/RECEBIDO/CANCELADO/ATRASADO)
+    descricao, cliente(FK nullable), os(FK nullable)
+    valor_bruto, desconto, valor_liquido (calc em save())
+    conta(FK), vencimento, recebimento, referencia_mes, observacoes
+
+class Despesa(BaseFinanceiro):   # db_table='fin_despesa'
+    tipo(FIXA/VARIAVEL/PROLABORE/IMPOSTO/OUTRO)
+    status(PENDENTE/PAGO/CANCELADO/ATRASADO)
+    descricao, fornecedor, valor_bruto, desconto, valor_liquido (calc em save())
+    conta(FK), vencimento, pagamento, comprovante(FileField), observacoes
+
+class LivroCaixa(models.Model):  # db_table='fin_livro_caixa' — IMUTÁVEL
+    conta(FK), tipo(ENTRADA/SAIDA), origem(APORTE/RECEITA/DESPESA/MANUAL)
+    origem_id, descricao, valor, data, saldo_anterior, saldo_atual
+    criado_em, criado_por, estornado(bool), estorno_de(self FK)
 ```
-Conta | PlanoContas | Fornecedor | ServicoProduto | Produto
-ContasPagar | ContasReceber | PlanosPagamentos | ClientePlano
-LivroCaixa (imutável) | FolhaPagamento | Pedido + PedidoItem
-```
-`BaseModel` tem: `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`, `deleted_by`
 
 ---
 
@@ -443,23 +467,33 @@ Unidades ativas para combobox: `GET /api/unidades/?ativas=1`
 
 ### Financeiro (`/api/financeiro/`)
 ```
-CRUD: contas/ | plano-contas/ | fornecedores/ | servicos-produtos/ | produtos/
-      contas-pagar/ | contas-receber/ | planos-pagamentos/ | cliente-plano/
-      livro-caixa/ (GET+POST apenas) | folha-pagamento/ | pedidos/
+CRUD:
+  GET/POST/PATCH/DELETE  contas/           (IsAdminOrFinanceiro)
+  GET/POST/PATCH/DELETE  aportes/          (IsAdmin)
+  GET/POST/PATCH/DELETE  receitas/         (IsAdminOrFinanceiro)
+  GET/POST/PATCH/DELETE  despesas/         (IsAdminOrFinanceiro)
+  GET/POST               livro-caixa/      (ReadCreateViewSet — imutável)
+
 Ações:
-  GET  livro-caixa/totais/
-  GET  produtos/alertas-estoque/
-  POST pedidos/{id}/confirmar/
-  GET  pedidos/{id}/recibo/          (PDF)
-  POST transferencia/
-  POST gerar-mensalidades/
-Relatórios:
-  GET  relatorios/dre/?ano=&mes=
-  GET  relatorios/dre/pdf/
-  GET  relatorios/fluxo-caixa/?meses=3
-  GET  relatorios/fluxo-caixa/pdf/
-  GET  relatorios/extrato/
+  PATCH  receitas/{id}/marcar_recebido/    → status=RECEBIDO + data recebimento
+  PATCH  despesas/{id}/marcar_pago/        → status=PAGO + data pagamento
+  GET    livro-caixa/totais/               → { total_entradas, total_saidas, saldo_atual }
+  POST   livro-caixa/{id}/estornar/        → cria lançamento inverso (IsAdmin)
+
+Views calculadas:
+  GET  fluxo-caixa/?mes=2026-05&conta=1   → saldo_inicial, entradas, saidas, saldo_final, lancamentos[]
+  GET  dre/?ano=2026                       → { ano, meses[12], totais_ano }
+  GET  receita-por-cliente/?ano=2026       → lista clientes com totais ordenado por valor
 ```
+
+Signals automáticos (`financeiro/signals.py`):
+- `Aporte` criado → LivroCaixa ENTRADA
+- `Receita` status→RECEBIDO → LivroCaixa ENTRADA  
+- `Despesa` status→PAGO → LivroCaixa SAIDA
+
+Signal OS (`ordens/signals.py`):
+- OS status→CONTRATO → cria Receitas (ENTRADA_CONTRATO + 3x MENSALIDADE)
+  Usa `_add_months()` customizada — **não usar `python-dateutil`** (não instalado)
 
 ---
 
@@ -523,18 +557,12 @@ print('OK')
 
 | Evento | Resultado |
 |--------|-----------|
-| `ContasPagar.pag_status = 'pago'` | LivroCaixa saída (exceto pró-labore) |
-| `ContasReceber.rec_status = 'recebido'` | LivroCaixa entrada |
-| `Pedido.ped_status = 'pago'` (à vista) | LivroCaixa entrada + reduz estoque |
-| `Pedido.ped_status = 'pago'` (futuro) | Cria ContasReceber em parcelas + reduz estoque |
+| `Aporte` criado (post_save) | LivroCaixa ENTRADA origem=APORTE |
+| `Receita.status = 'RECEBIDO'` | LivroCaixa ENTRADA origem=RECEITA |
+| `Despesa.status = 'PAGO'` | LivroCaixa SAIDA origem=DESPESA |
+| `OS.status = 'CONTRATO'` | Receitas: ENTRADA_CONTRATO + 3x MENSALIDADE |
 
-Todos usam `select_for_update()` + `transaction.atomic()` contra race condition.
-
-### Vincular ContasReceber a cliente SystemD
-```javascript
-// rec_cliente_id é IntegerField genérico — sem FK direta
-{ rec_cliente_id: cliente.id, rec_nome_pagador: cliente.nome_empresa, ... }
-```
+Duplicate guard: `_gerar_lancamento` verifica `origem+origem_id` antes de criar — seguro em race condition.
 
 ### Gerar mensalidades (cron sugerido)
 ```bash
@@ -724,7 +752,7 @@ docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000
 | Fase 4 | Webmail frontend completo + responsivo + multi-pasta + CC + busca + download + archive | ✅ |
 | Fase 5 | Perfis + Setores + Permissões DRF + Portal do Cliente + Telas Admin | ✅ |
 | Fase 6 | OS — Ordens de Serviço (models + API + frontend 4 abas + portal cliente) | ✅ |
-| Fase 7 | Financeiro — 12 models + signals + relatórios + 12 telas frontend | ✅ |
+| Fase 7 | Financeiro — refatorado para Uid ME: 5 models (Conta/Aporte/Receita/Despesa/LivroCaixa) + signals automáticos + DRE anual + 8 telas frontend | ✅ |
 | Fase 8 | Leads + Prospectos + Entregas + Navbar "Entrar" + redirect pós-login | ✅ |
 | Fase 8.1 | Acesso do cliente: criar conta + email de primeiro acesso + alterar senha | ✅ |
 | Fase 8.2 | Leads: mensagem na tabela + ao vivo (polling 30s) + fix F5 tokenRef | ✅ |
@@ -834,4 +862,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 24/05/2026 (noite)*
+*Última atualização: 25/05/2026*

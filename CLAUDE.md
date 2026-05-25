@@ -657,6 +657,7 @@ UPDATE vitrine_lead SET convertido = true WHERE id = X;
 | Novos clientes | 8003+ | — |
 
 - Deploy: `/root/SytemD/`
+- SSH alias local: `vps-pcuidsoftware-root` → `ssh vps-pcuidsoftware-root` (configurado em `~/.ssh/config`)
 - SSL: certbot com renovação automática no nginx-proxy
 - PostgreSQL MCP: exposto em 127.0.0.1:5433 para o Planner (não público)
 
@@ -672,6 +673,9 @@ make makemigrations   # gera migrations
 make shell            # shell Django
 make logs             # tail logs
 make createsuperuser  # cria admin
+
+# Acesso à VPS
+ssh vps-pcuidsoftware-root
 
 # Produção — rodar na VPS em /root/SytemD/
 git pull origin main                                              # ← SEMPRE PRIMEIRO
@@ -832,6 +836,21 @@ Pipeline completo testado usando Studio Fluir como caso real:
 
 Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → Escritório** (iframe de office.uidsoftware.com.br). Hooks registram todos os eventos em tempo real.
 
+### Sincronização local ↔ GitHub ↔ VPS
+
+Os agents (Forge, Loom, etc.) fazem commits e push direto ao GitHub durante a execução.
+Após qualquer rodada de agents, verificar se local e VPS estão sincronizados:
+
+```bash
+# Verificar os 3 ambientes
+git fetch origin && git status                          # local
+ssh vps-pcuidsoftware-root "cd /root/SytemD && git fetch origin && git status"
+
+# Atualizar ambos se necessário
+git pull
+ssh vps-pcuidsoftware-root "cd /root/SytemD && git pull origin main"
+```
+
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 24/05/2026 (noite)*
+*Última atualização: 25/05/2026*

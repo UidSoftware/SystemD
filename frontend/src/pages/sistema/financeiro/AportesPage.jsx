@@ -5,7 +5,7 @@ import { financeiroApi } from '../../../services/financeiroApi'
 
 const TIPO_CFG = {
   CAPITAL_SOCIAL: { label: 'Capital Social', cor: '#063BF8' },
-  SOCIO:          { label: 'Sócio',           cor: '#3d0361' },
+  SOCIO:          { label: 'Aporte do Fundador', cor: '#3d0361' },
   INVESTIDOR:     { label: 'Investidor',       cor: '#10b981' },
   EMPRESTIMO:     { label: 'Empréstimo',       cor: '#f59e0b' },
 }

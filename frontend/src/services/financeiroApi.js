@@ -23,20 +23,24 @@ export const financeiroApi = {
   criarReceita:          (d) => post('/receitas/', d),
   editarReceita:         (id, d) => patch(`/receitas/${id}/`, d),
   deletarReceita:        (id) => del(`/receitas/${id}/`),
-  marcarRecebido:        (id, d) => patch(`/receitas/${id}/marcar_recebido/`, d),
+  marcarRecebido:        (id, d) => patch(`/receitas/${id}/receber/`, d),
 
   // Despesas
   listarDespesas:        (p) => f('/despesas/', p),
   criarDespesa:          (d) => post('/despesas/', d),
   editarDespesa:         (id, d) => patch(`/despesas/${id}/`, d),
   deletarDespesa:        (id) => del(`/despesas/${id}/`),
-  marcarPago:            (id, d) => patch(`/despesas/${id}/marcar_pago/`, d),
+  marcarPago:            (id, d) => patch(`/despesas/${id}/pagar/`, d),
 
   // Livro Caixa
   listarLivroCaixa:      (p) => f('/livro-caixa/', p),
   criarLancamento:       (d) => post('/livro-caixa/', d),
   totaisLivroCaixa:      (p) => f('/livro-caixa/totais/', p),
   estornar:              (id, d) => post(`/livro-caixa/${id}/estornar/`, d),
+
+  // Helpers para selects em formulários financeiros
+  listarClientesOpts:    () => api.get('/clientes/'),
+  listarOSOpts:          () => api.get('/os/'),
 
   // Views calculadas
   fluxoCaixa:            (p) => f('/fluxo-caixa/', p),

@@ -1,26 +1,60 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  /* Paleta Uid — imutavel */
   --color-brand-blue:   #063BF8;
   --color-brand-red:    #FF0000;
   --color-brand-purple: #3d0361;
-  --color-bg-dark:      #0a0014;
-  --color-bg-mid:       #1a0a2e;
-  --color-bg-section:   #3d0361;
+
+  /* Backgrounds — escalonados para hierarquia visual */
+  --color-bg-dark:      #07000f;   /* fundo base — mais profundo */
+  --color-bg-mid:       #120828;   /* sidebar, cards secundarios */
+  --color-bg-surface:   #1a0f35;   /* cards primarios, modais */
+  --color-bg-elevated:  #221444;   /* hover de item ativo */
+
+  /* Texto */
   --color-text-main:    #f1f5f9;
-  --color-text-muted:   #a78bca;
+  --color-text-sub:     #c4b5d9;   /* subtitulos, labels */
+  --color-text-muted:   #7c6d9a;   /* placeholders, texto terciario */
   --color-text-accent:  #6b8fff;
-  --color-border:       rgba(6, 59, 248, 0.2);
-  --color-border-hover: rgba(6, 59, 248, 0.6);
-  --color-btn-primary:  #063BF8;
-  --color-btn-hover:    #0430cc;
-  --color-badge-prod:   #FF0000;
-  --color-badge-dev:    #063BF8;
-  --color-badge-next:   #3d0361;
+
+  /* Bordas */
+  --color-border:       rgba(255, 255, 255, 0.07);
+  --color-border-mid:   rgba(255, 255, 255, 0.11);
+  --color-border-focus: rgba(6, 59, 248, 0.55);
+
+  /* Estados */
+  --color-success:      #10b981;
+  --color-warning:      #f59e0b;
+  --color-danger:       #f87171;
+  --color-info:         #38bdf8;
+
+  /* Sidebar */
+  --sidebar-width:      224px;
+  --sidebar-item-active-bg: rgba(6, 59, 248, 0.14);
+  --sidebar-item-active-border: #063BF8;
+
+  /* Espacamento base: 8px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Raio */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Sombras */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 html {
@@ -31,20 +65,53 @@ body {
   font-family: 'DM Sans', sans-serif;
   background-color: var(--color-bg-dark);
   color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4 {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
+/* Scrollbar discreta */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Focus global acessivel */
+:focus-visible {
+  outline: 2px solid var(--color-brand-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Select options */
 select option {
   background-color: #1a0a2e;
   color: #f1f5f9;
 }
-
 select option:checked {
   background-color: #063BF8;
   color: #ffffff;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @keyframes pulse-whatsapp {
@@ -55,4 +122,13 @@ select option:checked {
 @keyframes pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 4px #10b981; }
   50%       { opacity: 0.4; box-shadow: 0 0 10px #10b981; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.18s ease-out both;
 }

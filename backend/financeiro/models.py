@@ -50,7 +50,7 @@ class Conta(BaseFinanceiro):
 
 class TipoAporte(models.TextChoices):
     CAPITAL_SOCIAL = 'CAPITAL_SOCIAL', 'Capital Social'
-    SOCIO          = 'SOCIO',          'Aporte de Sócio'
+    SOCIO          = 'SOCIO',          'Aporte do Fundador'
     INVESTIDOR     = 'INVESTIDOR',     'Aporte de Investidor'
     EMPRESTIMO     = 'EMPRESTIMO',     'Empréstimo'
 

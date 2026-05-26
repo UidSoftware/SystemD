@@ -68,7 +68,7 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOrFinanceiro])
+    @action(detail=True, methods=['patch'], url_path='receber', permission_classes=[IsAdminOrFinanceiro])
     def marcar_recebido(self, request, pk=None):
         receita = self.get_object()
         recebimento = request.data.get('recebimento') or date.today().isoformat()
@@ -103,7 +103,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOrFinanceiro])
+    @action(detail=True, methods=['patch'], url_path='pagar', permission_classes=[IsAdminOrFinanceiro])
     def marcar_pago(self, request, pk=None):
         despesa = self.get_object()
         pagamento = request.data.get('pagamento') or date.today().isoformat()

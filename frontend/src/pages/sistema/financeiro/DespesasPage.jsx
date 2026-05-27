@@ -17,6 +17,16 @@ const TIPO_CFG = {
   OUTRO:     { label: 'Outro',      cor: '#6b7280' },
 }
 
+const FORMA_PAGAMENTO_OPTS = [
+  { value: 'PIX',            label: 'PIX' },
+  { value: 'TED_DOC',        label: 'TED/DOC' },
+  { value: 'BOLETO',         label: 'Boleto' },
+  { value: 'CARTAO_DEBITO',  label: 'Cartão de Débito' },
+  { value: 'CARTAO_CREDITO', label: 'Cartão de Crédito' },
+  { value: 'DINHEIRO',       label: 'Dinheiro' },
+  { value: 'OUTRO',          label: 'Outro' },
+]
+
 const formVazio = {
   tipo: 'FIXA', descricao: '', fornecedor: '',
   valor_bruto: '', desconto: '0', conta: '',
@@ -28,17 +38,18 @@ const btnAcao = (cor) => ({
 })
 
 export default function DespesasPage() {
-  const [dados, setDados]           = useState([])
-  const [contas, setContas]         = useState([])
-  const [carregando, setCarregando] = useState(true)
-  const [modal, setModal]           = useState(false)
-  const [modalPagar, setModalPagar] = useState(null)
-  const [editando, setEditando]     = useState(null)
-  const [form, setForm]             = useState(formVazio)
-  const [formPag, setFormPag]       = useState({ pagamento: '', conta: '' })
-  const [salvando, setSalvando]     = useState(false)
-  const [erro, setErro]             = useState('')
-  const [filtros, setFiltros]       = useState({ status: '', tipo: '' })
+  const [dados, setDados]               = useState([])
+  const [contas, setContas]             = useState([])
+  const [fornecedores, setFornecedores] = useState([])
+  const [carregando, setCarregando]     = useState(true)
+  const [modal, setModal]               = useState(false)
+  const [modalPagar, setModalPagar]     = useState(null)
+  const [editando, setEditando]         = useState(null)
+  const [form, setForm]                 = useState(formVazio)
+  const [formPag, setFormPag]           = useState({ pagamento: '', conta: '', forma_pagamento: '' })
+  const [salvando, setSalvando]         = useState(false)
+  const [erro, setErro]                 = useState('')
+  const [filtros, setFiltros]           = useState({ status: '', tipo: '' })
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -48,9 +59,11 @@ export default function DespesasPage() {
     Promise.all([
       financeiroApi.listarDespesas(params),
       financeiroApi.listarContas(),
-    ]).then(([r, c]) => {
+      financeiroApi.listarFornecedores(),
+    ]).then(([r, c, forn]) => {
       setDados(r.data.results ?? r.data)
       setContas(c.data.results ?? c.data)
+      setFornecedores(Array.isArray(forn.data) ? forn.data : (forn.data.results ?? []))
     }).catch(() => {}).finally(() => setCarregando(false))
   }, [filtros])
 
@@ -97,6 +110,7 @@ export default function DespesasPage() {
       await financeiroApi.marcarPago(modalPagar.id, {
         pagamento: formPag.pagamento || new Date().toISOString().slice(0, 10),
         conta: formPag.conta || modalPagar.conta,
+        forma_pagamento: formPag.forma_pagamento,
       })
       setModalPagar(null); carregar()
     } catch { } finally { setSalvando(false) }
@@ -119,8 +133,8 @@ export default function DespesasPage() {
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
           {r.status === 'PENDENTE' && (
-            <button style={btnAcao('#10b981')} onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta }) }}>
-              💲 Pagar
+            <button style={btnAcao('#10b981')} onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '' }) }}>
+              💸 Pagar
             </button>
           )}
           <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)} title="Editar">✏️</button>
@@ -138,7 +152,7 @@ export default function DespesasPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas a Pagar</h1>
           <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            + Nova Despesa
+            ➕ Nova Despesa
           </button>
         </div>
 
@@ -171,7 +185,17 @@ export default function DespesasPage() {
             </div>
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Fornecedor</label>
-              <input style={inputStyle} value={form.fornecedor} onChange={e => setForm(f => ({ ...f, fornecedor: e.target.value }))} />
+              <input
+                style={inputStyle}
+                list="lista-fornecedores"
+                value={form.fornecedor}
+                onChange={e => setForm(f => ({ ...f, fornecedor: e.target.value }))}
+                placeholder="Digite ou selecione um fornecedor"
+                autoComplete="off"
+              />
+              <datalist id="lista-fornecedores">
+                {fornecedores.map(forn => <option key={forn} value={forn} />)}
+              </datalist>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
@@ -218,6 +242,13 @@ export default function DespesasPage() {
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Data de pagamento</label>
               <input style={inputStyle} type="date" value={formPag.pagamento} onChange={e => setFormPag(f => ({ ...f, pagamento: e.target.value }))} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Forma de pagamento</label>
+              <select style={inputStyle} value={formPag.forma_pagamento} onChange={e => setFormPag(f => ({ ...f, forma_pagamento: e.target.value }))}>
+                <option value="">Selecione</option>
+                {FORMA_PAGAMENTO_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Conta</label>

@@ -142,20 +142,33 @@ class StatusDespesa(models.TextChoices):
     ATRASADO  = 'ATRASADO',  'Atrasado'
 
 
+class FormaPagamento(models.TextChoices):
+    PIX             = 'PIX',             'PIX'
+    TED_DOC         = 'TED_DOC',         'TED/DOC'
+    BOLETO          = 'BOLETO',          'Boleto'
+    CARTAO_DEBITO   = 'CARTAO_DEBITO',   'Cartão de Débito'
+    CARTAO_CREDITO  = 'CARTAO_CREDITO',  'Cartão de Crédito'
+    DINHEIRO        = 'DINHEIRO',        'Dinheiro'
+    OUTRO           = 'OUTRO',           'Outro'
+
+
 class Despesa(BaseFinanceiro):
-    tipo          = models.CharField(max_length=20, choices=TipoDespesa.choices)
-    descricao     = models.CharField(max_length=255)
-    fornecedor    = models.CharField(max_length=150, blank=True)
-    valor_bruto   = models.DecimalField(max_digits=12, decimal_places=2)
-    desconto      = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    valor_liquido = models.DecimalField(max_digits=12, decimal_places=2)
-    conta         = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='despesas')
-    vencimento    = models.DateField()
-    pagamento     = models.DateField(null=True, blank=True)
-    status        = models.CharField(max_length=20, choices=StatusDespesa.choices, default='PENDENTE')
-    referencia_mes = models.DateField(null=True, blank=True)
-    comprovante   = models.FileField(upload_to='despesas/', blank=True)
-    observacoes   = models.TextField(blank=True)
+    tipo             = models.CharField(max_length=20, choices=TipoDespesa.choices)
+    descricao        = models.CharField(max_length=255)
+    fornecedor       = models.CharField(max_length=150, blank=True)
+    valor_bruto      = models.DecimalField(max_digits=12, decimal_places=2)
+    desconto         = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_liquido    = models.DecimalField(max_digits=12, decimal_places=2)
+    conta            = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='despesas')
+    vencimento       = models.DateField()
+    pagamento        = models.DateField(null=True, blank=True)
+    forma_pagamento  = models.CharField(
+        max_length=20, choices=FormaPagamento.choices, blank=True,
+    )
+    status           = models.CharField(max_length=20, choices=StatusDespesa.choices, default='PENDENTE')
+    referencia_mes   = models.DateField(null=True, blank=True)
+    comprovante      = models.FileField(upload_to='despesas/', blank=True)
+    observacoes      = models.TextField(blank=True)
 
     class Meta:
         db_table = 'fin_despesa'

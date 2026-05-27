@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Aporte, Conta, Despesa, LivroCaixa, Receita
+from .models import Aporte, Conta, Despesa, FormaPagamento, LivroCaixa, Receita
 
 
 class ContaSerializer(serializers.ModelSerializer):
@@ -61,7 +61,7 @@ class DespesaSerializer(serializers.ModelSerializer):
             'id', 'tipo', 'descricao', 'fornecedor',
             'valor_bruto', 'desconto', 'valor_liquido',
             'conta', 'conta_nome',
-            'vencimento', 'pagamento', 'status',
+            'vencimento', 'pagamento', 'forma_pagamento', 'status',
             'referencia_mes', 'comprovante', 'observacoes', 'ativo', 'criado_em',
         ]
         read_only_fields = ['id', 'valor_liquido', 'criado_em']

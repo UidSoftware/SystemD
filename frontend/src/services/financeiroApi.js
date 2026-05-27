@@ -31,6 +31,7 @@ export const financeiroApi = {
   editarDespesa:         (id, d) => patch(`/despesas/${id}/`, d),
   deletarDespesa:        (id) => del(`/despesas/${id}/`),
   marcarPago:            (id, d) => patch(`/despesas/${id}/pagar/`, d),
+  listarFornecedores:    () => f('/despesas/fornecedores/'),
 
   // Livro Caixa
   listarLivroCaixa:      (p) => f('/livro-caixa/', p),

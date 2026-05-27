@@ -13,7 +13,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro
 
-from .models import Aporte, Conta, Despesa, LivroCaixa, Receita
+from .models import Aporte, Conta, Despesa, FormaPagamento, LivroCaixa, Receita
 from .serializers import (
     AporteSerializer, ContaSerializer, DespesaSerializer,
     LivroCaixaSerializer, ReceitaSerializer,
@@ -108,15 +108,32 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
         despesa = self.get_object()
         pagamento = request.data.get('pagamento') or date.today().isoformat()
         conta_id  = request.data.get('conta')
+        forma_pagamento = request.data.get('forma_pagamento', '')
         if conta_id:
             try:
                 despesa.conta = Conta.objects.get(id=conta_id)
             except Conta.DoesNotExist:
                 return Response({'conta': 'Conta não encontrada.'}, status=400)
+        if forma_pagamento and forma_pagamento not in FormaPagamento.values:
+            return Response({'forma_pagamento': 'Forma de pagamento inválida.'}, status=400)
         despesa.pagamento = pagamento
+        despesa.forma_pagamento = forma_pagamento
         despesa.status = 'PAGO'
         despesa.save()
         return Response(DespesaSerializer(despesa).data)
+
+    @action(detail=False, methods=['get'], url_path='fornecedores', permission_classes=[IsAdminOrFinanceiro])
+    def fornecedores(self, request):
+        """Retorna lista de fornecedores distintos e não vazios já cadastrados."""
+        qs = (
+            Despesa.objects
+            .filter(ativo=True)
+            .exclude(fornecedor='')
+            .values_list('fornecedor', flat=True)
+            .distinct()
+            .order_by('fornecedor')
+        )
+        return Response(list(qs))
 
 
 class LivroCaixaViewSet(ReadCreateViewSet):

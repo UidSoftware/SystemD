@@ -30,3 +30,4 @@ jobs:
 
             docker exec sytemd-backend-1 python manage.py migrate --no-input
             docker exec sytemd-backend-1 python manage.py collectstatic --no-input --clear
+

@@ -183,6 +183,26 @@ class Despesa(BaseFinanceiro):
 
 
 # ──────────────────────────────────────────────
+# Fornecedor
+# ──────────────────────────────────────────────
+
+class Fornecedor(BaseFinanceiro):
+    forn_nome        = models.CharField(max_length=200)
+    forn_cnpj        = models.CharField(max_length=18, unique=True, null=True, blank=True)
+    forn_email       = models.EmailField(blank=True)
+    forn_telefone    = models.CharField(max_length=20, blank=True)
+    forn_observacoes = models.TextField(blank=True)
+    forn_ativo       = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'fin_fornecedor'
+        ordering = ['forn_nome']
+
+    def __str__(self):
+        return self.forn_nome
+
+
+# ──────────────────────────────────────────────
 # LivroCaixa (imutável)
 # ──────────────────────────────────────────────
 

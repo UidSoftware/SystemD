@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Aporte, Conta, Despesa, FormaPagamento, LivroCaixa, Receita
+from .models import Aporte, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
 
 
 class ContaSerializer(serializers.ModelSerializer):
@@ -72,6 +72,23 @@ class DespesaSerializer(serializers.ModelSerializer):
         if desconto > bruto:
             raise serializers.ValidationError({'desconto': 'Desconto não pode ser maior que o valor bruto.'})
         return data
+
+
+class FornecedorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Fornecedor
+        fields = [
+            'id', 'forn_nome', 'forn_cnpj', 'forn_email',
+            'forn_telefone', 'forn_observacoes', 'forn_ativo',
+            'ativo', 'criado_em',
+        ]
+        read_only_fields = ['id', 'criado_em']
+
+    def validate_forn_cnpj(self, value):
+        # Regra CLAUDE.md: unique+null+blank -> '' viola constraint; converter para None
+        if value == '':
+            return None
+        return value
 
 
 class LivroCaixaSerializer(serializers.ModelSerializer):

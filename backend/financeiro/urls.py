@@ -2,16 +2,17 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    AporteViewSet, ContaViewSet, DespesaViewSet, LivroCaixaViewSet,
-    ReceitaViewSet, dre, fluxo_caixa, receita_por_cliente,
+    AporteViewSet, ContaViewSet, DespesaViewSet, FornecedorViewSet,
+    LivroCaixaViewSet, ReceitaViewSet, dre, fluxo_caixa, receita_por_cliente,
 )
 
 router = DefaultRouter()
-router.register('contas',      ContaViewSet,      basename='contas')
-router.register('aportes',     AporteViewSet,     basename='aportes')
-router.register('receitas',    ReceitaViewSet,    basename='receitas')
-router.register('despesas',    DespesaViewSet,    basename='despesas')
-router.register('livro-caixa', LivroCaixaViewSet, basename='livro-caixa')
+router.register('contas',       ContaViewSet,       basename='contas')
+router.register('aportes',      AporteViewSet,      basename='aportes')
+router.register('receitas',     ReceitaViewSet,     basename='receitas')
+router.register('despesas',     DespesaViewSet,     basename='despesas')
+router.register('fornecedores', FornecedorViewSet,  basename='fornecedores')
+router.register('livro-caixa',  LivroCaixaViewSet,  basename='livro-caixa')
 
 urlpatterns = [
     path('', include(router.urls)),

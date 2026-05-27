@@ -44,6 +44,7 @@ const menuFinanceiro = [
   { label: 'Visao Geral',      path: '/sistema/financeiro/visao-geral' },
   { label: 'Contas a Receber', path: '/sistema/financeiro/receitas' },
   { label: 'Contas a Pagar',   path: '/sistema/financeiro/despesas' },
+  { label: 'Fornecedores',     path: '/sistema/financeiro/fornecedores' },
   { label: 'Aportes',          path: '/sistema/financeiro/aportes' },
   { label: 'Contas Bancarias', path: '/sistema/financeiro/contas' },
   { label: 'Relatorios',       path: 'relatorios', submenu: menuRelatorios },

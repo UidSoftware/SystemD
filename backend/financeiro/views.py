@@ -13,10 +13,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro
 
-from .models import Aporte, Conta, Despesa, FormaPagamento, LivroCaixa, Receita
+from .models import Aporte, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
 from .serializers import (
     AporteSerializer, ContaSerializer, DespesaSerializer,
-    LivroCaixaSerializer, ReceitaSerializer,
+    FornecedorSerializer, LivroCaixaSerializer, ReceitaSerializer,
 )
 
 
@@ -124,16 +124,23 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='fornecedores', permission_classes=[IsAdminOrFinanceiro])
     def fornecedores(self, request):
-        """Retorna lista de fornecedores distintos e não vazios já cadastrados."""
-        qs = (
-            Despesa.objects
-            .filter(ativo=True)
-            .exclude(fornecedor='')
-            .values_list('fornecedor', flat=True)
-            .distinct()
-            .order_by('fornecedor')
-        )
+        """Retorna lista de nomes dos fornecedores ativos cadastrados."""
+        qs = Fornecedor.objects.filter(forn_ativo=True).values_list('forn_nome', flat=True)
         return Response(list(qs))
+
+
+class FornecedorViewSet(AuditMixin, ModelViewSet):
+    queryset = Fornecedor.objects.filter(ativo=True).order_by('forn_nome')
+    serializer_class = FornecedorSerializer
+    permission_classes = [IsAdminOrFinanceiro]
+    filter_backends = [SearchFilter]
+    search_fields = ['forn_nome', 'forn_cnpj']
+
+    def perform_create(self, serializer):
+        serializer.save(criado_por=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
 
 
 class LivroCaixaViewSet(ReadCreateViewSet):

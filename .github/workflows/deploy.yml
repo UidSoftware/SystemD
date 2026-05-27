@@ -9,14 +9,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Configura SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy na VPS
-        uses: appleboy/ssh-action@v1.2.1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
-          script: |
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} '
             set -e
             cd /root/SytemD
 
@@ -30,5 +32,4 @@ jobs:
 
             docker exec sytemd-backend-1 python manage.py migrate --no-input
             docker exec sytemd-backend-1 python manage.py collectstatic --no-input --clear
-
-# actions ok
+          '

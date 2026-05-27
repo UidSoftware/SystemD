@@ -28,10 +28,10 @@ jobs:
 
             docker compose -f docker-compose.prod.yml build frontend-builder backend
 
-            docker compose -f docker-compose.prod.yml up frontend-builder
+            docker compose -f docker-compose.prod.yml run --rm frontend-builder
 
-            docker compose -f docker-compose.prod.yml up -d --no-deps --no-build backend nginx
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans backend nginx
 
-            docker exec sytemd-backend-1 python manage.py migrate --no-input
-            docker exec sytemd-backend-1 python manage.py collectstatic --no-input --clear
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --no-input
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --no-input --clear
           '

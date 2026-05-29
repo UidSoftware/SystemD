@@ -2,10 +2,11 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS
+from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS, ArquiteturaTecnica
 from .serializers import (
     OSListSerializer, OSDetailSerializer, OSCreateSerializer,
     ContratoSerializer, ChamadoSerializer, MensagemChamadoSerializer,
+    ArquiteturaTecnicaSerializer,
 )
 from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import IsAdmin, IsAdminOrOperacional
@@ -201,3 +202,14 @@ class MensagemGlobalViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(chamado_id=self.kwargs.get('chamado_pk'), autor=self.request.user)
+
+
+class ArquiteturaTecnicaViewSet(viewsets.ModelViewSet):
+    serializer_class = ArquiteturaTecnicaSerializer
+    http_method_names = ['get', 'post', 'patch', 'put', 'delete']
+
+    def get_permissions(self):
+        return [IsAdminOrOperacional()]
+
+    def get_queryset(self):
+        return ArquiteturaTecnica.objects.all()

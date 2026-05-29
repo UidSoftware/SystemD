@@ -132,7 +132,7 @@ export default function OSPage() {
           <button onClick={() => setModalAberto(true)}
             className="px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap"
             style={{ backgroundColor: '#063BF8', color: '#fff' }}>
-            + Nova OS
+            ➕ Nova OS
           </button>
         </div>
 
@@ -299,12 +299,12 @@ export default function OSPage() {
                 <button type="button" onClick={() => { setModalAberto(false); setErro('') }}
                   className="flex-1 py-2 rounded-lg text-sm font-medium"
                   style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-                  Cancelar
+                  ❌ Cancelar
                 </button>
                 <button type="submit" disabled={salvando}
                   className="flex-1 py-2 rounded-lg text-sm font-semibold"
                   style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-                  {salvando ? 'Criando...' : 'Criar OS'}
+                  {salvando ? 'Criando...' : '➕ Criar OS'}
                 </button>
               </div>
             </form>

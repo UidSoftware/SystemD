@@ -81,7 +81,7 @@ export default function LivroCaixaPage() {
         <button
           style={{ background: 'rgba(248,113,113,0.15)', color: '#f87171', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}
           onClick={() => { setModalEstorno(r); setMotivo('') }}>
-          Estornar
+          ↩️ Estornar
         </button>
       ) : null
     }] : []),

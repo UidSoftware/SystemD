@@ -35,7 +35,7 @@ export default function EmailDetail({ email, pasta, onDeletar, onResponder, onAr
               style={{ border: '1px solid rgba(6,59,248,0.4)', color: '#6b8fff' }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(6,59,248,0.1)'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              Responder
+              📤 Responder
             </button>
             {onArquivar && (
               <button onClick={onArquivar}
@@ -51,7 +51,7 @@ export default function EmailDetail({ email, pasta, onDeletar, onResponder, onAr
               style={{ border: '1px solid rgba(248,113,113,0.3)', color: '#f87171' }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(248,113,113,0.1)'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              Deletar
+              🗑️ Deletar
             </button>
           </div>
         </div>

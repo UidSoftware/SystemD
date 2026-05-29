@@ -65,7 +65,7 @@ export default function AportesPage() {
       key: '_acoes', label: 'Ações',
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
-          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)}>Editar</button>
+          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)}>✏️ Editar</button>
         </div>
       )
     },
@@ -77,7 +77,7 @@ export default function AportesPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Aportes</h1>
           <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            + Novo Aporte
+            ➕ Novo Aporte
           </button>
         </div>
         {carregando ? <Spinner /> : dados.length === 0 ? <Vazio /> : <FinanceiroTable colunas={colunas} dados={dados} />}

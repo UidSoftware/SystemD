@@ -62,7 +62,9 @@ class DespesaSerializer(serializers.ModelSerializer):
             'valor_bruto', 'desconto', 'valor_liquido',
             'conta', 'conta_nome',
             'vencimento', 'pagamento', 'forma_pagamento', 'status',
-            'referencia_mes', 'comprovante', 'observacoes', 'ativo', 'criado_em',
+            'referencia_mes', 'comprovante', 'observacoes',
+            'recorrente', 'frequencia', 'quantidade',
+            'ativo', 'criado_em',
         ]
         read_only_fields = ['id', 'valor_liquido', 'criado_em']
 

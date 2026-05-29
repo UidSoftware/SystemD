@@ -130,7 +130,7 @@ export function BotoesModal({ onCancel, salvando, labelConfirmar = 'Salvar' }) {
     <div className="flex gap-3 pt-2">
       <button type="button" onClick={onCancel} className="flex-1 py-2 rounded-lg text-sm font-medium"
         style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-        Cancelar
+        ❌ Cancelar
       </button>
       <button type="submit" disabled={salvando} className="flex-1 py-2 rounded-lg text-sm font-semibold"
         style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>

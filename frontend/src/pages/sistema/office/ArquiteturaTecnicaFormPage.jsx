@@ -117,7 +117,7 @@ export default function ArquiteturaTecnicaFormPage() {
         </div>
         <button onClick={() => { setSucesso(false); setForm(f => ({ ...f, projeto: '', cliente: '' })) }}
           style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-          Novo projeto
+          ➕ Novo projeto
         </button>
       </div>
     </SistemaLayout>
@@ -222,7 +222,7 @@ export default function ArquiteturaTecnicaFormPage() {
           </button>
           <button type="submit" disabled={salvando}
             style={{ flex: 1, padding: '11px 20px', background: salvando ? '#1a2a6b' : '#063BF8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: salvando ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}>
-            {salvando ? 'Salvando no banco...' : 'Salvar Arquitetura Técnica →'}
+            {salvando ? 'Salvando no banco...' : '💾 Salvar Arquitetura Técnica →'}
           </button>
         </div>
 

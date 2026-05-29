@@ -143,3 +143,53 @@ class MensagemChamado(models.Model):
 
     def __str__(self):
         return f'Msg de {self.autor} em #{self.chamado_id}'
+
+
+class ArquiteturaTecnica(models.Model):
+    # Identificação
+    projeto            = models.CharField(max_length=200)
+    cliente            = models.CharField(max_length=200)
+    versao             = models.CharField(max_length=20, default='1.0.0')
+    data_levantamento  = models.DateField()
+    responsavel        = models.CharField(max_length=200, blank=True)
+
+    # Backend
+    linguagem          = models.CharField(max_length=50, default='Python')
+    framework          = models.CharField(max_length=100, default='Django REST Framework')
+    banco              = models.CharField(max_length=50, default='PostgreSQL')
+    autenticacao       = models.CharField(max_length=50, default='JWT')
+    padrao_api         = models.CharField(max_length=50, default='REST')
+
+    # Frontend
+    frontend_fw        = models.CharField(max_length=100, default='React 18')
+    build_tool         = models.CharField(max_length=50, default='Vite')
+    estilizacao        = models.CharField(max_length=100, default='Tailwind CSS')
+    estado_global      = models.CharField(max_length=100, default='Zustand')
+    server_state       = models.CharField(max_length=100, default='TanStack Query')
+
+    # Infra
+    ambiente_deploy    = models.CharField(max_length=200, default='VPS própria (Uid Software)')
+    servidor_web       = models.CharField(max_length=50, default='Nginx')
+    docker             = models.BooleanField(default=True)
+    ssl                = models.BooleanField(default=True)
+    cicd               = models.BooleanField(default=False)
+    pwa                = models.BooleanField(default=False)
+    dominio_uid        = models.BooleanField(default=False)
+
+    # Observações
+    padrao_rotas       = models.TextField(blank=True)
+    perfis_acesso      = models.TextField(blank=True)
+    integracoes        = models.TextField(blank=True)
+    restricoes         = models.TextField(blank=True)
+    notas_claude       = models.TextField(blank=True)
+
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Arquitetura Técnica'
+        verbose_name_plural = 'Arquiteturas Técnicas'
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return f'{self.projeto} v{self.versao}'

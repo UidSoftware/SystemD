@@ -85,7 +85,7 @@ export default function SetoresPage() {
         <div className="flex justify-end mb-5">
           <button onClick={abrirNovo} className="px-4 py-2 rounded-lg text-sm font-semibold"
             style={{ backgroundColor: '#063BF8', color: '#fff' }}>
-            + Novo setor
+            ➕ Novo setor
           </button>
         </div>
 
@@ -121,12 +121,12 @@ export default function SetoresPage() {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => abrirEdicao(s)}
                       style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                      Editar
+                      ✏️ Editar
                     </button>
                     {s.ativo && (
                       <button onClick={() => desativar(s)}
                         style={{ flex: 1, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                        Desativar
+                        🗑️ Desativar
                       </button>
                     )}
                   </div>
@@ -159,8 +159,8 @@ export default function SetoresPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-3">
-                          <button onClick={() => abrirEdicao(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
-                          {s.ativo && <button onClick={() => desativar(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
+                          <button onClick={() => abrirEdicao(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#6b8fff' }}>✏️ Editar</button>
+                          {s.ativo && <button onClick={() => desativar(s)} className="text-xs font-medium hover:opacity-70" style={{ color: '#f87171' }}>🗑️ Desativar</button>}
                         </div>
                       </td>
                     </tr>
@@ -204,12 +204,12 @@ export default function SetoresPage() {
                 <button type="button" onClick={() => setModalAberto(false)}
                   className="flex-1 py-2 rounded-lg text-sm font-medium"
                   style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-                  Cancelar
+                  ❌ Cancelar
                 </button>
                 <button type="submit" disabled={salvando}
                   className="flex-1 py-2 rounded-lg text-sm font-semibold"
                   style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-                  {salvando ? 'Salvando...' : 'Salvar'}
+                  {salvando ? 'Salvando...' : '💾 Salvar'}
                 </button>
               </div>
             </form>

@@ -141,14 +141,14 @@ export default function EmailCompose({ onEnviado, onCancelar, destinatarioPadrao
           style={{ color: '#6b6b8a' }}
           onMouseEnter={e => e.currentTarget.style.color = '#a78bca'}
           onMouseLeave={e => e.currentTarget.style.color = '#6b6b8a'}>
-          Cancelar
+          ❌ Cancelar
         </button>
         <button onClick={handleEnviar} disabled={enviando}
           className="text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-50"
           style={{ backgroundColor: '#063BF8', color: '#fff' }}
           onMouseEnter={e => !enviando && (e.currentTarget.style.backgroundColor = '#0430cc')}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#063BF8'}>
-          {enviando ? 'Enviando...' : 'Enviar'}
+          {enviando ? 'Enviando...' : '📤 Enviar'}
         </button>
       </div>
     </div>

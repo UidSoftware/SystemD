@@ -154,7 +154,7 @@ export default function UsuariosPage() {
           </select>
           <button onClick={abrirNovo} className="px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap"
             style={{ backgroundColor: '#063BF8', color: '#fff' }}>
-            + Novo usuário
+            ➕ Novo usuário
           </button>
         </div>
 
@@ -198,7 +198,7 @@ export default function UsuariosPage() {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => abrirEdicao(u)}
                       style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                      Editar
+                      ✏️ Editar
                     </button>
                     {u.ativo && (
                       <button onClick={() => enviarAcesso(u)}
@@ -244,7 +244,7 @@ export default function UsuariosPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-3">
-                          <button onClick={() => abrirEdicao(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#6b8fff' }}>Editar</button>
+                          <button onClick={() => abrirEdicao(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#6b8fff' }}>✏️ Editar</button>
                           {u.ativo && <button onClick={() => enviarAcesso(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#10b981' }}>Enviar acesso</button>}
                           {u.ativo && <button onClick={() => desativar(u)} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>Desativar</button>}
                         </div>
@@ -322,12 +322,12 @@ export default function UsuariosPage() {
                 <button type="button" onClick={() => setModalAberto(false)}
                   className="flex-1 py-2 rounded-lg text-sm font-medium"
                   style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-                  Cancelar
+                  ❌ Cancelar
                 </button>
                 <button type="submit" disabled={salvando}
                   className="flex-1 py-2 rounded-lg text-sm font-semibold"
                   style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-                  {salvando ? 'Salvando...' : 'Salvar'}
+                  {salvando ? 'Salvando...' : '💾 Salvar'}
                 </button>
               </div>
             </form>

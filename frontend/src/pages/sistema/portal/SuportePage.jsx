@@ -116,7 +116,7 @@ export default function SuportePage() {
                           <button onClick={handleEnviarMensagem} disabled={enviandoMsg}
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{ backgroundColor: '#063BF8', color: '#fff', opacity: enviandoMsg ? 0.6 : 1 }}>
-                            Enviar
+                            📤 Enviar
                           </button>
                         </div>
                       )}
@@ -154,7 +154,7 @@ export default function SuportePage() {
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => { setModalAberto(false); setErro('') }}
                     className="flex-1 py-2 rounded-lg text-sm font-medium"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>Cancelar</button>
+                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>❌ Cancelar</button>
                   <button type="submit" disabled={salvando} className="flex-1 py-2 rounded-lg text-sm font-semibold"
                     style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
                     {salvando ? 'Enviando...' : 'Abrir chamado'}

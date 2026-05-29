@@ -62,8 +62,8 @@ export default function ContasPage() {
       key: '_acoes', label: 'Ações',
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
-          <button style={btnEditar} onClick={() => abrirEdicao(r)}>Editar</button>
-          <button style={btnDesativar} onClick={() => deletar(r)}>Desativar</button>
+          <button style={btnEditar} onClick={() => abrirEdicao(r)}>✏️ Editar</button>
+          <button style={btnDesativar} onClick={() => deletar(r)}>🗑️ Desativar</button>
         </div>
       )
     },
@@ -75,7 +75,7 @@ export default function ContasPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas Bancárias</h1>
           <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            + Nova Conta
+            ➕ Nova Conta
           </button>
         </div>
         {carregando ? <Spinner /> : dados.length === 0 ? <Vazio /> : <FinanceiroTable colunas={colunas} dados={dados} />}

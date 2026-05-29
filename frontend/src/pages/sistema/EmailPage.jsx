@@ -142,7 +142,7 @@ export default function EmailPage() {
         style={{ backgroundColor: '#063BF8', color: '#fff' }}
         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0430cc'}
         onMouseLeave={e => e.currentTarget.style.backgroundColor = '#063BF8'}>
-        + Novo
+        ➕ Novo
       </button>
       {pastas.map(pasta => (
         <button key={pasta} onClick={() => trocarPasta(pasta)}
@@ -181,7 +181,7 @@ export default function EmailPage() {
         <button onClick={abrirCompose}
           className="text-xs font-semibold px-4 py-1.5 rounded-lg"
           style={{ backgroundColor: '#063BF8', color: '#fff' }}>
-          + Novo
+          ➕ Novo
         </button>
       </div>
 

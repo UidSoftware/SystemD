@@ -138,7 +138,7 @@ export default function ReceitasPage() {
         <div style={{ display: 'flex', gap: 6 }}>
           {r.status === 'PENDENTE' && (
             <button style={btnAcao('#10b981')} onClick={() => { setModalReceber(r); setFormRec({ recebimento: '', conta: r.conta }) }}>
-              💲 Receber
+              💰 Receber
             </button>
           )}
           <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)} title="Editar">✏️</button>
@@ -156,7 +156,7 @@ export default function ReceitasPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas a Receber</h1>
           <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            + Novo Lançamento
+            ➕ Novo Lançamento
           </button>
         </div>
 

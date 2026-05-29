@@ -315,7 +315,7 @@ export default function LeadsPage() {
                 {!lead.convertido && (
                   <button onClick={() => abrirConverter(lead)}
                     style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                    Converter
+                    🔄 Converter
                   </button>
                 )}
               </div>
@@ -382,7 +382,7 @@ export default function LeadsPage() {
                     {!lead.convertido && (
                       <button onClick={() => abrirConverter(lead)}
                         style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
-                        Converter
+                        🔄 Converter
                       </button>
                     )}
                   </td>
@@ -453,11 +453,11 @@ export default function LeadsPage() {
               )}
               <button onClick={() => setModalLead(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={salvarLead} disabled={salvando}
                 style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Salvando...' : 'Salvar'}
+                {salvando ? 'Salvando...' : '💾 Salvar'}
               </button>
             </div>
           </div>
@@ -500,11 +500,11 @@ export default function LeadsPage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModalConverter(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={confirmarConverter} disabled={salvando}
                 style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Convertendo...' : 'Confirmar conversão'}
+                {salvando ? 'Convertendo...' : '✅ Confirmar conversão'}
               </button>
             </div>
           </div>

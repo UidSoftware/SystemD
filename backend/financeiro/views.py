@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
@@ -98,7 +98,42 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
     ordering_fields = ['vencimento', 'valor_liquido', 'status']
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        dados = serializer.validated_data
+        recorrente = dados.get('recorrente', False)
+        frequencia = dados.get('frequencia', '')
+        quantidade = dados.get('quantidade', 1)
+
+        if recorrente and quantidade > 1 and frequencia:
+            # Cria N lançamentos com datas de vencimento calculadas
+            from financeiro.models import Despesa
+            vencimento_base = dados.get('vencimento')
+
+            def proxima_data(base, n, freq):
+                if freq == 'MENSAL':
+                    # _add_months sem dateutil (padrão CLAUDE.md)
+                    mes = base.month - 1 + n
+                    ano = base.year + mes // 12
+                    mes = mes % 12 + 1
+                    import calendar
+                    ultimo_dia = calendar.monthrange(ano, mes)[1]
+                    dia = min(base.day, ultimo_dia)
+                    return base.replace(year=ano, month=mes, day=dia)
+                elif freq == 'SEMANAL':
+                    return base + timedelta(weeks=n)
+                elif freq == 'QUINZENAL':
+                    return base + timedelta(days=15 * n)
+                elif freq == 'ANUAL':
+                    return base.replace(year=base.year + n)
+                return base
+
+            campos_base = {k: v for k, v in dados.items()}
+            campos_base['criado_por'] = self.request.user
+
+            for i in range(quantidade):
+                campos_base['vencimento'] = proxima_data(vencimento_base, i, frequencia)
+                Despesa.objects.create(**campos_base)
+        else:
+            serializer.save(criado_por=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()

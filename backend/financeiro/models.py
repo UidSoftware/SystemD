@@ -127,6 +127,13 @@ class Receita(BaseFinanceiro):
 # Despesa
 # ──────────────────────────────────────────────
 
+
+class FrequenciaDespesa(models.TextChoices):
+    MENSAL    = 'MENSAL',    'Mensal'
+    SEMANAL   = 'SEMANAL',   'Semanal'
+    QUINZENAL = 'QUINZENAL', 'Quinzenal'
+    ANUAL     = 'ANUAL',     'Anual'
+
 class TipoDespesa(models.TextChoices):
     FIXA      = 'FIXA',      'Despesa Fixa'
     VARIAVEL  = 'VARIAVEL',  'Despesa Variável'
@@ -169,6 +176,11 @@ class Despesa(BaseFinanceiro):
     referencia_mes   = models.DateField(null=True, blank=True)
     comprovante      = models.FileField(upload_to='despesas/', blank=True)
     observacoes      = models.TextField(blank=True)
+    recorrente       = models.BooleanField(default=False)
+    frequencia       = models.CharField(
+        max_length=20, choices=FrequenciaDespesa.choices, blank=True,
+    )
+    quantidade       = models.PositiveIntegerField(default=1)
 
     class Meta:
         db_table = 'fin_despesa'

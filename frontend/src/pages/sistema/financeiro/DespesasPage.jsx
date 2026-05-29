@@ -11,18 +11,23 @@ const STATUS_CFG = {
 }
 const TIPO_CFG = {
   FIXA:      { label: 'Fixa',       cor: '#063BF8' },
-  VARIAVEL:  { label: 'Variável',   cor: '#f59e0b' },
-  PROLABORE: { label: 'Pró-labore', cor: '#3d0361' },
+  VARIAVEL:  { label: 'Variavel',   cor: '#f59e0b' },
+  PROLABORE: { label: 'Pro-labore', cor: '#3d0361' },
   IMPOSTO:   { label: 'Imposto',    cor: '#FF0000' },
   OUTRO:     { label: 'Outro',      cor: '#6b7280' },
 }
-
+const FREQUENCIA_OPTS = [
+  { value: 'MENSAL',    label: 'Mensal' },
+  { value: 'SEMANAL',   label: 'Semanal' },
+  { value: 'QUINZENAL', label: 'Quinzenal' },
+  { value: 'ANUAL',     label: 'Anual' },
+]
 const FORMA_PAGAMENTO_OPTS = [
   { value: 'PIX',            label: 'PIX' },
   { value: 'TED_DOC',        label: 'TED/DOC' },
   { value: 'BOLETO',         label: 'Boleto' },
-  { value: 'CARTAO_DEBITO',  label: 'Cartão de Débito' },
-  { value: 'CARTAO_CREDITO', label: 'Cartão de Crédito' },
+  { value: 'CARTAO_DEBITO',  label: 'Cartao de Debito' },
+  { value: 'CARTAO_CREDITO', label: 'Cartao de Credito' },
   { value: 'DINHEIRO',       label: 'Dinheiro' },
   { value: 'OUTRO',          label: 'Outro' },
 ]
@@ -31,6 +36,7 @@ const formVazio = {
   tipo: 'FIXA', descricao: '', fornecedor: '',
   valor_bruto: '', desconto: '0', conta: '',
   vencimento: '', referencia_mes: '', observacoes: '',
+  recorrente: false, frequencia: 'MENSAL', quantidade: 1,
 }
 const btnAcao = (cor) => ({
   background: `${cor}22`, color: cor, border: 'none', borderRadius: 8,
@@ -78,6 +84,9 @@ export default function DespesasPage() {
       conta: d.conta, vencimento: d.vencimento,
       referencia_mes: d.referencia_mes ? d.referencia_mes.slice(0, 7) : '',
       observacoes: d.observacoes || '',
+      recorrente: d.recorrente || false,
+      frequencia: d.frequencia || 'MENSAL',
+      quantidade: d.quantidade || 1,
     })
     setErro(''); setModal(true)
   }
@@ -87,19 +96,28 @@ export default function DespesasPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.descricao || !form.valor_bruto || !form.conta || !form.vencimento) {
-      setErro('Preencha os campos obrigatórios.'); return
+      setErro('Preencha os campos obrigatorios.'); return
+    }
+    if (form.recorrente && !form.frequencia) {
+      setErro('Selecione a frequencia para despesa recorrente.'); return
+    }
+    if (form.recorrente && (parseInt(form.quantidade) < 1 || parseInt(form.quantidade) > 60)) {
+      setErro('Quantidade deve ser entre 1 e 60.'); return
     }
     setSalvando(true); setErro('')
     const payload = {
       ...form,
       referencia_mes: form.referencia_mes ? form.referencia_mes + '-01' : null,
+      recorrente: form.recorrente,
+      frequencia: form.recorrente ? form.frequencia : '',
+      quantidade: form.recorrente ? parseInt(form.quantidade) : 1,
     }
     try {
       if (editando) await financeiroApi.editarDespesa(editando.id, payload)
       else await financeiroApi.criarDespesa(payload)
       setModal(false); carregar()
-    } catch (e) {
-      setErro(e.response?.data ? Object.values(e.response.data).flat().join(' ') : 'Erro ao salvar.')
+    } catch (err) {
+      setErro(err.response?.data ? Object.values(err.response.data).flat().join(' ') : 'Erro ao salvar.')
     } finally { setSalvando(false) }
   }
 
@@ -117,34 +135,57 @@ export default function DespesasPage() {
   }
 
   const cancelar = async (d) => {
-    if (!confirm(`Cancelar despesa "${d.descricao}"?`)) return
+    if (!confirm('Cancelar despesa "' + d.descricao + '"?')) return
     await financeiroApi.editarDespesa(d.id, { status: 'CANCELADO' }); carregar()
   }
 
+  const labelFrequencia = (freq) => FREQUENCIA_OPTS.find(o => o.value === freq)?.label ?? freq
+
   const colunas = [
-    { key: 'descricao',    label: 'Descrição' },
+    { key: 'descricao',    label: 'Descricao' },
     { key: 'tipo',         label: 'Tipo',       render: r => <BadgeStatus status={r.tipo} config={TIPO_CFG} /> },
     { key: 'fornecedor',   label: 'Fornecedor', render: r => r.fornecedor || '—', muted: true },
     { key: 'valor_liquido', label: 'Valor',     render: r => formatMoeda(r.valor_liquido) },
     { key: 'vencimento',   label: 'Vencimento', render: r => formatData(r.vencimento), muted: true },
+    {
+      key: 'recorrente', label: 'Recorrencia',
+      render: r => r.recorrente
+        ? <span style={{ fontSize: 11, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 6, padding: '2px 7px' }}>
+            {labelFrequencia(r.frequencia)}
+          </span>
+        : <span style={{ color: '#6b6b8a', fontSize: 12 }}>{'—'}</span>,
+      muted: true,
+    },
     { key: 'status',       label: 'Status',     render: r => <BadgeStatus status={r.status} config={STATUS_CFG} /> },
     {
-      key: '_acoes', label: 'Ações',
+      key: '_acoes', label: 'Acoes',
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
           {r.status === 'PENDENTE' && (
             <button style={btnAcao('#10b981')} onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '' }) }}>
-              💸 Pagar
+              Pagar
             </button>
           )}
-          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)} title="Editar">✏️</button>
+          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)}>Editar</button>
           {r.status !== 'CANCELADO' && (
-            <button style={btnAcao('#f87171')} onClick={() => cancelar(r)} title="Cancelar">🗑️</button>
+            <button style={btnAcao('#f87171')} onClick={() => cancelar(r)}>Cancelar</button>
           )}
         </div>
       ),
     },
   ]
+
+  const previewRecorrencia = () => {
+    if (!form.recorrente || parseInt(form.quantidade) < 2) return null
+    const label = FREQUENCIA_OPTS.find(o => o.value === form.frequencia)?.label ?? ''
+    return (
+      <div style={{ marginTop: 10, background: 'rgba(6,59,248,0.08)', border: '1px solid rgba(6,59,248,0.2)', borderRadius: 8, padding: '8px 12px' }}>
+        <span style={{ fontSize: 12, color: '#6b8fff' }}>
+          Serao criados {form.quantidade} lancamentos. 1 vencimento em {form.vencimento || '(data nao informada)'}, os demais calculados automaticamente ({label}).
+        </span>
+      </div>
+    )
+  }
 
   return (
     <SistemaLayout>
@@ -152,7 +193,7 @@ export default function DespesasPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas a Pagar</h1>
           <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            ➕ Nova Despesa
+            Nova Despesa
           </button>
         </div>
 
@@ -180,7 +221,7 @@ export default function DespesasPage() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Descrição *</label>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Descricao *</label>
               <input style={inputStyle} value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: VPS Contabo Maio/2026" />
             </div>
             <div>
@@ -207,9 +248,8 @@ export default function DespesasPage() {
                 <input style={inputStyle} type="number" step="0.01" value={form.desconto} onChange={e => setForm(f => ({ ...f, desconto: e.target.value }))} />
               </div>
             </div>
-            {/* Valor líquido calculado */}
             <div style={{ background: 'rgba(255,0,0,0.06)', border: '1px solid rgba(255,0,0,0.15)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: '#a78bca' }}>Valor líquido</span>
+              <span style={{ fontSize: 12, color: '#a78bca' }}>Valor liquido</span>
               <span style={{ fontSize: 15, fontWeight: 700, color: '#f87171' }}>{formatMoeda(valorLiquidoCalc)}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -226,9 +266,51 @@ export default function DespesasPage() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Mês de referência</label>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Mes de referencia</label>
               <input style={inputStyle} type="month" value={form.referencia_mes} onChange={e => setForm(f => ({ ...f, referencia_mes: e.target.value }))} />
             </div>
+
+            {/* Bloco recorrencia */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={form.recorrente}
+                  onChange={e => setForm(f => ({ ...f, recorrente: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: '#063BF8', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: 13, color: '#e2d9f3', fontWeight: 500 }}>Despesa recorrente</span>
+              </label>
+
+              {form.recorrente && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Frequencia *</label>
+                    <select
+                      style={inputStyle}
+                      value={form.frequencia}
+                      onChange={e => setForm(f => ({ ...f, frequencia: e.target.value }))}
+                    >
+                      {FREQUENCIA_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Qtd de parcelas *</label>
+                    <input
+                      style={inputStyle}
+                      type="number"
+                      min="2"
+                      max="60"
+                      value={form.quantidade}
+                      onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {previewRecorrencia()}
+            </div>
+
             {erro && <p style={{ color: '#f87171', fontSize: 13 }}>{erro}</p>}
             <BotoesModal onCancel={() => setModal(false)} salvando={salvando} />
           </form>

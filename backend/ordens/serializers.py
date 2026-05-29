@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from usuarios.models import Usuario
-from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado
+from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, ArquiteturaTecnica
 
 
 class FaseOSSerializer(serializers.ModelSerializer):
@@ -104,3 +104,10 @@ class OSCreateSerializer(serializers.ModelSerializer):
             'valor_total', 'valor_entrada', 'valor_mensal',
             'data_inicio', 'data_entrega', 'observacoes',
         ]
+
+
+class ArquiteturaTecnicaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArquiteturaTecnica
+        fields = '__all__'
+        read_only_fields = ['criado_em', 'atualizado_em']

@@ -117,7 +117,7 @@ export default function ClientesPage() {
           <button onClick={abrirNovo}
             style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8,
               padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            + Novo cliente
+            ➕ Novo cliente
           </button>
         </div>
 
@@ -151,7 +151,7 @@ export default function ClientesPage() {
                 <button onClick={() => abrirEditar(c)}
                   style={{ flex: 1, padding: '8px 0', background: 'rgba(6,59,248,0.15)', color: '#6b8fff',
                     border: '1px solid rgba(6,59,248,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  Editar
+                  ✏️ Editar
                 </button>
                 {isAdmin && (
                   <button onClick={() => enviarAcesso(c)}
@@ -198,7 +198,7 @@ export default function ClientesPage() {
                   <td style={{ padding: '14px 20px', color: '#6b6b8a', fontSize: 12 }}>{c.email}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', gap: 12 }}>
-                      <button onClick={() => abrirEditar(c)} style={{ background: 'none', border: 'none', color: '#6b8fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>Editar</button>
+                      <button onClick={() => abrirEditar(c)} style={{ background: 'none', border: 'none', color: '#6b8fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>✏️ Editar</button>
                       {isAdmin && (
                         <button onClick={() => enviarAcesso(c)} style={{ background: 'none', border: 'none', color: '#10b981', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
                           {c.usuario ? 'Enviar acesso' : 'Criar acesso'}
@@ -270,12 +270,12 @@ export default function ClientesPage() {
                 <button type="button" onClick={() => setModalAberto(false)}
                   style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.06)', color: '#a78bca',
                     border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
-                  Cancelar
+                  ❌ Cancelar
                 </button>
                 <button type="submit" disabled={salvando}
                   style={{ padding: '10px 24px', background: '#063BF8', color: '#fff', border: 'none',
                     borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                  {salvando ? 'Salvando...' : 'Salvar'}
+                  {salvando ? 'Salvando...' : '💾 Salvar'}
                 </button>
               </div>
             </form>
@@ -296,7 +296,7 @@ export default function ClientesPage() {
               <button onClick={() => setConfirmando(null)}
                 style={{ flex: 1, padding: '10px 0', background: 'rgba(255,255,255,0.06)', color: '#a78bca',
                   border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={() => desativar(confirmando)}
                 style={{ flex: 1, padding: '10px 0', background: '#dc2626', color: '#fff',

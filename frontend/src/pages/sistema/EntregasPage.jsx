@@ -282,11 +282,11 @@ export default function EntregasPage() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={() => exportar('pdf')}
               style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-              Exportar PDF
+              📄 Exportar PDF
             </button>
             <button onClick={() => exportar('excel')}
               style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-              Exportar Excel
+              📊 Exportar Excel
             </button>
             {isInterno && (
               <>
@@ -296,7 +296,7 @@ export default function EntregasPage() {
                 </button>
                 <button onClick={abrirNovo}
                   style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  + Nova entrega
+                  ➕ Nova entrega
                 </button>
               </>
             )}
@@ -411,12 +411,12 @@ export default function EntregasPage() {
                   <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
                     <button onClick={() => abrirEdicao(e)}
                       style={{ flex: 1, padding: '8px 0', background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: '1px solid rgba(6,59,248,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                      Editar
+                      ✏️ Editar
                     </button>
                     {isAdmin && (
                       <button onClick={() => excluir(e)}
                         style={{ flex: 1, padding: '8px 0', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        Excluir
+                        🗑️ Excluir
                       </button>
                     )}
                   </div>
@@ -468,12 +468,12 @@ export default function EntregasPage() {
                           <div style={{ display: 'flex', gap: 10 }}>
                             <button onClick={() => abrirEdicao(e)}
                               style={{ background: 'none', border: 'none', color: '#6b8fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                              Editar
+                              ✏️ Editar
                             </button>
                             {isAdmin && (
                               <button onClick={() => excluir(e)}
                                 style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                                Excluir
+                                🗑️ Excluir
                               </button>
                             )}
                           </div>
@@ -632,11 +632,11 @@ export default function EntregasPage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => { setModal(null); setEditandoId(null) }}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={salvar} disabled={salvando}
                 style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Salvando...' : 'Salvar'}
+                {salvando ? 'Salvando...' : '💾 Salvar'}
               </button>
             </div>
           </div>
@@ -663,7 +663,7 @@ export default function EntregasPage() {
               />
               <button onClick={salvarUnidade} disabled={salvandoUnidade}
                 style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', opacity: salvandoUnidade ? 0.6 : 1 }}>
-                {editandoUnidade ? 'Salvar' : '+ Adicionar'}
+                {editandoUnidade ? '💾 Salvar' : '➕ Adicionar'}
               </button>
               {editandoUnidade && (
                 <button onClick={() => { setEditandoUnidade(null); setUnidadeForm({ nome: '', ativo: true }) }}
@@ -688,11 +688,11 @@ export default function EntregasPage() {
                           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                             <button onClick={() => editarUnidade(u)}
                               style={{ background: 'none', border: 'none', color: '#6b8fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                              Editar
+                              ✏️ Editar
                             </button>
                             <button onClick={() => desativarUnidade(u)}
                               style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                              Desativar
+                              🗑️ Desativar
                             </button>
                           </div>
                         </td>
@@ -717,11 +717,11 @@ export default function EntregasPage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModalMotivo(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={naoConfirmar} disabled={!motivo.trim()}
                 style={{ background: '#f87171', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: motivo.trim() ? 1 : 0.5 }}>
-                Enviar
+                📤 Enviar
               </button>
             </div>
           </div>

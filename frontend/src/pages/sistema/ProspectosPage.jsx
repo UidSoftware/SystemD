@@ -189,7 +189,7 @@ export default function ProspectosPage() {
           </div>
           <button onClick={abrirNovo}
             style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            + Novo prospecto
+            ➕ Novo prospecto
           </button>
         </div>
 
@@ -275,18 +275,18 @@ export default function ProspectosPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => abrirEditar(p)}
                   style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                  Ver/Editar
+                  ✏️ Ver/Editar
                 </button>
                 {isAdmin && !p.convertido && (
                   <button onClick={() => abrirConverter(p)}
                     style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                    → Cliente
+                    🔄 → Cliente
                   </button>
                 )}
                 {isAdmin && (
                   <button onClick={() => excluir(p.id)}
                     style={{ flex: 1, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                    Excluir
+                    🗑️ Excluir
                   </button>
                 )}
               </div>
@@ -338,18 +338,18 @@ export default function ProspectosPage() {
                   <td style={tdStyle}>
                     <button onClick={() => abrirEditar(p)}
                       style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
-                      Ver/Editar
+                      ✏️ Ver/Editar
                     </button>
                     {isAdmin && !p.convertido && (
                       <button onClick={() => abrirConverter(p)}
                         style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
-                        → Cliente
+                        🔄 → Cliente
                       </button>
                     )}
                     {isAdmin && (
                       <button onClick={() => excluir(p.id)}
                         style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
-                        Excluir
+                        🗑️ Excluir
                       </button>
                     )}
                   </td>
@@ -418,11 +418,11 @@ export default function ProspectosPage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={salvar} disabled={salvando}
                 style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Salvando...' : 'Salvar'}
+                {salvando ? 'Salvando...' : '💾 Salvar'}
               </button>
             </div>
           </div>
@@ -455,11 +455,11 @@ export default function ProspectosPage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModalConverter(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                Cancelar
+                ❌ Cancelar
               </button>
               <button onClick={confirmarConverter} disabled={salvando}
                 style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Convertendo...' : 'Confirmar'}
+                {salvando ? 'Convertendo...' : '✅ Confirmar'}
               </button>
             </div>
           </div>

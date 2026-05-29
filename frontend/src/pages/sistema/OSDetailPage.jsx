@@ -113,7 +113,7 @@ function AbaResumo({ os, onAvancar, onCancelar, usuarios }) {
             <button onClick={() => { setEditando(true); setForm({ titulo: os.titulo, descricao: os.descricao || '', responsavel_id: os.responsavel_nome ? '' : '', valor_total: os.valor_total || '', valor_entrada: os.valor_entrada || '', valor_mensal: os.valor_mensal || '', data_inicio: os.data_inicio || '', data_entrega: os.data_entrega || '', observacoes: os.observacoes || '' }) }}
               className="px-3 py-1 rounded-lg text-xs font-medium"
               style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-              Editar
+              ✏️ Editar
             </button>
           )}
           {proximoLabel && (
@@ -127,7 +127,7 @@ function AbaResumo({ os, onAvancar, onCancelar, usuarios }) {
             <button onClick={() => setModalCancelar(true)}
               className="px-3 py-1 rounded-lg text-xs font-medium"
               style={{ backgroundColor: 'rgba(255,0,0,0.1)', color: '#FF0000', border: '1px solid #FF000033' }}>
-              Cancelar OS
+              ❌ Cancelar OS
             </button>
           )}
         </div>
@@ -166,10 +166,10 @@ function AbaResumo({ os, onAvancar, onCancelar, usuarios }) {
               placeholder="Observação sobre esta transição (opcional)" style={{ ...inputStyle, resize: 'none' }} />
             <div className="flex gap-3 mt-4">
               <button onClick={() => setModalAvancar(false)} className="flex-1 py-2 rounded-lg text-sm"
-                style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>Cancelar</button>
+                style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>❌ Cancelar</button>
               <button onClick={handleAvancar} disabled={salvando} className="flex-1 py-2 rounded-lg text-sm font-semibold"
                 style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-                {salvando ? 'Avançando...' : 'Confirmar'}
+                {salvando ? 'Avançando...' : '✅ Confirmar'}
               </button>
             </div>
           </div>
@@ -189,7 +189,7 @@ function AbaResumo({ os, onAvancar, onCancelar, usuarios }) {
                 style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>Voltar</button>
               <button onClick={handleCancelar} disabled={salvando} className="flex-1 py-2 rounded-lg text-sm font-semibold"
                 style={{ backgroundColor: '#FF0000', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-                {salvando ? 'Cancelando...' : 'Cancelar OS'}
+                {salvando ? 'Cancelando...' : '❌ Cancelar OS'}
               </button>
             </div>
           </div>
@@ -239,10 +239,10 @@ function AbaResumo({ os, onAvancar, onCancelar, usuarios }) {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditando(false)} className="flex-1 py-2 rounded-lg text-sm"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>Cancelar</button>
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>❌ Cancelar</button>
                 <button type="submit" disabled={salvandoEdit} className="flex-1 py-2 rounded-lg text-sm font-semibold"
                   style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvandoEdit ? 0.6 : 1 }}>
-                  {salvandoEdit ? 'Salvando...' : 'Salvar'}
+                  {salvandoEdit ? 'Salvando...' : '💾 Salvar'}
                 </button>
               </div>
             </form>
@@ -371,10 +371,10 @@ function AbaContrato({ os, onReload }) {
         {erro && <p className="text-xs" style={{ color: '#FF0000' }}>{erro}</p>}
         <div className="flex gap-3">
           <button type="button" onClick={() => setEditando(false)} className="flex-1 py-2 rounded-lg text-sm"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>Cancelar</button>
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>❌ Cancelar</button>
           <button type="submit" disabled={salvando} className="flex-1 py-2 rounded-lg text-sm font-semibold"
             style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-            {salvando ? 'Salvando...' : 'Salvar'}
+            {salvando ? 'Salvando...' : '💾 Salvar'}
           </button>
         </div>
       </form>
@@ -388,7 +388,7 @@ function AbaContrato({ os, onReload }) {
         <h3 className="font-semibold" style={{ color: '#f1f5f9' }}>Contrato {c.numero}</h3>
         <button onClick={() => setEditando(true)} className="px-3 py-1 rounded-lg text-xs font-medium"
           style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-          Editar
+          ✏️ Editar
         </button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -493,7 +493,7 @@ function AbaChamados({ os, onReload }) {
                         <button onClick={handleEnviarMensagem} disabled={enviandoMsg}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                           style={{ backgroundColor: '#063BF8', color: '#fff', opacity: enviandoMsg ? 0.6 : 1 }}>
-                          Enviar
+                          📤 Enviar
                         </button>
                       </div>
                     )}
@@ -530,11 +530,11 @@ function AbaChamados({ os, onReload }) {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setModalNovo(false); setErro('') }}
                   className="flex-1 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca' }}>
-                  Cancelar
+                  ❌ Cancelar
                 </button>
                 <button type="submit" disabled={salvando} className="flex-1 py-2 rounded-lg text-sm font-semibold"
                   style={{ backgroundColor: '#063BF8', color: '#fff', opacity: salvando ? 0.6 : 1 }}>
-                  {salvando ? 'Criando...' : 'Criar chamado'}
+                  {salvando ? 'Criando...' : '➕ Criar chamado'}
                 </button>
               </div>
             </form>

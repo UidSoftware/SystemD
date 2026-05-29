@@ -235,7 +235,7 @@ export default function DespesasPage() {
                 autoComplete="off"
               />
               <datalist id="lista-fornecedores">
-                {fornecedores.map(forn => <option key={forn} value={forn} />)}
+                {fornecedores.map(forn => <option key={forn.id} value={forn.forn_nome} />)}
               </datalist>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

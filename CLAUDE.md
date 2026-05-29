@@ -95,6 +95,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Transferência entre contas | `POST /api/financeiro/contas/{id}/transferir/` — cria dois `LivroCaixa` direto (sem model próprio): SAIDA da origem + ENTRADA no destino, ambos com `origem='TRANSFER'` (8 chars, cabe no `max_length=10`). Usa `select_for_update()` + `transaction.atomic()` para saldo seguro. Não passa por `_gerar_lancamento` (sem duplicate guard por `origem_id`). |
 | Sidebar — emojis no menu | A `Sidebar.jsx` usa emojis (campo `emoji` em cada item do menu) em vez de SVG icons para itens principais e submenus. O objeto `icons` com SVGs foi mantido mas não é renderizado. Ao adicionar novo item de menu, **sempre incluir `emoji`** no objeto do item. |
 | `OrigemLancamento` max_length | Campo `origem` no `LivroCaixa` tem `max_length=10`. Choices atuais: APORTE(6), RECEITA(7), DESPESA(7), MANUAL(6), TRANSFER(8). Nunca adicionar choice com mais de 10 chars sem migration que aumente o max_length. |
+| Deploy frontend — 3 comandos obrigatórios | Qualquer alteração no frontend **exige os 3 comandos na sequência**, senão o nginx continua servindo o build antigo e Ctrl+Shift+R não resolve: (1) `docker compose -f docker-compose.prod.yml build --no-cache frontend-builder` → (2) `docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"` → (3) `docker compose -f docker-compose.prod.yml restart nginx`. **Nunca usar `docker compose run frontend-builder`** — cria o container mas não copia para o volume de forma confiável. |
 
 ---
 
@@ -714,7 +715,7 @@ docker exec sytemd-backend-1 python manage.py migrate
 
 # Deploy frontend (OBRIGATÓRIO após qualquer mudança no frontend)
 docker compose -f docker-compose.prod.yml build --no-cache frontend-builder
-docker compose -f docker-compose.prod.yml run --rm frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
 docker compose -f docker-compose.prod.yml restart nginx
 ```
 

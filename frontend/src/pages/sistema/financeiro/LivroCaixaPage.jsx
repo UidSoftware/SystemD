@@ -5,7 +5,7 @@ import { financeiroApi } from '../../../services/financeiroApi'
 import { useAuth } from '../../../contexts/AuthContext'
 
 const TIPO_COR   = { ENTRADA: '#10b981', SAIDA: '#FF0000' }
-const ORIGEM_CFG = { APORTE: '#063BF8', RECEITA: '#10b981', DESPESA: '#f59e0b', MANUAL: '#6b7280' }
+const ORIGEM_CFG = { APORTE: '#063BF8', RECEITA: '#10b981', DESPESA: '#f59e0b', MANUAL: '#6b7280', TRANSFER: '#a78bca', ESTORNO: '#a78bca' }
 
 export default function LivroCaixaPage() {
   const { usuario } = useAuth()
@@ -55,7 +55,16 @@ export default function LivroCaixaPage() {
     { key: 'descricao', label: 'Histórico', render: r => (
       <span style={{ opacity: r.estornado ? 0.45 : 1 }}>
         {r.descricao}
-        {r.estornado && <span style={{ marginLeft: 8, fontSize: 10, background: '#f8717122', color: '#f87171', borderRadius: 4, padding: '1px 5px' }}>ESTORNADO</span>}
+        {r.estornado && (
+          <span style={{ marginLeft: 8, fontSize: 10, background: 'rgba(167,139,202,0.2)', color: '#a78bca', borderRadius: 4, padding: '1px 5px' }}>
+            Estornado
+          </span>
+        )}
+        {r.origem === 'ESTORNO' && (
+          <span style={{ marginLeft: 8, fontSize: 10, background: 'rgba(16,185,129,0.15)', color: '#10b981', borderRadius: 4, padding: '1px 5px' }}>
+            Estorno
+          </span>
+        )}
       </span>
     )},
     { key: 'origem', label: 'Origem', render: r => (
@@ -123,6 +132,8 @@ export default function LivroCaixaPage() {
             <option value="RECEITA">Receita</option>
             <option value="DESPESA">Despesa</option>
             <option value="MANUAL">Manual</option>
+            <option value="TRANSFER">Transferencia</option>
+            <option value="ESTORNO">Estorno</option>
           </select>
         </div>
 

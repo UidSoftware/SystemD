@@ -2,7 +2,14 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Aporte, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
+from .models import Aporte, Categoria, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
+
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = ['id', 'nome', 'tipo', 'ativo', 'criado_em']
+        read_only_fields = ['id', 'criado_em']
 
 
 class ContaSerializer(serializers.ModelSerializer):
@@ -28,15 +35,17 @@ class AporteSerializer(serializers.ModelSerializer):
 
 
 class ReceitaSerializer(serializers.ModelSerializer):
-    cliente_nome = serializers.CharField(source='cliente.nome_empresa', read_only=True)
-    os_titulo    = serializers.CharField(source='os.titulo', read_only=True)
-    conta_nome   = serializers.CharField(source='conta.nome', read_only=True)
+    cliente_nome   = serializers.CharField(source='cliente.nome_empresa', read_only=True)
+    os_titulo      = serializers.CharField(source='os.titulo', read_only=True)
+    conta_nome     = serializers.CharField(source='conta.nome', read_only=True)
+    categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
 
     class Meta:
         model = Receita
         fields = [
             'id', 'tipo', 'descricao',
             'cliente', 'cliente_nome', 'os', 'os_titulo',
+            'categoria', 'categoria_nome',
             'valor_bruto', 'desconto', 'valor_liquido',
             'conta', 'conta_nome',
             'vencimento', 'recebimento', 'status',
@@ -53,7 +62,8 @@ class ReceitaSerializer(serializers.ModelSerializer):
 
 
 class DespesaSerializer(serializers.ModelSerializer):
-    conta_nome = serializers.CharField(source='conta.nome', read_only=True)
+    conta_nome     = serializers.CharField(source='conta.nome', read_only=True)
+    categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
 
     class Meta:
         model = Despesa
@@ -61,12 +71,14 @@ class DespesaSerializer(serializers.ModelSerializer):
             'id', 'tipo', 'descricao', 'fornecedor',
             'valor_bruto', 'desconto', 'valor_liquido',
             'conta', 'conta_nome',
+            'categoria', 'categoria_nome',
             'vencimento', 'pagamento', 'forma_pagamento', 'status',
             'referencia_mes', 'comprovante', 'observacoes',
             'recorrente', 'frequencia', 'quantidade',
+            'estornado', 'data_estorno', 'motivo_estorno',
             'ativo', 'criado_em',
         ]
-        read_only_fields = ['id', 'valor_liquido', 'criado_em']
+        read_only_fields = ['id', 'valor_liquido', 'estornado', 'data_estorno', 'motivo_estorno', 'criado_em']
 
     def validate(self, data):
         bruto    = data.get('valor_bruto', getattr(self.instance, 'valor_bruto', Decimal('0')))

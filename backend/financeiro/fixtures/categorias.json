@@ -1,0 +1,12 @@
+[
+  {"model": "financeiro.categoria", "pk": 1, "fields": {"nome": "Sistema SaaS",  "tipo": "ENTRADA", "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 2, "fields": {"nome": "Consultoria",   "tipo": "ENTRADA", "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 3, "fields": {"nome": "Projeto Avulso","tipo": "ENTRADA", "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 4, "fields": {"nome": "Reembolso",     "tipo": "ENTRADA", "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 5, "fields": {"nome": "Infraestrutura","tipo": "SAIDA",   "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 6, "fields": {"nome": "Ferramentas",   "tipo": "SAIDA",   "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 7, "fields": {"nome": "Marketing",     "tipo": "SAIDA",   "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 8, "fields": {"nome": "Impostos",      "tipo": "SAIDA",   "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 9, "fields": {"nome": "Pessoal",       "tipo": "SAIDA",   "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}},
+  {"model": "financeiro.categoria", "pk": 10,"fields": {"nome": "Outros",        "tipo": "SAIDA",   "ativo": true, "criado_em": "2026-05-29T00:00:00Z"}}
+]

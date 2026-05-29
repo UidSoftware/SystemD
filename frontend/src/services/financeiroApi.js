@@ -1,11 +1,16 @@
 import api from './api'
 
-const f    = (url, params) => api.get(`/financeiro${url}`, { params })
-const post = (url, data)   => api.post(`/financeiro${url}`, data)
-const patch = (url, data)  => api.patch(`/financeiro${url}`, data)
-const del  = (url)         => api.delete(`/financeiro${url}`)
+const f     = (url, params) => api.get(`/financeiro${url}`, { params })
+const post  = (url, data)   => api.post(`/financeiro${url}`, data)
+const patch = (url, data)   => api.patch(`/financeiro${url}`, data)
+const del   = (url)         => api.delete(`/financeiro${url}`)
 
 export const financeiroApi = {
+  // Categorias
+  listarCategorias:      (p) => f('/categorias/', p),
+  criarCategoria:        (d) => post('/categorias/', d),
+  editarCategoria:       (id, d) => patch(`/categorias/${id}/`, d),
+
   // Contas
   listarContas:          (p) => f('/contas/', p),
   criarConta:            (d) => post('/contas/', d),
@@ -31,6 +36,7 @@ export const financeiroApi = {
   editarDespesa:         (id, d) => patch(`/despesas/${id}/`, d),
   deletarDespesa:        (id) => del(`/despesas/${id}/`),
   marcarPago:            (id, d) => patch(`/despesas/${id}/pagar/`, d),
+  estornarDespesa:       (id, d) => post(`/despesas/${id}/estornar/`, d),
   transferir:            (id, d) => post(`/contas/${id}/transferir/`, d),
   listarFornecedores:    (p) => f('/fornecedores/', p),
   criarFornecedor:       (d) => post('/fornecedores/', d),
@@ -43,9 +49,9 @@ export const financeiroApi = {
   totaisLivroCaixa:      (p) => f('/livro-caixa/totais/', p),
   estornar:              (id, d) => post(`/livro-caixa/${id}/estornar/`, d),
 
-  // Helpers para selects em formulários financeiros
-  listarClientesOpts:    () => api.get('/clientes/'),
-  listarOSOpts:          () => api.get('/os/'),
+  // Helpers para selects em formularios financeiros
+  listarClientesOpts:    (p) => api.get('/clientes/', { params: p }),
+  listarOSOpts:          (p) => api.get('/os/', { params: p }),
 
   // Views calculadas
   dashboard:             ()  => f('/dashboard/'),

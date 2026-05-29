@@ -774,6 +774,7 @@ docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000
 | Fase 9.3 | Fluxo Novo Projeto: Leads→Prospectos→Entrevista→Arquitetura Técnica | ✅ |
 | Fase 9.4 | Sidebar com emojis em todos os itens + submenus; campos faltando em ContasPage (agencia/numero) e DespesasPage (observacoes); botões com emojis em DespesasPage; transferência entre contas com LivroCaixa duplo | ✅ |
 | Fase 9.5 | Dashboard profissional: endpoint `/api/financeiro/dashboard/` + DashboardPage reescrito com KPIs por perfil, pipeline OS, gráfico 6 meses (CSS), vencimentos 30d, top clientes; fix saldo em `livro-caixa/totais/` e `fluxo-caixa/`; rename "Fluxo de Caixa" → "Livro Caixa" no menu Relatórios | ✅ |
+| Fase 9.6 | Financeiro: model Categoria + FK em Receita/Despesa + estorno Despesa + menu Relatorios separado + paginas relatorio sem botao Novo + combobox categoria inline + botao estorno + LivroCaixa badge ESTORNO | ✅ |
 | **Fase 10** | Pipeline agents via Office | ⏳ |
 
 ---
@@ -876,4 +877,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 29/05/2026 (Fase 9.5)*
+*Última atualização: 29/05/2026 (Fase 9.6)*

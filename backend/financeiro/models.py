@@ -101,6 +101,11 @@ class Receita(BaseFinanceiro):
         'ordens.OS', null=True, blank=True,
         on_delete=models.PROTECT, related_name='receitas',
     )
+    categoria      = models.ForeignKey(
+        'Categoria', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='receitas',
+        limit_choices_to={'tipo': 'ENTRADA', 'ativo': True},
+    )
     valor_bruto    = models.DecimalField(max_digits=12, decimal_places=2)
     desconto       = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     valor_liquido  = models.DecimalField(max_digits=12, decimal_places=2)
@@ -167,6 +172,11 @@ class Despesa(BaseFinanceiro):
     desconto         = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     valor_liquido    = models.DecimalField(max_digits=12, decimal_places=2)
     conta            = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='despesas')
+    categoria        = models.ForeignKey(
+        'Categoria', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='despesas',
+        limit_choices_to={'tipo': 'SAIDA', 'ativo': True},
+    )
     vencimento       = models.DateField()
     pagamento        = models.DateField(null=True, blank=True)
     forma_pagamento  = models.CharField(
@@ -181,6 +191,9 @@ class Despesa(BaseFinanceiro):
         max_length=20, choices=FrequenciaDespesa.choices, blank=True,
     )
     quantidade       = models.PositiveIntegerField(default=1)
+    estornado        = models.BooleanField(default=False)
+    data_estorno     = models.DateField(null=True, blank=True)
+    motivo_estorno   = models.TextField(blank=True)
 
     class Meta:
         db_table = 'fin_despesa'
@@ -192,6 +205,30 @@ class Despesa(BaseFinanceiro):
 
     def __str__(self):
         return f'{self.descricao} — R$ {self.valor_liquido}'
+
+
+# ──────────────────────────────────────────────
+# Categoria
+# ──────────────────────────────────────────────
+
+class TipoCategoria(models.TextChoices):
+    ENTRADA = 'ENTRADA', 'Entrada'
+    SAIDA   = 'SAIDA',   'Saída'
+
+
+class Categoria(models.Model):
+    nome      = models.CharField(max_length=100)
+    tipo      = models.CharField(max_length=10, choices=TipoCategoria.choices)
+    ativo     = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['nome']
+        unique_together = [['nome', 'tipo']]
+        db_table = 'fin_categoria'
+
+    def __str__(self):
+        return f'{self.nome} ({self.tipo})'
 
 
 # ──────────────────────────────────────────────
@@ -229,6 +266,7 @@ class OrigemLancamento(models.TextChoices):
     DESPESA  = 'DESPESA',  'Despesa'
     MANUAL   = 'MANUAL',   'Lançamento Manual'
     TRANSFER = 'TRANSFER', 'Transferência'
+    ESTORNO  = 'ESTORNO',  'Estorno'  # 7 chars — dentro do max_length=10
 
 
 class LivroCaixa(models.Model):

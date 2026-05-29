@@ -13,11 +13,25 @@ from django_filters.rest_framework import DjangoFilterBackend
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrOperacionalOrFinanceiro
 
-from .models import Aporte, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
+from .models import Aporte, Categoria, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
 from .serializers import (
-    AporteSerializer, ContaSerializer, DespesaSerializer,
+    AporteSerializer, CategoriaSerializer, ContaSerializer, DespesaSerializer,
     FornecedorSerializer, LivroCaixaSerializer, ReceitaSerializer,
 )
+
+
+class CategoriaViewSet(ModelViewSet):
+    queryset = Categoria.objects.filter(ativo=True).order_by('nome')
+    serializer_class = CategoriaSerializer
+    permission_classes = [IsAdminOrFinanceiro]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['tipo']
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def perform_update(self, serializer):
+        serializer.save()
 
 
 class ContaViewSet(AuditMixin, ModelViewSet):
@@ -227,6 +241,67 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
         """Retorna lista de nomes dos fornecedores ativos cadastrados."""
         qs = Fornecedor.objects.filter(forn_ativo=True).values_list('forn_nome', flat=True)
         return Response(list(qs))
+
+    @action(detail=True, methods=['post'], url_path='estornar', permission_classes=[IsAdmin])
+    def estornar_despesa(self, request, pk=None):
+        """POST /api/financeiro/despesas/{id}/estornar/ — cria LivroCaixa ENTRADA origem=ESTORNO"""
+        despesa = self.get_object()
+
+        if despesa.status != 'PAGO':
+            return Response({'detail': 'Somente despesas com status PAGO podem ser estornadas.'}, status=400)
+
+        if despesa.estornado:
+            return Response({'detail': 'Despesa já foi estornada.'}, status=400)
+
+        data_estorno_str = request.data.get('data_estorno') or date.today().isoformat()
+        conta_id         = request.data.get('conta')
+        motivo           = request.data.get('motivo', '')
+        observacoes      = request.data.get('observacoes', '')
+
+        if not motivo.strip():
+            return Response({'motivo': 'Motivo do estorno é obrigatório.'}, status=400)
+
+        try:
+            data_estorno = date.fromisoformat(data_estorno_str)
+        except ValueError:
+            return Response({'data_estorno': 'Data inválida.'}, status=400)
+
+        conta = despesa.conta
+        if conta_id:
+            try:
+                conta = Conta.objects.get(id=conta_id, ativo=True)
+            except Conta.DoesNotExist:
+                return Response({'conta': 'Conta não encontrada.'}, status=400)
+
+        with transaction.atomic():
+            ultimo = (
+                LivroCaixa.objects.select_for_update()
+                .filter(conta=conta)
+                .order_by('-data', '-criado_em')
+                .first()
+            )
+            saldo_anterior = ultimo.saldo_atual if ultimo else conta.saldo_inicial
+            saldo_atual    = saldo_anterior + despesa.valor_liquido
+
+            lancamento = LivroCaixa.objects.create(
+                conta=conta,
+                tipo='ENTRADA',
+                origem='ESTORNO',
+                origem_id=despesa.id,
+                descricao=f'Estorno despesa: {despesa.descricao}' + (f' — {motivo}' if motivo else ''),
+                valor=despesa.valor_liquido,
+                data=data_estorno,
+                saldo_anterior=saldo_anterior,
+                saldo_atual=saldo_atual,
+                criado_por=request.user,
+            )
+
+            despesa.estornado      = True
+            despesa.data_estorno   = data_estorno
+            despesa.motivo_estorno = motivo + (' | ' + observacoes if observacoes else '')
+            despesa.save(update_fields=['estornado', 'data_estorno', 'motivo_estorno'])
+
+        return Response(LivroCaixaSerializer(lancamento).data, status=201)
 
 
 class FornecedorViewSet(AuditMixin, ModelViewSet):

@@ -34,6 +34,7 @@ const FORMA_PAGAMENTO_OPTS = [
 
 const formVazio = {
   tipo: 'FIXA', descricao: '', fornecedor: '',
+  categoria: '',
   valor_bruto: '', desconto: '0', conta: '',
   vencimento: '', referencia_mes: '', observacoes: '',
   recorrente: false, frequencia: 'MENSAL', quantidade: 1,
@@ -44,18 +45,26 @@ const btnAcao = (cor) => ({
 })
 
 export default function DespesasPage() {
-  const [dados, setDados]               = useState([])
-  const [contas, setContas]             = useState([])
-  const [fornecedores, setFornecedores] = useState([])
-  const [carregando, setCarregando]     = useState(true)
-  const [modal, setModal]               = useState(false)
-  const [modalPagar, setModalPagar]     = useState(null)
-  const [editando, setEditando]         = useState(null)
-  const [form, setForm]                 = useState(formVazio)
-  const [formPag, setFormPag]           = useState({ pagamento: '', conta: '', forma_pagamento: '' })
-  const [salvando, setSalvando]         = useState(false)
-  const [erro, setErro]                 = useState('')
-  const [filtros, setFiltros]           = useState({ status: '', tipo: '' })
+  const [dados, setDados]                     = useState([])
+  const [contas, setContas]                   = useState([])
+  const [fornecedores, setFornecedores]       = useState([])
+  const [categorias, setCategorias]           = useState([])
+  const [carregando, setCarregando]           = useState(true)
+  const [modal, setModal]                     = useState(false)
+  const [modalPagar, setModalPagar]           = useState(null)
+  const [modalEstorno, setModalEstorno]       = useState(false)
+  const [despesasParaEstornar, setDespesasParaEstornar] = useState([])
+  const [despesaEstorno, setDespesaEstorno]   = useState(null)
+  const [formEstorno, setFormEstorno]         = useState({ data_estorno: '', conta: '', motivo: '', observacoes: '' })
+  const [editando, setEditando]               = useState(null)
+  const [form, setForm]                       = useState(formVazio)
+  const [formPag, setFormPag]                 = useState({ pagamento: '', conta: '', forma_pagamento: '' })
+  const [salvando, setSalvando]               = useState(false)
+  const [erro, setErro]                       = useState('')
+  const [filtros, setFiltros]                 = useState({ status: '', tipo: '' })
+  const [novaCategoria, setNovaCategoria]     = useState('')
+  const [salvandoCategoria, setSalvandoCategoria] = useState(false)
+  const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -66,20 +75,23 @@ export default function DespesasPage() {
       financeiroApi.listarDespesas(params),
       financeiroApi.listarContas(),
       financeiroApi.listarFornecedores(),
-    ]).then(([r, c, forn]) => {
+      financeiroApi.listarCategorias({ tipo: 'SAIDA' }),
+    ]).then(([r, c, forn, cat]) => {
       setDados(r.data.results ?? r.data)
       setContas(c.data.results ?? c.data)
       setFornecedores(Array.isArray(forn.data) ? forn.data : (forn.data.results ?? []))
+      setCategorias(cat.data.results ?? cat.data)
     }).catch(() => {}).finally(() => setCarregando(false))
   }, [filtros])
 
   useEffect(() => { carregar() }, [carregar])
 
-  const abrirNovo = () => { setEditando(null); setForm(formVazio); setErro(''); setModal(true) }
+  const abrirNovo = () => { setEditando(null); setForm(formVazio); setErro(''); setMostrarNovaCategoria(false); setModal(true) }
   const abrirEdicao = (d) => {
     setEditando(d)
     setForm({
       tipo: d.tipo, descricao: d.descricao, fornecedor: d.fornecedor || '',
+      categoria: d.categoria || '',
       valor_bruto: d.valor_bruto, desconto: d.desconto || '0',
       conta: d.conta, vencimento: d.vencimento,
       referencia_mes: d.referencia_mes ? d.referencia_mes.slice(0, 7) : '',
@@ -88,7 +100,48 @@ export default function DespesasPage() {
       frequencia: d.frequencia || 'MENSAL',
       quantidade: d.quantidade || 1,
     })
-    setErro(''); setModal(true)
+    setErro(''); setMostrarNovaCategoria(false); setModal(true)
+  }
+
+  const abrirEstorno = async () => {
+    try {
+      const res = await financeiroApi.listarDespesas({ status: 'PAGO', estornado: false })
+      setDespesasParaEstornar(res.data.results ?? res.data)
+      setDespesaEstorno(null)
+      setFormEstorno({ data_estorno: new Date().toISOString().slice(0, 10), conta: contas[0]?.id || '', motivo: '', observacoes: '' })
+      setModalEstorno(true)
+    } catch { }
+  }
+
+  const handleEstornar = async (e) => {
+    e.preventDefault()
+    if (!despesaEstorno) { setErro('Selecione uma despesa.'); return }
+    if (!formEstorno.motivo.trim()) { setErro('Motivo é obrigatório.'); return }
+    setSalvando(true); setErro('')
+    try {
+      await financeiroApi.estornarDespesa(despesaEstorno.id, {
+        data_estorno: formEstorno.data_estorno || new Date().toISOString().slice(0, 10),
+        conta: formEstorno.conta || despesaEstorno.conta,
+        motivo: formEstorno.motivo,
+        observacoes: formEstorno.observacoes,
+      })
+      setModalEstorno(false); carregar()
+    } catch (err) {
+      setErro(err.response?.data?.detail || 'Erro ao estornar.')
+    } finally { setSalvando(false) }
+  }
+
+  const salvarNovaCategoria = async () => {
+    if (!novaCategoria.trim()) return
+    setSalvandoCategoria(true)
+    try {
+      const res = await financeiroApi.criarCategoria({ nome: novaCategoria.trim(), tipo: 'SAIDA' })
+      const nova = res.data
+      setCategorias(prev => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)))
+      setForm(f => ({ ...f, categoria: nova.id }))
+      setNovaCategoria('')
+      setMostrarNovaCategoria(false)
+    } catch { } finally { setSalvandoCategoria(false) }
   }
 
   const valorLiquidoCalc = (parseFloat(form.valor_bruto) || 0) - (parseFloat(form.desconto) || 0)
@@ -107,6 +160,7 @@ export default function DespesasPage() {
     setSalvando(true); setErro('')
     const payload = {
       ...form,
+      categoria: form.categoria || null,
       referencia_mes: form.referencia_mes ? form.referencia_mes + '-01' : null,
       recorrente: form.recorrente,
       frequencia: form.recorrente ? form.frequencia : '',
@@ -142,11 +196,12 @@ export default function DespesasPage() {
   const labelFrequencia = (freq) => FREQUENCIA_OPTS.find(o => o.value === freq)?.label ?? freq
 
   const colunas = [
-    { key: 'descricao',    label: 'Descricao' },
-    { key: 'tipo',         label: 'Tipo',       render: r => <BadgeStatus status={r.tipo} config={TIPO_CFG} /> },
-    { key: 'fornecedor',   label: 'Fornecedor', render: r => r.fornecedor || '—', muted: true },
-    { key: 'valor_liquido', label: 'Valor',     render: r => formatMoeda(r.valor_liquido) },
-    { key: 'vencimento',   label: 'Vencimento', render: r => formatData(r.vencimento), muted: true },
+    { key: 'descricao',     label: 'Descricao' },
+    { key: 'tipo',          label: 'Tipo',       render: r => <BadgeStatus status={r.tipo} config={TIPO_CFG} /> },
+    { key: 'fornecedor',    label: 'Fornecedor', render: r => r.fornecedor || '—', muted: true },
+    { key: 'categoria_nome',label: 'Categoria',  render: r => r.categoria_nome || '—', muted: true },
+    { key: 'valor_liquido', label: 'Valor',      render: r => formatMoeda(r.valor_liquido) },
+    { key: 'vencimento',    label: 'Vencimento', render: r => formatData(r.vencimento), muted: true },
     {
       key: 'recorrente', label: 'Recorrencia',
       render: r => r.recorrente
@@ -156,19 +211,27 @@ export default function DespesasPage() {
         : <span style={{ color: '#6b6b8a', fontSize: 12 }}>{'—'}</span>,
       muted: true,
     },
-    { key: 'status',       label: 'Status',     render: r => <BadgeStatus status={r.status} config={STATUS_CFG} /> },
+    { key: 'status', label: 'Status', render: r => (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <BadgeStatus status={r.status} config={STATUS_CFG} />
+        {r.estornado && <span style={{ fontSize: 10, background: 'rgba(167,139,202,0.2)', color: '#a78bca', borderRadius: 4, padding: '1px 5px' }}>Estornada</span>}
+      </span>
+    )},
     {
       key: '_acoes', label: 'Acoes',
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
-          {r.status === 'PENDENTE' && (
-            <button style={btnAcao('#10b981')} onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '' }) }}>
-              ✅ Pagar
+          {(r.status === 'PENDENTE' || r.status === 'ATRASADO') && !r.estornado && (
+            <button
+              style={{ ...btnAcao('#063BF8'), border: '1px solid #063BF8' }}
+              title="Confirmar pagamento"
+              onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '' }) }}>
+              $
             </button>
           )}
-          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)}>✏️ Editar</button>
-          {r.status !== 'CANCELADO' && (
-            <button style={btnAcao('#f87171')} onClick={() => cancelar(r)}>❌ Cancelar</button>
+          {!r.estornado && <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)} title="Editar">✏️</button>}
+          {r.status !== 'CANCELADO' && !r.estornado && (
+            <button style={btnAcao('#f87171')} onClick={() => cancelar(r)} title="Cancelar">🗑️</button>
           )}
         </div>
       ),
@@ -192,9 +255,14 @@ export default function DespesasPage() {
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas a Pagar</h1>
-          <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            ➕ Nova Despesa
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={abrirEstorno} style={{ background: 'transparent', color: '#a78bca', border: '1px solid rgba(61,3,97,0.6)', borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Estorno
+            </button>
+            <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Nova Despesa
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -237,6 +305,36 @@ export default function DespesasPage() {
               <datalist id="lista-fornecedores">
                 {fornecedores.map(forn => <option key={forn.id} value={forn.forn_nome} />)}
               </datalist>
+            </div>
+            {/* Categoria com mini-form inline */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <label style={{ fontSize: 12, color: '#a78bca' }}>Categoria</label>
+                <button type="button"
+                  onClick={() => setMostrarNovaCategoria(v => !v)}
+                  style={{ fontSize: 11, background: 'rgba(6,59,248,0.1)', color: '#6b8fff', border: '1px solid rgba(6,59,248,0.2)', borderRadius: 5, padding: '1px 7px', cursor: 'pointer' }}>
+                  + Nova
+                </button>
+              </div>
+              <select style={inputStyle} value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                <option value="">Sem categoria</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+              {mostrarNovaCategoria && (
+                <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+                  <input
+                    style={{ ...inputStyle, flex: 1 }}
+                    placeholder="Nome da categoria..."
+                    value={novaCategoria}
+                    onChange={e => setNovaCategoria(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); salvarNovaCategoria() } }}
+                  />
+                  <button type="button" onClick={salvarNovaCategoria} disabled={salvandoCategoria}
+                    style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 7, padding: '0 12px', cursor: 'pointer', fontSize: 12 }}>
+                    {salvandoCategoria ? '...' : 'Salvar'}
+                  </button>
+                </div>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
@@ -344,6 +442,60 @@ export default function DespesasPage() {
               </select>
             </div>
             <BotoesModal onCancel={() => setModalPagar(null)} salvando={salvando} labelConfirmar="Confirmar Pagamento" />
+          </form>
+        </ModalBase>
+      )}
+
+      {/* Modal Estorno de Despesa */}
+      {modalEstorno && (
+        <ModalBase titulo="Estorno de Despesa" onClose={() => { setModalEstorno(false); setErro('') }}>
+          <form onSubmit={handleEstornar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Despesa paga *</label>
+              <select
+                style={inputStyle}
+                value={despesaEstorno?.id || ''}
+                onChange={e => {
+                  const d = despesasParaEstornar.find(x => String(x.id) === e.target.value)
+                  setDespesaEstorno(d || null)
+                  if (d) setFormEstorno(f => ({ ...f, conta: d.conta }))
+                }}>
+                <option value="">Selecione...</option>
+                {despesasParaEstornar.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.descricao} — {formatMoeda(d.valor_liquido)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {despesaEstorno && (
+              <div style={{ background: 'rgba(167,139,202,0.08)', border: '1px solid rgba(167,139,202,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#a78bca' }}>
+                Fornecedor: {despesaEstorno.fornecedor || '—'} | Valor: {formatMoeda(despesaEstorno.valor_liquido)}
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Data do estorno</label>
+                <input style={inputStyle} type="date" value={formEstorno.data_estorno} onChange={e => setFormEstorno(f => ({ ...f, data_estorno: e.target.value }))} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Conta</label>
+                <select style={inputStyle} value={formEstorno.conta} onChange={e => setFormEstorno(f => ({ ...f, conta: e.target.value }))}>
+                  <option value="">Selecione</option>
+                  {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Motivo *</label>
+              <input style={inputStyle} value={formEstorno.motivo} onChange={e => setFormEstorno(f => ({ ...f, motivo: e.target.value }))} placeholder="Ex: Pagamento duplicado" />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Observacoes</label>
+              <textarea style={{ ...inputStyle, minHeight: 60 }} value={formEstorno.observacoes} onChange={e => setFormEstorno(f => ({ ...f, observacoes: e.target.value }))} />
+            </div>
+            {erro && <p style={{ color: '#f87171', fontSize: 13 }}>{erro}</p>}
+            <BotoesModal onCancel={() => { setModalEstorno(false); setErro('') }} salvando={salvando} labelConfirmar="Confirmar Estorno" />
           </form>
         </ModalBase>
       )}

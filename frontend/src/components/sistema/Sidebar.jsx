@@ -32,22 +32,20 @@ const icons = {
   logout:     ['M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
 }
 
-const menuRelatorios = [
-  { label: 'Livro Caixa',    path: '/sistema/financeiro/livro-caixa', emoji: '📒' },
-  { label: 'DRE',            path: '/sistema/financeiro/dre',          emoji: '📉' },
-  { label: 'Receitas',       path: '/sistema/financeiro/receitas',     emoji: '💵' },
-  { label: 'Despesas',       path: '/sistema/financeiro/despesas',     emoji: '💸' },
-  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',  emoji: '👥' },
+const menuFinanceiro = [
+  { label: 'Contas a Receber', path: '/sistema/financeiro/receitas',     emoji: '📥' },
+  { label: 'Contas a Pagar',   path: '/sistema/financeiro/despesas',     emoji: '📤' },
+  { label: 'Aportes',          path: '/sistema/financeiro/aportes',      emoji: '💰' },
+  { label: 'Contas Bancarias', path: '/sistema/financeiro/contas',       emoji: '🏦' },
+  { label: 'Livro Caixa',      path: '/sistema/financeiro/livro-caixa',  emoji: '📒' },
 ]
 
-const menuFinanceiro = [
-  { label: 'Visao Geral',      path: '/sistema/financeiro/visao-geral',  emoji: '📊' },
-  { label: 'Contas a Receber', path: '/sistema/financeiro/receitas',      emoji: '📥' },
-  { label: 'Contas a Pagar',   path: '/sistema/financeiro/despesas',      emoji: '📤' },
-  { label: 'Fornecedores',     path: '/sistema/financeiro/fornecedores',  emoji: '🤝' },
-  { label: 'Aportes',          path: '/sistema/financeiro/aportes',       emoji: '💰' },
-  { label: 'Contas Bancarias', path: '/sistema/financeiro/contas',        emoji: '🏦' },
-  { label: 'Relatorios',       path: 'relatorios', submenu: menuRelatorios, emoji: '📋' },
+const menuRelatorios = [
+  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa',     emoji: '📈' },
+  { label: 'DRE',            path: '/sistema/financeiro/dre',              emoji: '📉' },
+  { label: 'Receitas',       path: '/sistema/relatorios/receitas',         emoji: '💵' },
+  { label: 'Despesas',       path: '/sistema/relatorios/despesas',         emoji: '💸' },
+  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
 ]
 
 const menuNovoProjeto = [
@@ -73,6 +71,7 @@ const menuPorPerfil = {
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
     { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
     { label: 'Financeiro',    path: '/sistema/financeiro',    emoji: '💰', submenu: menuFinanceiro },
+    { label: 'Relatorios',    path: '/sistema/relatorios',    emoji: '📊', submenu: menuRelatorios },
     { label: 'Email',         path: '/sistema/email',         emoji: '📧' },
     { label: 'Usuarios',      path: '/sistema/usuarios',      emoji: '👤' },
     { label: 'Configuracoes', path: '/sistema/configuracoes', emoji: '⚙️' },
@@ -87,9 +86,10 @@ const menuPorPerfil = {
     { label: 'Email',      path: '/sistema/email',      emoji: '📧' },
   ],
   FINANCEIRO: [
-    { label: 'Dashboard',  path: '/sistema/',           emoji: '🏠' },
-    { label: 'Financeiro', path: '/sistema/financeiro', emoji: '💰', submenu: menuFinanceiro },
-    { label: 'Email',      path: '/sistema/email',      emoji: '📧' },
+    { label: 'Dashboard',  path: '/sistema/',            emoji: '🏠' },
+    { label: 'Financeiro', path: '/sistema/financeiro',  emoji: '💰', submenu: menuFinanceiro },
+    { label: 'Relatorios', path: '/sistema/relatorios',  emoji: '📊', submenu: menuRelatorios },
+    { label: 'Email',      path: '/sistema/email',       emoji: '📧' },
   ],
   CLIENTE: [
     { label: 'Meus Projetos',  path: '/sistema/meus-projetos',  emoji: '📁' },

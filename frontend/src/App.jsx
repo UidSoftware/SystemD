@@ -35,6 +35,9 @@ import AportesPage from './pages/sistema/financeiro/AportesPage'
 import VisaoGeralPage from './pages/sistema/financeiro/VisaoGeralPage'
 import DREPage from './pages/sistema/financeiro/DREPage'
 import PorClientePage from './pages/sistema/financeiro/PorClientePage'
+// Relatorios
+import ReceitasRelatorioPage from './pages/sistema/relatorios/ReceitasRelatorioPage'
+import DespesasRelatorioPage from './pages/sistema/relatorios/DespesasRelatorioPage'
 
 const FIN = ['ADMIN', 'FINANCEIRO']
 
@@ -77,6 +80,9 @@ export default function App() {
           <Route path="/sistema/financeiro/livro-caixa" element={<PrivateRoute perfisPermitidos={FIN}><LivroCaixaPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN}><DREPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN}><PorClientePage /></PrivateRoute>} />
+          {/* Relatorios */}
+          <Route path="/sistema/relatorios/receitas" element={<PrivateRoute perfisPermitidos={FIN}><ReceitasRelatorioPage /></PrivateRoute>} />
+          <Route path="/sistema/relatorios/despesas" element={<PrivateRoute perfisPermitidos={FIN}><DespesasRelatorioPage /></PrivateRoute>} />
 
           {/* Office */}
           <Route path="/sistema/office/escritorio" element={<PrivateRoute perfisPermitidos={['ADMIN']}><EscritorioPage /></PrivateRoute>} />

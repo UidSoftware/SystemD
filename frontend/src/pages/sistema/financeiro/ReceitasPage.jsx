@@ -18,6 +18,7 @@ const TIPO_CFG = {
 
 const formVazio = {
   tipo: 'MENSALIDADE', descricao: '', cliente: '', os: '',
+  categoria: '',
   valor_bruto: '', desconto: '0', conta: '',
   vencimento: '', referencia_mes: '', observacoes: '',
 }
@@ -28,19 +29,23 @@ const btnAcao = (cor) => ({
 })
 
 export default function ReceitasPage() {
-  const [dados, setDados]           = useState([])
-  const [contas, setContas]         = useState([])
-  const [clientes, setClientes]     = useState([])
-  const [oss, setOss]               = useState([])
-  const [carregando, setCarregando] = useState(true)
-  const [modal, setModal]           = useState(false)
-  const [modalReceber, setModalReceber] = useState(null)
-  const [editando, setEditando]     = useState(null)
-  const [form, setForm]             = useState(formVazio)
-  const [formRec, setFormRec]       = useState({ recebimento: '', conta: '' })
-  const [salvando, setSalvando]     = useState(false)
-  const [erro, setErro]             = useState('')
-  const [filtros, setFiltros]       = useState({ status: '', tipo: '' })
+  const [dados, setDados]                 = useState([])
+  const [contas, setContas]               = useState([])
+  const [clientes, setClientes]           = useState([])
+  const [oss, setOss]                     = useState([])
+  const [categorias, setCategorias]       = useState([])
+  const [carregando, setCarregando]       = useState(true)
+  const [modal, setModal]                 = useState(false)
+  const [modalReceber, setModalReceber]   = useState(null)
+  const [editando, setEditando]           = useState(null)
+  const [form, setForm]                   = useState(formVazio)
+  const [formRec, setFormRec]             = useState({ recebimento: '', conta: '' })
+  const [salvando, setSalvando]           = useState(false)
+  const [erro, setErro]                   = useState('')
+  const [filtros, setFiltros]             = useState({ status: '', tipo: '' })
+  const [novaCategoria, setNovaCategoria] = useState('')
+  const [salvandoCategoria, setSalvandoCategoria] = useState(false)
+  const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -50,13 +55,15 @@ export default function ReceitasPage() {
     Promise.all([
       financeiroApi.listarReceitas(params),
       financeiroApi.listarContas(),
-      financeiroApi.listarClientesOpts(),
+      financeiroApi.listarClientesOpts({ ativo: true }),
       financeiroApi.listarOSOpts(),
-    ]).then(([r, c, cl, os]) => {
+      financeiroApi.listarCategorias({ tipo: 'ENTRADA' }),
+    ]).then(([r, c, cl, os, cat]) => {
       setDados(r.data.results ?? r.data)
       setContas(c.data.results ?? c.data)
       setClientes(cl.data.results ?? cl.data)
       setOss(os.data.results ?? os.data)
+      setCategorias(cat.data.results ?? cat.data)
     }).catch(() => {}).finally(() => setCarregando(false))
   }, [filtros])
 
@@ -70,12 +77,26 @@ export default function ReceitasPage() {
     setForm({
       tipo: r.tipo, descricao: r.descricao,
       cliente: r.cliente || '', os: r.os || '',
+      categoria: r.categoria || '',
       valor_bruto: r.valor_bruto, desconto: r.desconto || '0',
       conta: r.conta, vencimento: r.vencimento,
       referencia_mes: r.referencia_mes ? r.referencia_mes.slice(0, 7) : '',
       observacoes: r.observacoes || '',
     })
-    setErro(''); setModal(true)
+    setErro(''); setMostrarNovaCategoria(false); setModal(true)
+  }
+
+  const salvarNovaCategoria = async () => {
+    if (!novaCategoria.trim()) return
+    setSalvandoCategoria(true)
+    try {
+      const res = await financeiroApi.criarCategoria({ nome: novaCategoria.trim(), tipo: 'ENTRADA' })
+      const nova = res.data
+      setCategorias(prev => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)))
+      setForm(f => ({ ...f, categoria: nova.id }))
+      setNovaCategoria('')
+      setMostrarNovaCategoria(false)
+    } catch { } finally { setSalvandoCategoria(false) }
   }
 
   const valorLiquidoCalc = (parseFloat(form.valor_bruto) || 0) - (parseFloat(form.desconto) || 0)
@@ -90,6 +111,7 @@ export default function ReceitasPage() {
       ...form,
       cliente: form.cliente || null,
       os: form.os || null,
+      categoria: form.categoria || null,
       referencia_mes: form.referencia_mes ? form.referencia_mes + '-01' : null,
     }
     try {
@@ -127,18 +149,22 @@ export default function ReceitasPage() {
         </span>
       ),
     },
-    { key: 'tipo',         label: 'Tipo',     render: r => <BadgeStatus status={r.tipo} config={TIPO_CFG} /> },
-    { key: 'cliente_nome', label: 'Cliente',  render: r => r.cliente_nome || '—', muted: true },
-    { key: 'valor_liquido', label: 'Valor',   render: r => formatMoeda(r.valor_liquido) },
-    { key: 'vencimento',   label: 'Vencimento', render: r => formatData(r.vencimento), muted: true },
-    { key: 'status',       label: 'Status',   render: r => <BadgeStatus status={r.status} config={STATUS_CFG} /> },
+    { key: 'tipo',          label: 'Tipo',      render: r => <BadgeStatus status={r.tipo} config={TIPO_CFG} /> },
+    { key: 'cliente_nome',  label: 'Cliente',   render: r => r.cliente_nome || '—', muted: true },
+    { key: 'categoria_nome',label: 'Categoria', render: r => r.categoria_nome || '—', muted: true },
+    { key: 'valor_liquido', label: 'Valor',     render: r => formatMoeda(r.valor_liquido) },
+    { key: 'vencimento',    label: 'Vencimento',render: r => formatData(r.vencimento), muted: true },
+    { key: 'status',        label: 'Status',    render: r => <BadgeStatus status={r.status} config={STATUS_CFG} /> },
     {
       key: '_acoes', label: 'Ações',
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
-          {r.status === 'PENDENTE' && (
-            <button style={btnAcao('#10b981')} onClick={() => { setModalReceber(r); setFormRec({ recebimento: '', conta: r.conta }) }}>
-              💰 Receber
+          {(r.status === 'PENDENTE' || r.status === 'ATRASADO') && (
+            <button
+              style={{ ...btnAcao('#10b981'), border: '1px solid #10b981' }}
+              title="Confirmar recebimento"
+              onClick={() => { setModalReceber(r); setFormRec({ recebimento: '', conta: r.conta }) }}>
+              $
             </button>
           )}
           <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)} title="Editar">✏️</button>
@@ -191,7 +217,9 @@ export default function ReceitasPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Cliente</label>
-                <select style={inputStyle} value={form.cliente} onChange={e => setForm(f => ({ ...f, cliente: e.target.value }))}>
+                <select style={inputStyle} value={form.cliente} onChange={e => {
+                  setForm(f => ({ ...f, cliente: e.target.value, os: '' }))
+                }}>
                   <option value="">Nenhum</option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome_empresa}</option>)}
                 </select>
@@ -200,9 +228,39 @@ export default function ReceitasPage() {
                 <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>OS</label>
                 <select style={inputStyle} value={form.os} onChange={e => setForm(f => ({ ...f, os: e.target.value }))}>
                   <option value="">Nenhuma</option>
-                  {oss.map(o => <option key={o.id} value={o.id}>{o.titulo}</option>)}
+                  {oss.filter(o => !form.cliente || String(o.cliente) === String(form.cliente)).map(o => <option key={o.id} value={o.id}>{o.titulo}</option>)}
                 </select>
               </div>
+            </div>
+            {/* Categoria com mini-form inline */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <label style={{ fontSize: 12, color: '#a78bca' }}>Categoria</label>
+                <button type="button"
+                  onClick={() => setMostrarNovaCategoria(v => !v)}
+                  style={{ fontSize: 11, background: 'rgba(6,59,248,0.1)', color: '#6b8fff', border: '1px solid rgba(6,59,248,0.2)', borderRadius: 5, padding: '1px 7px', cursor: 'pointer' }}>
+                  + Nova
+                </button>
+              </div>
+              <select style={inputStyle} value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                <option value="">Sem categoria</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+              {mostrarNovaCategoria && (
+                <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+                  <input
+                    style={{ ...inputStyle, flex: 1 }}
+                    placeholder="Nome da categoria..."
+                    value={novaCategoria}
+                    onChange={e => setNovaCategoria(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); salvarNovaCategoria() } }}
+                  />
+                  <button type="button" onClick={salvarNovaCategoria} disabled={salvandoCategoria}
+                    style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 7, padding: '0 12px', cursor: 'pointer', fontSize: 12 }}>
+                    {salvandoCategoria ? '...' : 'Salvar'}
+                  </button>
+                </div>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>

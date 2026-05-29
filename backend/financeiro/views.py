@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Count, F, Sum, Q
 from rest_framework import status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -11,7 +11,7 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
-from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro
+from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrOperacionalOrFinanceiro
 
 from .models import Aporte, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
 from .serializers import (
@@ -460,3 +460,145 @@ def receita_por_cliente(request):
 
     resultado.sort(key=lambda x: x['total_liquido'], reverse=True)
     return Response(resultado)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrOperacionalOrFinanceiro])
+def dashboard(request):
+    """GET /api/financeiro/dashboard/ — dados agregados para o painel principal"""
+    perfil = request.user.perfil
+    is_fin = perfil in ('ADMIN', 'FINANCEIRO')
+    is_ops = perfil in ('ADMIN', 'OPERACIONAL')
+    hoje = date.today()
+    data = {}
+
+    if is_fin:
+        primeiro_dia = hoje.replace(day=1)
+        ultimo_dia = (
+            date(hoje.year + 1, 1, 1) - timedelta(days=1)
+            if hoje.month == 12
+            else date(hoje.year, hoje.month + 1, 1) - timedelta(days=1)
+        )
+
+        agg_mes = LivroCaixa.objects.filter(
+            estornado=False, data__gte=primeiro_dia, data__lte=ultimo_dia,
+        ).aggregate(
+            rec=Sum('valor', filter=Q(tipo='ENTRADA')),
+            des=Sum('valor', filter=Q(tipo='SAIDA')),
+        )
+        receita_mes = agg_mes['rec'] or Decimal('0')
+        despesa_mes = agg_mes['des'] or Decimal('0')
+
+        mrr = Receita.objects.filter(
+            ativo=True, tipo='MENSALIDADE', status='RECEBIDO',
+            recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
+        ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
+
+        prox_30 = hoje + timedelta(days=30)
+        receitas_vencer = []
+        for r in (
+            Receita.objects.filter(ativo=True, status='PENDENTE', vencimento__gte=hoje, vencimento__lte=prox_30)
+            .select_related('cliente').order_by('vencimento')[:8]
+        ):
+            receitas_vencer.append({
+                'id': r.id, 'descricao': r.descricao,
+                'valor_liquido': r.valor_liquido, 'vencimento': str(r.vencimento),
+                'cliente_nome': r.cliente.nome_empresa if r.cliente else None,
+            })
+
+        despesas_vencer = []
+        for d in (
+            Despesa.objects.filter(ativo=True, status='PENDENTE', vencimento__gte=hoje, vencimento__lte=prox_30)
+            .order_by('vencimento')[:8]
+        ):
+            despesas_vencer.append({
+                'id': d.id, 'descricao': d.descricao,
+                'valor_liquido': d.valor_liquido, 'vencimento': str(d.vencimento),
+                'fornecedor': d.fornecedor or None,
+            })
+
+        MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+        grafico = []
+        for i in range(5, -1, -1):
+            m = hoje.month - i
+            y = hoje.year
+            if m <= 0:
+                m += 12
+                y -= 1
+            p = date(y, m, 1)
+            u = date(y + 1, 1, 1) - timedelta(days=1) if m == 12 else date(y, m + 1, 1) - timedelta(days=1)
+            agg = LivroCaixa.objects.filter(estornado=False, data__gte=p, data__lte=u).aggregate(
+                rec=Sum('valor', filter=Q(tipo='ENTRADA')),
+                des=Sum('valor', filter=Q(tipo='SAIDA')),
+            )
+            rec = agg['rec'] or Decimal('0')
+            des = agg['des'] or Decimal('0')
+            grafico.append({'mes': f'{y}-{m:02d}', 'label': MESES_PT[m - 1], 'receita': rec, 'despesa': des, 'resultado': rec - des})
+
+        raw_top = list(
+            Receita.objects.filter(ativo=True, status='RECEBIDO', recebimento__year=hoje.year, cliente__isnull=False)
+            .values('cliente__nome_empresa')
+            .annotate(total=Sum('valor_liquido'))
+            .order_by('-total')[:5]
+        )
+        top_clientes = [{'cliente_nome': r['cliente__nome_empresa'], 'total': r['total']} for r in raw_top]
+
+        data.update({
+            'receita_mes': receita_mes,
+            'despesa_mes': despesa_mes,
+            'resultado_mes': receita_mes - despesa_mes,
+            'mrr': mrr,
+            'receitas_vencer': receitas_vencer,
+            'despesas_vencer': despesas_vencer,
+            'grafico_6_meses': grafico,
+            'top_clientes': top_clientes,
+            'receitas_atrasadas': Receita.objects.filter(ativo=True, status='ATRASADO').count(),
+            'despesas_atrasadas': Despesa.objects.filter(ativo=True, status='ATRASADO').count(),
+        })
+
+    if is_ops:
+        from ordens.models import OS, Chamado
+        from vitrine.models import Lead
+        from clientes.models import Cliente as ClienteModel
+
+        OS_STAGES = ['LEAD', 'REUNIAO', 'LEVANTAMENTO', 'PROPOSTA', 'CONTRATO', 'DEV', 'ENTREGA', 'MANUTENCAO']
+        OS_LABELS = {
+            'LEAD': 'Lead', 'REUNIAO': 'Reunião', 'LEVANTAMENTO': 'Levant.',
+            'PROPOSTA': 'Proposta', 'CONTRATO': 'Contrato', 'DEV': 'Dev',
+            'ENTREGA': 'Entrega', 'MANUTENCAO': 'Manutenção',
+        }
+        pipeline_agg = {
+            p['status']: p
+            for p in OS.objects.filter(ativo=True).exclude(status='CANCELADA')
+            .values('status').annotate(count=Count('id'), valor=Sum('valor_total'))
+        }
+        pipeline_os = [
+            {
+                'status': s, 'label': OS_LABELS[s],
+                'count': pipeline_agg.get(s, {}).get('count', 0),
+                'valor': pipeline_agg.get(s, {}).get('valor') or Decimal('0'),
+            }
+            for s in OS_STAGES
+        ]
+
+        ultimas_os = []
+        for os in OS.objects.filter(ativo=True).select_related('cliente').order_by('-criado_em')[:5]:
+            ultimas_os.append({
+                'id': os.id, 'titulo': os.titulo, 'status': os.status,
+                'valor_total': os.valor_total,
+                'data_entrega': str(os.data_entrega) if os.data_entrega else None,
+                'cliente_nome': os.cliente.nome_empresa if os.cliente else None,
+            })
+
+        leads_qs = Lead.objects.all()
+        data.update({
+            'pipeline_os': pipeline_os,
+            'leads_total': leads_qs.count(),
+            'leads_nao_lidos': leads_qs.filter(lido=False, convertido=False).count(),
+            'leads_convertidos': leads_qs.filter(convertido=True).count(),
+            'clientes_ativos': ClienteModel.objects.filter(ativo=True).count(),
+            'ultimas_os': ultimas_os,
+            'chamados_abertos': Chamado.objects.filter(ativo=True, status='ABERTO').count(),
+        })
+
+    return Response(data)

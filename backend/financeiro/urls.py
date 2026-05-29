@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AporteViewSet, ContaViewSet, DespesaViewSet, FornecedorViewSet,
-    LivroCaixaViewSet, ReceitaViewSet, dre, fluxo_caixa, receita_por_cliente,
+    LivroCaixaViewSet, ReceitaViewSet, dashboard, dre, fluxo_caixa, receita_por_cliente,
 )
 
 router = DefaultRouter()
@@ -16,6 +16,7 @@ router.register('livro-caixa',  LivroCaixaViewSet,  basename='livro-caixa')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('dashboard/',            dashboard,            name='dashboard'),
     path('fluxo-caixa/',         fluxo_caixa,          name='fluxo-caixa'),
     path('dre/',                 dre,                  name='dre'),
     path('receita-por-cliente/', receita_por_cliente,  name='receita-por-cliente'),

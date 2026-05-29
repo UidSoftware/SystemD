@@ -48,6 +48,7 @@ export const financeiroApi = {
   listarOSOpts:          () => api.get('/os/'),
 
   // Views calculadas
+  dashboard:             ()  => f('/dashboard/'),
   fluxoCaixa:            (p) => f('/fluxo-caixa/', p),
   dre:                   (p) => f('/dre/', p),
   receitaPorCliente:     (p) => f('/receita-por-cliente/', p),

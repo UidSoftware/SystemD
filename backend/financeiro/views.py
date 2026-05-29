@@ -305,11 +305,12 @@ class LivroCaixaViewSet(ReadCreateViewSet):
             total_entradas=Sum('valor', filter=Q(tipo='ENTRADA')),
             total_saidas=Sum('valor', filter=Q(tipo='SAIDA')),
         )
-        ultimo = qs.order_by('-data', '-criado_em').first()
+        total_entradas = agg['total_entradas'] or Decimal('0')
+        total_saidas   = agg['total_saidas']   or Decimal('0')
         return Response({
-            'total_entradas': agg['total_entradas'] or Decimal('0'),
-            'total_saidas':   agg['total_saidas'] or Decimal('0'),
-            'saldo_atual':    ultimo.saldo_atual if ultimo else Decimal('0'),
+            'total_entradas': total_entradas,
+            'total_saidas':   total_saidas,
+            'saldo_atual':    total_entradas - total_saidas,
         })
 
 

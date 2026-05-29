@@ -349,9 +349,10 @@ def fluxo_caixa(request):
     )
 
     primeiro_lancamento = qs.order_by('data', 'criado_em').first()
-    saldo_inicial = primeiro_lancamento.saldo_anterior if primeiro_lancamento else Decimal('0')
-    ultimo = qs.order_by('-data', '-criado_em').first()
-    saldo_final = ultimo.saldo_atual if ultimo else saldo_inicial
+    saldo_inicial  = primeiro_lancamento.saldo_anterior if primeiro_lancamento else Decimal('0')
+    total_entradas = agg['total_entradas'] or Decimal('0')
+    total_saidas   = agg['total_saidas']   or Decimal('0')
+    saldo_final    = saldo_inicial + total_entradas - total_saidas
 
     lancamentos = LivroCaixaSerializer(qs.order_by('data', 'criado_em'), many=True).data
 
@@ -359,8 +360,8 @@ def fluxo_caixa(request):
         'periodo':         f'{mes:02d}/{ano}',
         'conta':           conta.nome if conta else 'Todas',
         'saldo_inicial':   saldo_inicial,
-        'total_entradas':  agg['total_entradas'] or Decimal('0'),
-        'total_saidas':    agg['total_saidas'] or Decimal('0'),
+        'total_entradas':  total_entradas,
+        'total_saidas':    total_saidas,
         'saldo_final':     saldo_final,
         'lancamentos':     lancamentos,
     })

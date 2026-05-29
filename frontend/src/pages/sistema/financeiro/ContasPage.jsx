@@ -5,18 +5,24 @@ import { financeiroApi } from '../../../services/financeiroApi'
 
 const TIPOS = { CORRENTE: 'Conta Corrente', POUPANCA: 'Poupança', CAIXA: 'Caixa', CARTEIRA: 'Carteira Digital' }
 const formVazio = { nome: '', tipo: 'CORRENTE', banco: '', agencia: '', numero: '', saldo_inicial: '' }
+const formTransfVazio = { conta_destino: '', valor: '', descricao: '', data: '' }
 
-const btnEditar   = { background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
-const btnDesativar = { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
+const btnEditar    = { background: 'rgba(6,59,248,0.15)',   color: '#6b8fff', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
+const btnTransf    = { background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
+const btnDesativar = { background: 'rgba(239,68,68,0.12)',  color: '#f87171', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }
 
 export default function ContasPage() {
-  const [dados, setDados] = useState([])
-  const [carregando, setCarregando] = useState(true)
-  const [modal, setModal] = useState(false)
-  const [editando, setEditando] = useState(null)
-  const [form, setForm] = useState(formVazio)
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState('')
+  const [dados, setDados]               = useState([])
+  const [carregando, setCarregando]     = useState(true)
+  const [modal, setModal]               = useState(false)
+  const [modalTransf, setModalTransf]   = useState(null)   // conta origem
+  const [editando, setEditando]         = useState(null)
+  const [form, setForm]                 = useState(formVazio)
+  const [formTransf, setFormTransf]     = useState(formTransfVazio)
+  const [salvando, setSalvando]         = useState(false)
+  const [erro, setErro]                 = useState('')
+  const [erroTransf, setErroTransf]     = useState('')
+  const [sucesso, setSucesso]           = useState('')
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -35,6 +41,13 @@ export default function ContasPage() {
     setErro(''); setModal(true)
   }
 
+  const abrirTransferencia = (c) => {
+    setModalTransf(c)
+    setFormTransf(formTransfVazio)
+    setErroTransf('')
+    setSucesso('')
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.nome) { setErro('Nome é obrigatório.'); return }
@@ -45,6 +58,26 @@ export default function ContasPage() {
       setModal(false); carregar()
     } catch (e) {
       setErro(e.response?.data ? Object.values(e.response.data).flat().join(' ') : 'Erro ao salvar.')
+    } finally { setSalvando(false) }
+  }
+
+  const handleTransferir = async (e) => {
+    e.preventDefault()
+    if (!formTransf.conta_destino || !formTransf.valor) { setErroTransf('Conta destino e valor são obrigatórios.'); return }
+    setSalvando(true); setErroTransf('')
+    try {
+      await financeiroApi.transferir(modalTransf.id, {
+        conta_destino: formTransf.conta_destino,
+        valor: formTransf.valor,
+        descricao: formTransf.descricao || 'Transferencia entre contas',
+        data: formTransf.data || new Date().toISOString().slice(0, 10),
+      })
+      setSucesso(`Transferência de ${formatMoeda(formTransf.valor)} realizada com sucesso!`)
+      setFormTransf(formTransfVazio)
+      carregar()
+    } catch (err) {
+      const msg = err.response?.data?.erro || err.response?.data ? Object.values(err.response.data).flat().join(' ') : 'Erro ao transferir.'
+      setErroTransf(msg)
     } finally { setSalvando(false) }
   }
 
@@ -62,12 +95,16 @@ export default function ContasPage() {
       key: '_acoes', label: 'Ações',
       render: r => (
         <div style={{ display: 'flex', gap: 6 }}>
-          <button style={btnEditar} onClick={() => abrirEdicao(r)}>✏️ Editar</button>
+          <button style={btnTransf}    onClick={() => abrirTransferencia(r)}>🔄 Transferir</button>
+          <button style={btnEditar}    onClick={() => abrirEdicao(r)}>✏️ Editar</button>
           <button style={btnDesativar} onClick={() => deletar(r)}>🗑️ Desativar</button>
         </div>
       )
     },
   ]
+
+  // contas disponíveis como destino (exclui a origem)
+  const contasDestino = modalTransf ? dados.filter(c => c.id !== modalTransf.id) : []
 
   return (
     <SistemaLayout>
@@ -81,6 +118,7 @@ export default function ContasPage() {
         {carregando ? <Spinner /> : dados.length === 0 ? <Vazio /> : <FinanceiroTable colunas={colunas} dados={dados} />}
       </div>
 
+      {/* Modal Nova/Editar Conta */}
       {modal && (
         <ModalBase titulo={editando ? 'Editar Conta' : 'Nova Conta'} onClose={() => setModal(false)}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -100,6 +138,16 @@ export default function ContasPage() {
                 <input style={inputStyle} value={form.banco} onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} />
               </div>
               <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Agencia</label>
+                <input style={inputStyle} value={form.agencia} onChange={e => setForm(f => ({ ...f, agencia: e.target.value }))} placeholder="Ex: 0001" />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Numero da conta</label>
+                <input style={inputStyle} value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} placeholder="Ex: 12345-6" />
+              </div>
+              <div>
                 <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Saldo inicial (R$)</label>
                 <input style={inputStyle} type="number" step="0.01" value={form.saldo_inicial} onChange={e => setForm(f => ({ ...f, saldo_inicial: e.target.value }))} />
               </div>
@@ -107,6 +155,87 @@ export default function ContasPage() {
             {erro && <p style={{ color: '#f87171', fontSize: 13 }}>{erro}</p>}
             <BotoesModal onCancel={() => setModal(false)} salvando={salvando} />
           </form>
+        </ModalBase>
+      )}
+
+      {/* Modal Transferência */}
+      {modalTransf && (
+        <ModalBase titulo="🔄 Transferência entre Contas" onClose={() => setModalTransf(null)}>
+          <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10 }}>
+            <span style={{ fontSize: 12, color: '#a78bca' }}>Conta origem</span>
+            <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 700, color: '#10b981' }}>{modalTransf.nome}</p>
+          </div>
+
+          {sucesso ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+              <p style={{ color: '#10b981', fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{sucesso}</p>
+              <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'center' }}>
+                <button
+                  onClick={() => { setSucesso(''); setFormTransf(formTransfVazio) }}
+                  style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Nova transferência
+                </button>
+                <button
+                  onClick={() => setModalTransf(null)}
+                  style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleTransferir} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Conta destino *</label>
+                <select style={inputStyle} value={formTransf.conta_destino} onChange={e => setFormTransf(f => ({ ...f, conta_destino: e.target.value }))}>
+                  <option value="">Selecione a conta destino</option>
+                  {contasDestino.map(c => <option key={c.id} value={c.id}>{c.nome} — {TIPOS[c.tipo] || c.tipo}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Valor (R$) *</label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0,00"
+                    value={formTransf.valor}
+                    onChange={e => setFormTransf(f => ({ ...f, valor: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Data</label>
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={formTransf.data}
+                    onChange={e => setFormTransf(f => ({ ...f, data: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Descrição</label>
+                <input
+                  style={inputStyle}
+                  placeholder="Ex: Reserva mensal, reforço de caixa..."
+                  value={formTransf.descricao}
+                  onChange={e => setFormTransf(f => ({ ...f, descricao: e.target.value }))}
+                />
+              </div>
+
+              {formTransf.valor && formTransf.conta_destino && (
+                <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: '#a78bca' }}>Valor a transferir</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#10b981' }}>{formatMoeda(formTransf.valor)}</span>
+                </div>
+              )}
+
+              {erroTransf && <p style={{ color: '#f87171', fontSize: 13 }}>{erroTransf}</p>}
+              <BotoesModal onCancel={() => setModalTransf(null)} salvando={salvando} labelConfirmar="Confirmar Transferência" />
+            </form>
+          )}
         </ModalBase>
       )}
     </SistemaLayout>

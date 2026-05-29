@@ -33,69 +33,69 @@ const icons = {
 }
 
 const menuRelatorios = [
-  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/livro-caixa' },
-  { label: 'DRE',            path: '/sistema/financeiro/dre' },
-  { label: 'Receitas',       path: '/sistema/financeiro/receitas' },
-  { label: 'Despesas',       path: '/sistema/financeiro/despesas' },
-  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente' },
+  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/livro-caixa', emoji: '📈' },
+  { label: 'DRE',            path: '/sistema/financeiro/dre',          emoji: '📉' },
+  { label: 'Receitas',       path: '/sistema/financeiro/receitas',     emoji: '💵' },
+  { label: 'Despesas',       path: '/sistema/financeiro/despesas',     emoji: '💸' },
+  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',  emoji: '👥' },
 ]
 
 const menuFinanceiro = [
-  { label: 'Visao Geral',      path: '/sistema/financeiro/visao-geral' },
-  { label: 'Contas a Receber', path: '/sistema/financeiro/receitas' },
-  { label: 'Contas a Pagar',   path: '/sistema/financeiro/despesas' },
-  { label: 'Fornecedores',     path: '/sistema/financeiro/fornecedores' },
-  { label: 'Aportes',          path: '/sistema/financeiro/aportes' },
-  { label: 'Contas Bancarias', path: '/sistema/financeiro/contas' },
-  { label: 'Relatorios',       path: 'relatorios', submenu: menuRelatorios },
+  { label: 'Visao Geral',      path: '/sistema/financeiro/visao-geral',  emoji: '📊' },
+  { label: 'Contas a Receber', path: '/sistema/financeiro/receitas',      emoji: '📥' },
+  { label: 'Contas a Pagar',   path: '/sistema/financeiro/despesas',      emoji: '📤' },
+  { label: 'Fornecedores',     path: '/sistema/financeiro/fornecedores',  emoji: '🤝' },
+  { label: 'Aportes',          path: '/sistema/financeiro/aportes',       emoji: '💰' },
+  { label: 'Contas Bancarias', path: '/sistema/financeiro/contas',        emoji: '🏦' },
+  { label: 'Relatorios',       path: 'relatorios', submenu: menuRelatorios, emoji: '📋' },
 ]
 
 const menuNovoProjeto = [
-  { label: 'Leads',               path: '/sistema/office/novo-projeto/leads' },
-  { label: 'Prospectos',          path: '/sistema/prospectos' },
-  { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista' },
-  { label: 'Arquitetura Tecnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica' },
+  { label: 'Leads',               path: '/sistema/office/novo-projeto/leads',               emoji: '📝' },
+  { label: 'Prospectos',          path: '/sistema/prospectos',                               emoji: '🔍' },
+  { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista',           emoji: '🎤' },
+  { label: 'Arquitetura Tecnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica', emoji: '🏗️' },
 ]
 
 const menuOffice = [
-  { label: 'Escritorio',    path: '/sistema/office/escritorio' },
-  { label: 'Board',         path: '/sistema/office/board' },
-  { label: 'Agents',        path: '/sistema/office/agents' },
-  { label: 'Activity Feed', path: '/sistema/office/activity' },
-  { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', submenu: menuNovoProjeto },
+  { label: 'Escritorio',    path: '/sistema/office/escritorio',   emoji: '🖥️' },
+  { label: 'Board',         path: '/sistema/office/board',        emoji: '📌' },
+  { label: 'Agents',        path: '/sistema/office/agents',       emoji: '🤖' },
+  { label: 'Activity Feed', path: '/sistema/office/activity',     emoji: '📡' },
+  { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
 ]
 
 const menuPorPerfil = {
   ADMIN: [
-    { label: 'Dashboard',     path: '/sistema/',              icone: 'dashboard' },
-    { label: 'Office',        path: '/sistema/office',         icone: 'office', submenu: menuOffice },
-    { label: 'Clientes',      path: '/sistema/clientes',      icone: 'clientes' },
-    { label: 'OS',            path: '/sistema/os',            icone: 'os' },
-    { label: 'Entregas',      path: '/sistema/entregas',      icone: 'entregas' },
-    { label: 'Financeiro',    path: '/sistema/financeiro',    icone: 'financeiro', submenu: menuFinanceiro },
-    { label: 'Email',         path: '/sistema/email',         icone: 'email' },
-    { label: 'Usuarios',      path: '/sistema/usuarios',      icone: 'usuarios' },
-    { label: 'Configuracoes', path: '/sistema/configuracoes', icone: 'config' },
+    { label: 'Dashboard',     path: '/sistema/',              emoji: '🏠', submenu: undefined },
+    { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
+    { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
+    { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
+    { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
+    { label: 'Financeiro',    path: '/sistema/financeiro',    emoji: '💰', submenu: menuFinanceiro },
+    { label: 'Email',         path: '/sistema/email',         emoji: '📧' },
+    { label: 'Usuarios',      path: '/sistema/usuarios',      emoji: '👤' },
+    { label: 'Configuracoes', path: '/sistema/configuracoes', emoji: '⚙️' },
   ],
   OPERACIONAL: [
-    { label: 'Dashboard',  path: '/sistema/',           icone: 'dashboard' },
-    { label: 'Leads',      path: '/sistema/leads',      icone: 'leads' },
-    { label: 'Prospectos', path: '/sistema/prospectos', icone: 'prospectos' },
-    { label: 'Clientes',   path: '/sistema/clientes',   icone: 'clientes' },
-    { label: 'OS',         path: '/sistema/os',         icone: 'os' },
-    { label: 'Entregas',   path: '/sistema/entregas',   icone: 'entregas' },
-    { label: 'Email',      path: '/sistema/email',      icone: 'email' },
+    { label: 'Dashboard',  path: '/sistema/',           emoji: '🏠' },
+    { label: 'Leads',      path: '/sistema/leads',      emoji: '🎯' },
+    { label: 'Prospectos', path: '/sistema/prospectos', emoji: '🔍' },
+    { label: 'Clientes',   path: '/sistema/clientes',   emoji: '👥' },
+    { label: 'OS',         path: '/sistema/os',         emoji: '📋' },
+    { label: 'Entregas',   path: '/sistema/entregas',   emoji: '🚚' },
+    { label: 'Email',      path: '/sistema/email',      emoji: '📧' },
   ],
   FINANCEIRO: [
-    { label: 'Dashboard',  path: '/sistema/',           icone: 'dashboard' },
-    { label: 'Financeiro', path: '/sistema/financeiro', icone: 'financeiro', submenu: menuFinanceiro },
-    { label: 'Email',      path: '/sistema/email',      icone: 'email' },
+    { label: 'Dashboard',  path: '/sistema/',           emoji: '🏠' },
+    { label: 'Financeiro', path: '/sistema/financeiro', emoji: '💰', submenu: menuFinanceiro },
+    { label: 'Email',      path: '/sistema/email',      emoji: '📧' },
   ],
   CLIENTE: [
-    { label: 'Meus Projetos',  path: '/sistema/meus-projetos',  icone: 'projetos' },
-    { label: 'Entregas',       path: '/sistema/entregas',        icone: 'entregas' },
-    { label: 'Suporte',        path: '/sistema/suporte',         icone: 'suporte' },
-    { label: 'Minhas Faturas', path: '/sistema/minhas-faturas',  icone: 'faturas' },
+    { label: 'Meus Projetos',  path: '/sistema/meus-projetos',  emoji: '📁' },
+    { label: 'Entregas',       path: '/sistema/entregas',        emoji: '🚚' },
+    { label: 'Suporte',        path: '/sistema/suporte',         emoji: '💬' },
+    { label: 'Minhas Faturas', path: '/sistema/minhas-faturas',  emoji: '🧾' },
   ],
 }
 
@@ -138,8 +138,8 @@ function NavItem({ item, onClose, location }) {
         }
       }}
     >
-      <span style={{ color: isActive ? 'var(--color-brand-blue)' : 'inherit' }}>
-        <Icon d={icons[item.icone] || icons.dashboard} size={15} />
+      <span style={{ fontSize: 16, lineHeight: 1, width: 20, textAlign: 'center', flexShrink: 0 }}>
+        {item.emoji || '•'}
       </span>
       <span style={{ flex: 1 }}>{item.label}</span>
     </NavLink>
@@ -162,8 +162,10 @@ function SubNav({ items, depth = 0, onClose, location }) {
             to={item.path}
             onClick={onClose}
             style={({ isActive: a }) => ({
-              display: 'block',
-              padding: depth === 0 ? '7px 16px 7px 42px' : '6px 16px 6px 54px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: depth === 0 ? '7px 16px 7px 20px' : '6px 16px 6px 20px',
               fontSize: '0.78rem',
               fontWeight: 500,
               color: a ? '#f1f5f9' : 'var(--color-text-muted)',
@@ -174,6 +176,7 @@ function SubNav({ items, depth = 0, onClose, location }) {
               transition: 'all 0.15s ease',
             })}
           >
+            <span style={{ fontSize: 14, lineHeight: 1, width: 18, textAlign: 'center', flexShrink: 0 }}>{item.emoji || '·'}</span>
             {item.label}
           </NavLink>
         )
@@ -197,8 +200,9 @@ function SubGroup({ item, depth, onClose, location }) {
         style={{
           display: 'flex',
           alignItems: 'center',
+          gap: 8,
           width: '100%',
-          padding: depth <= 1 ? '7px 16px 7px 42px' : '6px 16px 6px 54px',
+          padding: '7px 16px 7px 20px',
           fontSize: depth <= 1 ? '0.78rem' : '0.75rem',
           fontWeight: 500,
           color: isAberto ? 'var(--color-text-sub)' : 'var(--color-text-muted)',
@@ -210,6 +214,7 @@ function SubGroup({ item, depth, onClose, location }) {
           transition: 'color 0.15s',
         }}
       >
+        <span style={{ fontSize: 14, lineHeight: 1, width: 18, textAlign: 'center', flexShrink: 0 }}>{item.emoji || '·'}</span>
         <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -251,8 +256,8 @@ function GroupItem({ item, onClose, location }) {
           textAlign: 'left',
         }}
       >
-        <span style={{ color: isAberto ? 'var(--color-brand-blue)' : 'inherit' }}>
-          <Icon d={icons[item.icone] || icons.dashboard} size={15} />
+        <span style={{ fontSize: 16, lineHeight: 1, width: 20, textAlign: 'center', flexShrink: 0 }}>
+          {item.emoji || '•'}
         </span>
         <span style={{ flex: 1 }}>{item.label}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"

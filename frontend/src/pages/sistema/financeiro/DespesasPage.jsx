@@ -163,12 +163,12 @@ export default function DespesasPage() {
         <div style={{ display: 'flex', gap: 6 }}>
           {r.status === 'PENDENTE' && (
             <button style={btnAcao('#10b981')} onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '' }) }}>
-              Pagar
+              ✅ Pagar
             </button>
           )}
-          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)}>Editar</button>
+          <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)}>✏️ Editar</button>
           {r.status !== 'CANCELADO' && (
-            <button style={btnAcao('#f87171')} onClick={() => cancelar(r)}>Cancelar</button>
+            <button style={btnAcao('#f87171')} onClick={() => cancelar(r)}>❌ Cancelar</button>
           )}
         </div>
       ),
@@ -193,7 +193,7 @@ export default function DespesasPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas a Pagar</h1>
           <button onClick={abrirNovo} style={{ backgroundColor: '#063BF8', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            Nova Despesa
+            ➕ Nova Despesa
           </button>
         </div>
 
@@ -268,6 +268,11 @@ export default function DespesasPage() {
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Mes de referencia</label>
               <input style={inputStyle} type="month" value={form.referencia_mes} onChange={e => setForm(f => ({ ...f, referencia_mes: e.target.value }))} />
+            </div>
+
+            <div>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Observacoes</label>
+              <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 64 }} value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} placeholder="Observacoes adicionais..." />
             </div>
 
             {/* Bloco recorrencia */}

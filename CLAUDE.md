@@ -92,6 +92,9 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | `unique=True, null=True, blank=True` — string vazia | Campo com essas três flags aceita `NULL` múltiplo no PostgreSQL, mas `''` (string vazia) viola a constraint única. Serializers com esses campos **obrigatoriamente** precisam de `validate_<field>` convertendo `''` → `None`. Ex: `forn_cnpj` em `FornecedorSerializer`. Sem isso: `POST` com campo vazio → `IntegrityError` → 500. |
 | AuthContext — interceptor permanente via `tokenRef` | O interceptor Axios está em `useEffect([])` (roda uma vez) e lê `tokenRef.current`, que é atualizado **síncrono no render** (`tokenRef.current = accessToken`). Nunca mover o interceptor para `useEffect([accessToken])` — effects de filhos rodam antes de pais, causando requests sem token (401) na montagem inicial das páginas. |
 | Soft delete financeiro — botão "Desativar" | Nos módulos financeiros (`BaseModel`), o `AuditMixin.perform_destroy` seta `deleted_at` (não `forn_ativo`). Registro some da listagem mas permanece no banco. **Restaurar via shell:** `instance.deleted_at = None; instance.deleted_by = None; instance.save(update_fields=['deleted_at', 'deleted_by'])` |
+| Transferência entre contas | `POST /api/financeiro/contas/{id}/transferir/` — cria dois `LivroCaixa` direto (sem model próprio): SAIDA da origem + ENTRADA no destino, ambos com `origem='TRANSFER'` (8 chars, cabe no `max_length=10`). Usa `select_for_update()` + `transaction.atomic()` para saldo seguro. Não passa por `_gerar_lancamento` (sem duplicate guard por `origem_id`). |
+| Sidebar — emojis no menu | A `Sidebar.jsx` usa emojis (campo `emoji` em cada item do menu) em vez de SVG icons para itens principais e submenus. O objeto `icons` com SVGs foi mantido mas não é renderizado. Ao adicionar novo item de menu, **sempre incluir `emoji`** no objeto do item. |
+| `OrigemLancamento` max_length | Campo `origem` no `LivroCaixa` tem `max_length=10`. Choices atuais: APORTE(6), RECEITA(7), DESPESA(7), MANUAL(6), TRANSFER(8). Nunca adicionar choice com mais de 10 chars sem migration que aumente o max_length. |
 
 ---
 
@@ -378,7 +381,7 @@ class Despesa(BaseFinanceiro):   # db_table='fin_despesa'
     conta(FK), vencimento, pagamento, comprovante(FileField), observacoes
 
 class LivroCaixa(models.Model):  # db_table='fin_livro_caixa' — IMUTÁVEL
-    conta(FK), tipo(ENTRADA/SAIDA), origem(APORTE/RECEITA/DESPESA/MANUAL)
+    conta(FK), tipo(ENTRADA/SAIDA), origem(APORTE/RECEITA/DESPESA/MANUAL/TRANSFER)
     origem_id, descricao, valor, data, saldo_anterior, saldo_atual
     criado_em, criado_por, estornado(bool), estorno_de(self FK)
 ```
@@ -477,6 +480,7 @@ CRUD:
 Ações:
   PATCH  receitas/{id}/marcar_recebido/    → status=RECEBIDO + data recebimento
   PATCH  despesas/{id}/marcar_pago/        → status=PAGO + data pagamento
+  POST   contas/{id}/transferir/           → 2x LivroCaixa (SAIDA origem + ENTRADA destino), origem='TRANSFER'
   GET    livro-caixa/totais/               → { total_entradas, total_saidas, saldo_atual }
   POST   livro-caixa/{id}/estornar/        → cria lançamento inverso (IsAdmin)
 
@@ -560,6 +564,7 @@ print('OK')
 | `Aporte` criado (post_save) | LivroCaixa ENTRADA origem=APORTE |
 | `Receita.status = 'RECEBIDO'` | LivroCaixa ENTRADA origem=RECEITA |
 | `Despesa.status = 'PAGO'` | LivroCaixa SAIDA origem=DESPESA |
+| `POST /api/financeiro/contas/{id}/transferir/` | Cria 2 lançamentos: SAIDA origem+ENTRADA destino, ambos com `origem='TRANSFER'`. Sem model próprio — direto no LivroCaixa. |
 | `OS.status = 'CONTRATO'` | Receitas: ENTRADA_CONTRATO + 3x MENSALIDADE |
 
 Duplicate guard: `_gerar_lancamento` verifica `origem+origem_id` antes de criar — seguro em race condition.
@@ -760,6 +765,7 @@ docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000
 | Fase 9.1 | Mobile-first em todas as páginas (cards + tabela responsiva) | ✅ |
 | Fase 9.2 | Exports PDF/Excel corrigidos + filtro unidade Entregas + confirmação CLIENTE | ✅ |
 | Fase 9.3 | Fluxo Novo Projeto: Leads→Prospectos→Entrevista→Arquitetura Técnica | ✅ |
+| Fase 9.4 | Sidebar com emojis em todos os itens + submenus; campos faltando em ContasPage (agencia/numero) e DespesasPage (observacoes); botões com emojis em DespesasPage; transferência entre contas com LivroCaixa duplo | ✅ |
 | **Fase 10** | Dashboard real + Pipeline agents via Office | ⏳ |
 
 ---
@@ -862,4 +868,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 25/05/2026*
+*Última atualização: 28/05/2026*

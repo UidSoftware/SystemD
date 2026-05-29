@@ -33,6 +33,71 @@ class ContaViewSet(AuditMixin, ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
+    @action(detail=True, methods=['post'], url_path='transferir', permission_classes=[IsAdminOrFinanceiro])
+    def transferir(self, request, pk=None):
+        from datetime import date as date_cls
+        conta_origem = self.get_object()
+        conta_destino_id = request.data.get('conta_destino')
+        valor_str        = request.data.get('valor')
+        descricao        = request.data.get('descricao') or 'Transferencia entre contas'
+        data_str         = request.data.get('data') or date_cls.today().isoformat()
+
+        if not conta_destino_id or not valor_str:
+            return Response({'erro': 'conta_destino e valor sao obrigatorios.'}, status=400)
+
+        try:
+            valor = Decimal(str(valor_str))
+        except Exception:
+            return Response({'erro': 'Valor invalido.'}, status=400)
+
+        if valor <= 0:
+            return Response({'erro': 'Valor deve ser maior que zero.'}, status=400)
+
+        try:
+            conta_destino = Conta.objects.get(id=conta_destino_id, ativo=True)
+        except Conta.DoesNotExist:
+            return Response({'erro': 'Conta destino nao encontrada.'}, status=400)
+
+        if conta_origem.id == conta_destino.id:
+            return Response({'erro': 'Conta origem e destino devem ser diferentes.'}, status=400)
+
+        try:
+            data = date_cls.fromisoformat(data_str)
+        except ValueError:
+            return Response({'erro': 'Data invalida.'}, status=400)
+
+        def ultimo_saldo(conta):
+            ult = LivroCaixa.objects.select_for_update().filter(conta=conta).order_by('-data', '-criado_em').first()
+            return ult.saldo_atual if ult else conta.saldo_inicial
+
+        with transaction.atomic():
+            saldo_ant_origem = ultimo_saldo(conta_origem)
+            LivroCaixa.objects.create(
+                conta=conta_origem,
+                tipo='SAIDA',
+                origem='TRANSFER',
+                descricao=f'Transferencia para {conta_destino.nome}: {descricao}',
+                valor=valor,
+                data=data,
+                saldo_anterior=saldo_ant_origem,
+                saldo_atual=saldo_ant_origem - valor,
+                criado_por=request.user,
+            )
+            saldo_ant_destino = ultimo_saldo(conta_destino)
+            LivroCaixa.objects.create(
+                conta=conta_destino,
+                tipo='ENTRADA',
+                origem='TRANSFER',
+                descricao=f'Transferencia de {conta_origem.nome}: {descricao}',
+                valor=valor,
+                data=data,
+                saldo_anterior=saldo_ant_destino,
+                saldo_atual=saldo_ant_destino + valor,
+                criado_por=request.user,
+            )
+
+        return Response({'ok': True, 'mensagem': f'Transferencia de R$ {valor} realizada com sucesso.'})
+
 
 class AporteViewSet(AuditMixin, ModelViewSet):
     queryset = Aporte.objects.filter(ativo=True).select_related('conta').order_by('-data')

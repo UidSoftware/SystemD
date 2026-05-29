@@ -224,10 +224,11 @@ class TipoLancamento(models.TextChoices):
 
 
 class OrigemLancamento(models.TextChoices):
-    APORTE  = 'APORTE',  'Aporte'
-    RECEITA = 'RECEITA', 'Receita'
-    DESPESA = 'DESPESA', 'Despesa'
-    MANUAL  = 'MANUAL',  'Lançamento Manual'
+    APORTE   = 'APORTE',   'Aporte'
+    RECEITA  = 'RECEITA',  'Receita'
+    DESPESA  = 'DESPESA',  'Despesa'
+    MANUAL   = 'MANUAL',   'Lançamento Manual'
+    TRANSFER = 'TRANSFER', 'Transferência'
 
 
 class LivroCaixa(models.Model):

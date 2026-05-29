@@ -853,17 +853,32 @@ claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
 ### Como os bonequinhos aparecem no Office
 
 O Office (pixel art) mostra personagens trabalhando via hooks `SubagentStart`/`SubagentStop`.
-**Regra crítica:** personagens SÓ aparecem quando o Agent tool é realmente chamado.
+Os bonequinhos aparecem quando o Agent tool é chamado — cada subagente spawnado dispara `SubagentStart` e aciona a animação do personagem correspondente.
 
-```
-❌ claude -p "tarefa simples" → Claude responde direto, sem subagente, sem bonequinho
-❌ claude -p "spawne X como subagente para fazer Y" → Claude faz Y direto, ignora instrução
-✅ claude -p "execute DUAS tarefas em PARALELO: subagente 1 faz A, subagente 2 faz B"
-   → Claude usa Agent tool naturalmente para paralelizar → bonequinhos saem do elevador
-```
+O pipeline usa subagentes sequenciais por papel: **Hotfix → Planner → Ursula/Bob → Sentinel → Pilot**.
+Cada agent tem seu CLAUDE.md em `/opt/uid-office/.claude/agents/` que define o papel e instrui a chamar o próximo via Agent tool.
 
-O segredo: tarefas genuinamente paralelas forçam o uso do Agent tool.
-Tarefa única = Claude faz direto. Duas tarefas distintas simultâneas = subagentes reais.
+**Regra absoluta do Hotfix** (`/opt/uid-office/.claude/agents/hotfix.md`):
+- Primeira linha: `EXPRESSAMENTE PROIBIDO QUEBRAR O FLUXO DE TRABALHO`
+- O Hotfix NÃO analisa, NÃO implementa, NÃO dá instruções de deploy
+- Única ação: invocar Planner via Agent tool com `subagent_type: "planner"`
+
+### Boss CLI — layout (29/05/2026)
+
+O Boss CLI foi movido para dentro do painel direito do Office — **não é mais um overlay full-screen**.
+
+**Estrutura do RightSidebar** (`/opt/uid-office/frontend/src/components/layout/RightSidebar.tsx`):
+- 3 abas: **Events** | **Conversation** | **⬡ Boss**
+- Clicar no sprite do boss → muda automaticamente para a aba Boss
+- Props: `isBossCliActive?: boolean` e `onBossCliClose?: () => void`
+
+**BossCliPanel** (`/opt/uid-office/frontend/src/components/layout/BossCliPanel.tsx`):
+- Fase form: select de projeto + textarea + botão Enviar (inline, sem modal)
+- Fase terminal: xterm.js embutido no sidebar — canvas do jogo permanece visível ao lado
+- WebSocket em `wss://{host}/boss` — stream do PTY em tempo real
+
+**BossCliModal** (`/opt/uid-office/frontend/src/components/overlay/BossCliModal.tsx`):
+- Mantido no repo mas não mais usado em `page.tsx` — substituído pelo BossCliPanel
 
 ### Primeiro teste da pipeline (19/05/2026)
 Pipeline completo testado usando Studio Fluir como caso real:
@@ -876,4 +891,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 29/05/2026 (Fase 9.5)*
+*Última atualização: 29/05/2026 (Fase 10)*

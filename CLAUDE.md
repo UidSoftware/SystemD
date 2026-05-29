@@ -188,8 +188,10 @@ src/
 │   ├── OSDetailPage.jsx         ← 4 abas: Resumo, Timeline, Contrato, Chamados
 │   ├── UsuariosPage.jsx         ← CRUD admin + badges de perfil
 │   ├── SetoresPage.jsx
-│   ├── financeiro/              ← 8 telas: VisaoGeral, Receitas, Despesas, Aportes,
-│   │                              ContasPage, LivroCaixa, DRE, PorCliente
+│   ├── financeiro/              ← Contas a Receber, Contas a Pagar, Aportes,
+│   │                              ContasPage, LivroCaixa (ex-Receitas/Despesas renomeadas)
+│   ├── relatorios/              ← ReceitasRelatorioPage, DespesasRelatorioPage
+│   │                              (somente leitura — sem botão Novo/Editar/Deletar)
 │   └── portal/                  ← MeusProjetos, Suporte, MinhasFaturas (perfil CLIENTE)
 └── services/
     ├── api.js                   ← instância Axios base
@@ -373,6 +375,7 @@ class Receita(BaseFinanceiro):   # db_table='fin_receita'
     tipo(ENTRADA_CONTRATO/MENSALIDADE/CONSULTORIA/OUTRO)
     status(PENDENTE/RECEBIDO/CANCELADO/ATRASADO)
     descricao, cliente(FK nullable), os(FK nullable)
+    categoria(FK Categoria nullable, limit_choices_to tipo=ENTRADA)
     valor_bruto, desconto, valor_liquido (calc em save())
     conta(FK), vencimento, recebimento, referencia_mes, observacoes
 
@@ -380,10 +383,18 @@ class Despesa(BaseFinanceiro):   # db_table='fin_despesa'
     tipo(FIXA/VARIAVEL/PROLABORE/IMPOSTO/OUTRO)
     status(PENDENTE/PAGO/CANCELADO/ATRASADO)
     descricao, fornecedor, valor_bruto, desconto, valor_liquido (calc em save())
+    categoria(FK Categoria nullable, limit_choices_to tipo=SAIDA)
     conta(FK), vencimento, pagamento, comprovante(FileField), observacoes
+    estornado(bool), data_estorno(DateField nullable), motivo_estorno(TextField)
+
+class Categoria(models.Model):   # db_table='fin_categoria'
+    nome, tipo(ENTRADA/SAIDA), ativo, criado_em
+    unique_together: [['nome', 'tipo']]
+    # Fixture: 4 ENTRADA (Sistema SaaS, Consultoria, Projeto Avulso, Reembolso)
+    #          6 SAIDA   (Infraestrutura, Ferramentas, Marketing, Impostos, Pessoal, Outros)
 
 class LivroCaixa(models.Model):  # db_table='fin_livro_caixa' — IMUTÁVEL
-    conta(FK), tipo(ENTRADA/SAIDA), origem(APORTE/RECEITA/DESPESA/MANUAL/TRANSFER)
+    conta(FK), tipo(ENTRADA/SAIDA), origem(APORTE/RECEITA/DESPESA/MANUAL/TRANSFER/ESTORNO)
     origem_id, descricao, valor, data, saldo_anterior, saldo_atual
     criado_em, criado_por, estornado(bool), estorno_de(self FK)
 ```
@@ -480,8 +491,10 @@ CRUD:
   GET/POST               livro-caixa/      (ReadCreateViewSet — imutável)
 
 Ações:
-  PATCH  receitas/{id}/marcar_recebido/    → status=RECEBIDO + data recebimento
-  PATCH  despesas/{id}/marcar_pago/        → status=PAGO + data pagamento
+  POST   receitas/{id}/receber/            → status=RECEBIDO + data + conta + observacao → LivroCaixa ENTRADA
+  POST   despesas/{id}/pagar/             → status=PAGO + data + conta + comprovante (opcional) → LivroCaixa SAIDA
+  POST   despesas/{id}/estornar/          → valida PAGA+não estornada → LivroCaixa ENTRADA origem=ESTORNO (IsAdmin)
+  GET/POST categorias/?tipo=ENTRADA|SAIDA → CRUD categorias (IsAdminOrFinanceiro)
   POST   contas/{id}/transferir/           → 2x LivroCaixa (SAIDA origem + ENTRADA destino), origem='TRANSFER'
   GET    livro-caixa/totais/               → { total_entradas, total_saidas, saldo_atual }
   POST   livro-caixa/{id}/estornar/        → cria lançamento inverso (IsAdmin)
@@ -499,8 +512,9 @@ Views calculadas:
 
 Signals automáticos (`financeiro/signals.py`):
 - `Aporte` criado → LivroCaixa ENTRADA
-- `Receita` status→RECEBIDO → LivroCaixa ENTRADA  
-- `Despesa` status→PAGO → LivroCaixa SAIDA
+- `Receita` status→RECEBIDO → LivroCaixa ENTRADA (via endpoint `/receber/` ou signal direto)
+- `Despesa` status→PAGO → LivroCaixa SAIDA (via endpoint `/pagar/` ou signal direto)
+- `Despesa` estornada → LivroCaixa ENTRADA origem=ESTORNO (via endpoint `/estornar/`)
 
 Signal OS (`ordens/signals.py`):
 - OS status→CONTRATO → cria Receitas (ENTRADA_CONTRATO + 3x MENSALIDADE)
@@ -774,7 +788,8 @@ docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000
 | Fase 9.3 | Fluxo Novo Projeto: Leads→Prospectos→Entrevista→Arquitetura Técnica | ✅ |
 | Fase 9.4 | Sidebar com emojis em todos os itens + submenus; campos faltando em ContasPage (agencia/numero) e DespesasPage (observacoes); botões com emojis em DespesasPage; transferência entre contas com LivroCaixa duplo | ✅ |
 | Fase 9.5 | Dashboard profissional: endpoint `/api/financeiro/dashboard/` + DashboardPage reescrito com KPIs por perfil, pipeline OS, gráfico 6 meses (CSS), vencimentos 30d, top clientes; fix saldo em `livro-caixa/totais/` e `fluxo-caixa/`; rename "Fluxo de Caixa" → "Livro Caixa" no menu Relatórios | ✅ |
-| **Fase 10** | Pipeline agents via Office | ⏳ |
+| Fase 10 | Financeiro: Categoria (fin_categoria + fixture 10 itens), estorno de Despesa, endpoints receber/pagar/estornar/categorias, Sidebar Receitas→Contas a Receber / Despesas→Contas a Pagar, menu Relatórios, páginas relatório somente-leitura; Boss CLI movido para aba no RightSidebar do Office; pipeline hotfix documentado e reforçado | ✅ |
+| **Fase 11** | Pipeline agents — fluxo Lead completo via Office | ⏳ |
 
 ---
 

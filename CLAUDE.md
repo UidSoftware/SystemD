@@ -487,7 +487,12 @@ Ações:
   POST   livro-caixa/{id}/estornar/        → cria lançamento inverso (IsAdmin)
 
 Views calculadas:
-  GET  fluxo-caixa/?mes=2026-05&conta=1   → saldo_inicial, entradas, saidas, saldo_final, lancamentos[]
+  GET  dashboard/                          → KPIs por perfil: fin (receita_mes, despesa_mes, resultado_mes, mrr,
+                                             receitas_vencer, despesas_vencer, grafico_6_meses, top_clientes,
+                                             receitas_atrasadas, despesas_atrasadas) + ops (pipeline_os, leads_*,
+                                             clientes_ativos, ultimas_os, chamados_abertos). Permissão: IsAdminOrOperacionalOrFinanceiro
+  GET  fluxo-caixa/?mes=2026-05&conta=1   → saldo_inicial, total_entradas, total_saidas,
+                                             saldo_final (= saldo_inicial + entradas - saidas), lancamentos[]
   GET  dre/?ano=2026                       → { ano, meses[12], totais_ano }
   GET  receita-por-cliente/?ano=2026       → lista clientes com totais ordenado por valor
 ```
@@ -768,7 +773,8 @@ docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000
 | Fase 9.2 | Exports PDF/Excel corrigidos + filtro unidade Entregas + confirmação CLIENTE | ✅ |
 | Fase 9.3 | Fluxo Novo Projeto: Leads→Prospectos→Entrevista→Arquitetura Técnica | ✅ |
 | Fase 9.4 | Sidebar com emojis em todos os itens + submenus; campos faltando em ContasPage (agencia/numero) e DespesasPage (observacoes); botões com emojis em DespesasPage; transferência entre contas com LivroCaixa duplo | ✅ |
-| **Fase 10** | Dashboard real + Pipeline agents via Office | ⏳ |
+| Fase 9.5 | Dashboard profissional: endpoint `/api/financeiro/dashboard/` + DashboardPage reescrito com KPIs por perfil, pipeline OS, gráfico 6 meses (CSS), vencimentos 30d, top clientes; fix saldo em `livro-caixa/totais/` e `fluxo-caixa/`; rename "Fluxo de Caixa" → "Livro Caixa" no menu Relatórios | ✅ |
+| **Fase 10** | Pipeline agents via Office | ⏳ |
 
 ---
 
@@ -870,4 +876,4 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 29/05/2026*
+*Última atualização: 29/05/2026 (Fase 9.5)*

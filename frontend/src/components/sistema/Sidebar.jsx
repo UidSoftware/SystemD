@@ -33,7 +33,7 @@ const icons = {
 }
 
 const menuRelatorios = [
-  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/livro-caixa', emoji: '📈' },
+  { label: 'Livro Caixa',    path: '/sistema/financeiro/livro-caixa', emoji: '📒' },
   { label: 'DRE',            path: '/sistema/financeiro/dre',          emoji: '📉' },
   { label: 'Receitas',       path: '/sistema/financeiro/receitas',     emoji: '💵' },
   { label: 'Despesas',       path: '/sistema/financeiro/despesas',     emoji: '💸' },

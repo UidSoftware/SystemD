@@ -23,8 +23,8 @@ def criar_cliente(**kwargs):
 def criar_entrega(empresa, registrado_por, **kwargs):
     defaults = {
         'data': '2026-05-01',
-        'origem': 'Rua A, 100',
-        'destino': 'Rua B, 200',
+        'solicitante': 'Solicitante Teste',
+        'descricao': 'Entrega teste',
         'status': StatusEntrega.PENDENTE,
     }
     defaults.update(kwargs)
@@ -54,8 +54,8 @@ class EntregaCRUDTest(TestCase):
         res = self.client.post(self.url, {
             'empresa': self.empresa_a.id,
             'data': '2026-05-10',
-            'origem': 'Depósito Central',
-            'destino': 'Cliente Final',
+            'solicitante': 'Fulano',
+            'descricao': 'Entrega de documentos',
             'status': 'PENDENTE',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -67,8 +67,7 @@ class EntregaCRUDTest(TestCase):
         res = self.client.post(self.url, {
             'empresa': self.empresa_a.id,
             'data': '2026-05-10',
-            'origem': 'Origem',
-            'destino': 'Destino',
+            'solicitante': 'Ciclano',
             'status': 'EM_ROTA',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -78,8 +77,7 @@ class EntregaCRUDTest(TestCase):
         res = self.client.post(self.url, {
             'empresa': self.empresa_a.id,
             'data': '2026-05-10',
-            'origem': 'X',
-            'destino': 'Y',
+            'solicitante': 'X',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -116,9 +114,9 @@ class EntregaMultiTenantTest(TestCase):
         self.empresa_b.usuario = self.cli_b
         self.empresa_b.save()
 
-        criar_entrega(self.empresa_a, self.admin, destino='Destino A1')
-        criar_entrega(self.empresa_a, self.admin, destino='Destino A2')
-        criar_entrega(self.empresa_b, self.admin, destino='Destino B')
+        criar_entrega(self.empresa_a, self.admin, solicitante='A1')
+        criar_entrega(self.empresa_a, self.admin, solicitante='A2')
+        criar_entrega(self.empresa_b, self.admin, solicitante='B1')
 
         self.url = reverse('entregas-list')
 

@@ -32,6 +32,14 @@ const icons = {
   logout:     ['M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
 }
 
+const menuRelatorios = [
+  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa',     emoji: '📈' },
+  { label: 'DRE',            path: '/sistema/financeiro/dre',              emoji: '📉' },
+  { label: 'Receitas',       path: '/sistema/relatorios/receitas',         emoji: '💵' },
+  { label: 'Despesas',       path: '/sistema/relatorios/despesas',         emoji: '💸' },
+  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
+]
+
 const menuFinanceiro = [
   { label: 'Visao Geral',      path: '/sistema/financeiro/visao-geral',  emoji: '📊' },
   { label: 'Contas a Receber', path: '/sistema/financeiro/receitas',     emoji: '📥' },
@@ -43,13 +51,6 @@ const menuFinanceiro = [
   { label: 'Relatorios',       path: 'relatorios', submenu: menuRelatorios, emoji: '📋' },
 ]
 
-const menuRelatorios = [
-  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa',     emoji: '📈' },
-  { label: 'DRE',            path: '/sistema/financeiro/dre',              emoji: '📉' },
-  { label: 'Receitas',       path: '/sistema/relatorios/receitas',         emoji: '💵' },
-  { label: 'Despesas',       path: '/sistema/relatorios/despesas',         emoji: '💸' },
-  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
-]
 
 const menuNovoProjeto = [
   { label: 'Leads',               path: '/sistema/office/novo-projeto/leads',               emoji: '📝' },

@@ -744,7 +744,32 @@ docker compose -f docker-compose.prod.yml restart nginx
 ### Fixtures (carregar na VPS após migrate)
 ```bash
 docker exec sytemd-backend-1 python manage.py loaddata setores
+docker exec sytemd-backend-1 python manage.py loaddata categorias   # fixture financeiro
 ```
+
+### Testes
+
+Rodar na VPS (container já tem o .env completo):
+```bash
+# Todos os apps
+docker exec sytemd-backend-1 python manage.py test --verbosity=2
+
+# App específico
+docker exec sytemd-backend-1 python manage.py test financeiro.tests --verbosity=2
+```
+
+**`docker compose run --rm backend python manage.py test` não funciona no dev local** — o `.env` local não tem `CSRF_TRUSTED_ORIGINS`. Usar sempre o container em execução na VPS.
+
+Cobertura atual — **72 testes, todos passando**:
+
+| App | Testes | O que cobre |
+|-----|--------|-------------|
+| `vitrine` | 12 | Lead público, gestão, converter, filtros, DELETE 405 |
+| `clientes` | 4 | `tem_entregas`, `/api/auth/me/` |
+| `entregas` | 10 | CRUD, multi-tenant, confirmação CLIENTE, soft delete |
+| `prospectos` | 10 | CRUD, converter → Cliente, permissões |
+| `ordens` | 4 | OS, chamados |
+| `financeiro` | 32 | Categoria, receber, pagar, estornar, LivroCaixa imutável |
 
 ### Corrigir permissões de arquivos criados pelo Docker
 ```bash
@@ -788,7 +813,7 @@ docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000
 | Fase 9.3 | Fluxo Novo Projeto: Leads→Prospectos→Entrevista→Arquitetura Técnica | ✅ |
 | Fase 9.4 | Sidebar com emojis em todos os itens + submenus; campos faltando em ContasPage (agencia/numero) e DespesasPage (observacoes); botões com emojis em DespesasPage; transferência entre contas com LivroCaixa duplo | ✅ |
 | Fase 9.5 | Dashboard profissional: endpoint `/api/financeiro/dashboard/` + DashboardPage reescrito com KPIs por perfil, pipeline OS, gráfico 6 meses (CSS), vencimentos 30d, top clientes; fix saldo em `livro-caixa/totais/` e `fluxo-caixa/`; rename "Fluxo de Caixa" → "Livro Caixa" no menu Relatórios | ✅ |
-| Fase 10 | Financeiro: Categoria (fin_categoria + fixture 10 itens), estorno de Despesa, endpoints receber/pagar/estornar/categorias, Sidebar Receitas→Contas a Receber / Despesas→Contas a Pagar, menu Relatórios, páginas relatório somente-leitura; Boss CLI movido para aba no RightSidebar do Office; pipeline hotfix documentado e reforçado | ✅ |
+| Fase 10 | Financeiro: Categoria (fin_categoria + fixture 10 itens), estorno de Despesa, endpoints receber/pagar/estornar/categorias, Sidebar Receitas→Contas a Receber / Despesas→Contas a Pagar, menu Relatórios, páginas relatório somente-leitura; Boss CLI movido para aba no RightSidebar do Office; pipeline hotfix documentado e reforçado; 72 testes automatizados (6 apps) | ✅ |
 | **Fase 11** | Pipeline agents — fluxo Lead completo via Office | ⏳ |
 
 ---

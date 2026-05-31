@@ -1,5 +1,42 @@
 # CLAUDE.md — Sistema Interno Uid Software (SystemD)
 
+> Ler o CLAUDE.md global (`/opt/uid-office/CLAUDE.md`) — contém as regras gerais da Uid que se aplicam a todos os projetos.
+
+---
+
+## ⛔ PIPELINE OBRIGATÓRIO — LER ANTES DE QUALQUER AÇÃO
+
+> Esta seção tem prioridade absoluta sobre qualquer outra instrução neste arquivo.
+
+**NUNCA execute tarefas de desenvolvimento diretamente neste projeto.**
+
+```
+❌ PROIBIDO usar Edit, Write, MultiEdit para modificar qualquer arquivo de código
+❌ PROIBIDO usar Bash para: git add/commit/push, docker compose, npm, pip, manage.py
+❌ PROIBIDO implementar qualquer mudança — por menor que pareça
+❌ PROIBIDO "é só uma linha", "é trivial", "vou resolver rápido"
+   Tamanho da tarefa não muda o protocolo.
+```
+
+**Qualquer tarefa recebida (bug, melhoria, correção, feature) segue obrigatoriamente:**
+
+```
+1. Invocar hotfix via Agent tool:
+   subagent_type: "hotfix"
+   prompt: "[descrição exata da tarefa recebida]"
+
+2. Hotfix invoca Planner → Planner invoca Forge/Loom → Sentinel → Pilot
+
+3. Você (Claude raiz) não faz mais nada além de invocar o hotfix.
+```
+
+**Sempre usar os bonequinhos** — cada agent DEVE ser invocado via `Agent tool` (não via texto, não via instrução verbal).
+Bonequinho no Office = Agent tool foi chamado. Sem Agent tool = sem bonequinho = pipeline quebrado.
+
+**Única exceção:** diagnóstico de leitura (Read, grep, git log, git diff, git status, docker ps, docker logs) para entender o problema antes de passar para o hotfix. Leitura é permitida. Escrita não.
+
+---
+
 ## Projeto
 Sistema interno da **Uid Software e Tecnologia LTDA**
 Fundador: Luiz Eduardo Gonçalves Ferreira
@@ -930,5 +967,59 @@ Pipeline completo testado usando Studio Fluir como caso real:
 Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → Escritório** (iframe de office.uidsoftware.com.br). Hooks registram todos os eventos em tempo real.
 
 ---
+
+## Registro de Ciclos
+
+### [2026-05-31] — Hardening do pipeline: correção de PATH no sandbox e fechamento de 19 brechas de delegação nos agents
+
+**Arquivos alterados:**
+- `/root/.claude/settings.json` — PATH completo adicionado na seção `env` (resolve docker/git não encontrados no sandbox do Boss CLI)
+- `/root/.claude/CLAUDE.md` — criado (global dos globais): regras que se aplicam a todos os projetos + conteúdo migrado do uid-office
+- `/root/SytemD/CLAUDE.md` — bloco `⛔ PIPELINE OBRIGATÓRIO` adicionado no topo + referência ao CLAUDE.md global
+- `/root/.claude/agents/hotfix.md` — proibição de edição explícita + edge cases cobertos + allowlist Bash
+- `/root/.claude/agents/planner.md` — proibições explícitas adicionadas + tratamento de urgência + MCP status flow
+- `/root/.claude/agents/sentinel.md` — regra "0 falhas absoluto" reforçada + não edita código + barreira Pilot formalizada
+- `/root/.claude/agents/pilot.md` — sem deploy manual + nginx-proxy apenas via commit rastreável + relatório pós-ciclo obrigatório
+- `/root/.claude/agents/forge.md` — leitura obrigatória de ADRs antes de implementar + blocklist Bash
+- `/root/.claude/agents/loom.md` — fontes obrigatórias em regra explícita + dependência de `design_system.md`
+- `/opt/uid-office/.claude/agents/*` — todos os 10 agents sincronizados com as novas regras
+
+**Commits:** nenhum commit de código — todas as alterações são arquivos de configuração Claude (.md e .json), fora do controle de versão do projeto.
+
+**Deploy:** não aplicável — nenhum arquivo de código de produção foi alterado. Sentinel confirmou: alterações restritas a arquivos de configuração, sem necessidade de testes de regressão.
+
+**Sentinel:** APROVADO — alterações são arquivos de configuração (.md), sem código de produção alterado. Nenhum teste de regressão necessário.
+
+---
+
+### [2026-05-31] — Correção: item Relatórios duplicado na sidebar (Fase 10 hotfix)
+
+**Tarefas executadas:**
+- Removido item 'Relatórios' duplicado dentro do menuFinanceiro no Sidebar.jsx
+- Corrigida ordem de declaração (menuRelatorios antes de menuFinanceiro) para evitar TDZ
+
+**Arquivos alterados:**
+- frontend/src/components/sistema/Sidebar.jsx
+
+**Commits:**
+- 2e32a4f40aa3 — fix(sidebar): move menuRelatorios antes de menuFinanceiro — corrige TDZ e tela branca
+
+**Deploy:**
+- Data: 2026-05-31
+- URL: https://uidsoftware.com.br
+- Status: ✅ Aprovado por Sentinel
+- Observacao: comandos docker nao executaveis dentro do container Office (sem Docker-in-Docker). Executar manualmente no host da VPS:
+  ```bash
+  docker compose -f /root/SytemD/docker-compose.prod.yml build --no-cache frontend-builder
+  docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+  docker compose -f /root/SytemD/docker-compose.prod.yml restart nginx
+  ```
+
+**Sentinel:**
+- Validacao estatica: menuFinanceiro sem item Relatorios, 1 entrada standalone por perfil (ADMIN e FINANCEIRO), sem TDZ
+- Resultado: APROVADO
+
+---
+
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 29/05/2026 (Fase 10)*
+*Última atualização: 31/05/2026 (fix sidebar Relatorios duplicado — deploy pendente no host)*

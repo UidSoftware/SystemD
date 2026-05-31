@@ -308,18 +308,30 @@ export default function DespesasPage() {
             </div>
             {/* Categoria com mini-form inline */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <label style={{ fontSize: 12, color: '#a78bca' }}>Categoria</label>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Categoria</label>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <select style={{ ...inputStyle, flex: 1 }} value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                  <option value="">Sem categoria</option>
+                  {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
                 <button type="button"
                   onClick={() => setMostrarNovaCategoria(v => !v)}
-                  style={{ fontSize: 11, background: 'rgba(6,59,248,0.1)', color: '#6b8fff', border: '1px solid rgba(6,59,248,0.2)', borderRadius: 5, padding: '1px 7px', cursor: 'pointer' }}>
-                  + Nova
+                  title="Nova categoria"
+                  style={{
+                    flexShrink: 0,
+                    background: mostrarNovaCategoria ? 'rgba(6,59,248,0.25)' : 'rgba(6,59,248,0.1)',
+                    color: '#6b8fff',
+                    border: '1px solid rgba(6,59,248,0.3)',
+                    borderRadius: 8,
+                    padding: '0 12px',
+                    height: 38,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    lineHeight: 1,
+                  }}>
+                  ➕
                 </button>
               </div>
-              <select style={inputStyle} value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
-                <option value="">Sem categoria</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
               {mostrarNovaCategoria && (
                 <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
                   <input
@@ -328,9 +340,10 @@ export default function DespesasPage() {
                     value={novaCategoria}
                     onChange={e => setNovaCategoria(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); salvarNovaCategoria() } }}
+                    autoFocus
                   />
                   <button type="button" onClick={salvarNovaCategoria} disabled={salvandoCategoria}
-                    style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 7, padding: '0 12px', cursor: 'pointer', fontSize: 12 }}>
+                    style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 7, padding: '0 12px', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
                     {salvandoCategoria ? '...' : 'Salvar'}
                   </button>
                 </div>

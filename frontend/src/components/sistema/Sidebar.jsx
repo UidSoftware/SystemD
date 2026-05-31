@@ -48,7 +48,6 @@ const menuFinanceiro = [
   { label: 'Contas Bancarias', path: '/sistema/financeiro/contas',       emoji: '🏦' },
   { label: 'Livro Caixa',      path: '/sistema/financeiro/livro-caixa',  emoji: '📒' },
   { label: 'Fornecedores',     path: '/sistema/financeiro/fornecedores',  emoji: '🤝' },
-  { label: 'Relatorios',       path: 'relatorios', submenu: menuRelatorios, emoji: '📋' },
 ]
 
 

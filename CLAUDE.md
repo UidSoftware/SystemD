@@ -1021,5 +1021,41 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 
 ---
 
+### [2026-06-02] — Emoji 💾 no botão Salvar do modal Nova Despesa (Contas a Pagar)
+
+**Tarefas executadas:**
+- Adicionado `labelConfirmar="💾 Salvar"` no BotoesModal do modal Nova/Editar Despesa em DespesasPage.jsx
+- Modais Pagar e Estorno não foram alterados
+- Pipeline completo via Boss CLI: Hotfix → Planner → Loom → Sentinel → Pilot (deploy manual no host)
+
+**Arquivos alterados:**
+- `frontend/src/pages/sistema/financeiro/DespesasPage.jsx` (linha 431)
+
+**Commits:**
+- `9ee6602` — feat(despesas): adicionar emoji 💾 no botão Salvar do modal Nova Despesa
+
+**Deploy:**
+- Data: 2026-06-02
+- URL: https://uidsoftware.com.br
+- Status: ✅ Em produção
+
+**Sentinel:**
+- 5/5 critérios de aceite passando
+- Resultado: APROVADO
+
+**Observação — Pilot bloqueado no sandbox:**
+O Pilot não consegue executar `git`/`docker` dentro do container Boss CLI (sem Docker-in-Docker e sem git instalado no container). Deploy foi executado manualmente no host. Padrão a seguir até o Pilot ser corrigido:
+```bash
+cd /root/SytemD
+git add <arquivos>
+git commit -m "mensagem"
+git push origin main
+docker compose -f docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f docker-compose.prod.yml restart nginx
+```
+
+---
+
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 31/05/2026 (fix sidebar Relatorios duplicado — deploy pendente no host)*
+*Última atualização: 2026-06-02 (emoji 💾 botão Salvar DespesasPage — em produção)*

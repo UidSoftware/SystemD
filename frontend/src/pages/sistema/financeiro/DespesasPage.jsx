@@ -428,7 +428,7 @@ export default function DespesasPage() {
             </div>
 
             {erro && <p style={{ color: '#f87171', fontSize: 13 }}>{erro}</p>}
-            <BotoesModal onCancel={() => setModal(false)} salvando={salvando} />
+            <BotoesModal onCancel={() => setModal(false)} salvando={salvando} labelConfirmar="💾 Salvar" />
           </form>
         </ModalBase>
       )}

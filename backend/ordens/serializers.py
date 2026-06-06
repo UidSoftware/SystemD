@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from usuarios.models import Usuario
-from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, ArquiteturaTecnica
+from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, Entrevista, ArquiteturaTecnica
 
 
 class FaseOSSerializer(serializers.ModelSerializer):
@@ -104,6 +104,22 @@ class OSCreateSerializer(serializers.ModelSerializer):
             'valor_total', 'valor_entrada', 'valor_mensal',
             'data_inicio', 'data_entrega', 'observacoes',
         ]
+
+
+class EntrevistaSerializer(serializers.ModelSerializer):
+    cliente_nome = serializers.CharField(source='cliente.nome_empresa', read_only=True)
+    segmento_display = serializers.CharField(source='get_segmento_display', read_only=True)
+    orcamento_faixa_display = serializers.CharField(source='get_orcamento_faixa_display', read_only=True)
+
+    class Meta:
+        model = Entrevista
+        fields = '__all__'
+        read_only_fields = ['criado_em', 'atualizado_em']
+
+    def validate_descricao(self, value):
+        if len(value) < 500:
+            raise serializers.ValidationError('A descrição deve ter no mínimo 500 caracteres.')
+        return value
 
 
 class ArquiteturaTecnicaSerializer(serializers.ModelSerializer):

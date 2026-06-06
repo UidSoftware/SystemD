@@ -145,6 +145,49 @@ class MensagemChamado(models.Model):
         return f'Msg de {self.autor} em #{self.chamado_id}'
 
 
+class SegmentoEntrevista(models.TextChoices):
+    SAUDE       = 'SAUDE',       'Saúde / Bem-estar'
+    BELEZA      = 'BELEZA',      'Beleza'
+    VAREJO      = 'VAREJO',      'Varejo'
+    ALIMENTACAO = 'ALIMENTACAO', 'Alimentação'
+    SERVICOS    = 'SERVICOS',    'Serviços'
+    EDUCACAO    = 'EDUCACAO',    'Educação'
+    OUTRO       = 'OUTRO',       'Outro'
+
+
+class OrcamentoFaixa(models.TextChoices):
+    MEI     = 'MEI',     'MEI'
+    PEQUENO = 'PEQUENO', 'Pequeno'
+    MEDIO   = 'MEDIO',   'Médio'
+
+
+class Entrevista(models.Model):
+    cliente          = models.ForeignKey('clientes.Cliente', on_delete=PROTECT, related_name='entrevistas')
+    sistema          = models.CharField(max_length=100)
+    descricao        = models.TextField()
+    cores_empresa    = models.CharField(max_length=100)
+    dominio          = models.CharField(max_length=200, blank=True)
+    whatsapp_business = models.BooleanField(default=False)
+    redes_sociais    = models.TextField(blank=True)
+    palavras_chave   = models.TextField(blank=True)
+    segmento         = models.CharField(max_length=20, choices=SegmentoEntrevista.choices)
+    publico_alvo     = models.TextField(blank=True)
+    concorrentes     = models.TextField(blank=True)
+    prazo_desejado   = models.DateField(null=True, blank=True)
+    orcamento_faixa  = models.CharField(max_length=10, choices=OrcamentoFaixa.choices)
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Entrevista'
+        verbose_name_plural = 'Entrevistas'
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return f'{self.sistema} — {self.cliente}'
+
+
 class ArquiteturaTecnica(models.Model):
     # Identificação
     projeto            = models.CharField(max_length=200)

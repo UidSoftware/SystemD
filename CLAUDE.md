@@ -892,7 +892,6 @@ Os agents estão em `/opt/uid-office/.claude/agents/` na VPS e em `/home/uidsoft
 |-------|-------|-------------|
 | **Planner** | Lead Agent / Gerente de Projeto | Iniciar projeto, orquestrar pipeline, status de sprint |
 | **Analista** | Levantamento de requisitos | Elicitar, modelar, documentar requisitos |
-| **doc-generator** | Documentação técnica | Gerar 8 documentos padrão após análise |
 | **Blueprint** | Arquiteto de software | Definir estrutura técnica, ADRs, plano de fases |
 | **Forge** | Dev Backend (Django) | Implementar models, migrations, serializers, viewsets |
 | **Loom** | Dev Frontend (React) | Implementar telas, componentes, integração API |

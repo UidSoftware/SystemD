@@ -77,8 +77,6 @@ const ORCAMENTO_CHOICES = [
   { value: 'MEDIO', label: 'Médio' },
 ]
 
-const DESCRICAO_MIN = 500
-
 export default function EntrevistaPage() {
   const [clientes, setClientes] = useState([])
 
@@ -102,13 +100,10 @@ export default function EntrevistaPage() {
     }).catch(() => {})
   }, [])
 
-  const descricaoLen = form.descricao.length
-  const descricaoOk = descricaoLen >= DESCRICAO_MIN
-
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.cliente || !form.sistema || !descricaoOk || !form.segmento || !form.orcamento_faixa) {
-      setErro('Preencha todos os campos obrigatórios — a descrição precisa ter pelo menos 500 caracteres.')
+    if (!form.cliente || !form.sistema || !form.descricao || !form.segmento || !form.orcamento_faixa) {
+      setErro('Preencha todos os campos obrigatórios.')
       return
     }
     setSalvando(true); setErro('')
@@ -182,9 +177,6 @@ export default function EntrevistaPage() {
         <Section num="02" title="Descritivo">
           <Field label="Descrição do projeto" required>
             <textarea style={{ ...inputStyle, minHeight: 160, resize: 'vertical', lineHeight: 1.6 }} value={form.descricao} onChange={e => set('descricao', e.target.value)} placeholder="Descreva o projeto com detalhes — o que o cliente precisa, contexto do negócio, fluxos principais..." />
-            <div style={{ marginTop: 6, fontSize: 12, color: descricaoOk ? '#10b981' : '#a78bca' }}>
-              {descricaoLen}/{DESCRICAO_MIN} caracteres
-            </div>
           </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Segmento" required>
@@ -228,8 +220,8 @@ export default function EntrevistaPage() {
             style={{ padding: '11px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, cursor: 'pointer', color: '#a78bca' }}>
             Voltar
           </button>
-          <button type="submit" disabled={salvando || !descricaoOk}
-            style={{ flex: 1, padding: '11px 20px', background: (salvando || !descricaoOk) ? '#1a2a6b' : '#063BF8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (salvando || !descricaoOk) ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}>
+          <button type="submit" disabled={salvando}
+            style={{ flex: 1, padding: '11px 20px', background: salvando ? '#1a2a6b' : '#063BF8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: salvando ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}>
             {salvando ? 'Salvando no banco...' : '💾 Salvar Entrevista →'}
           </button>
         </div>

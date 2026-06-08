@@ -46,12 +46,33 @@ export function AuthProvider({ children }) {
 
   // Interceptor permanente — lê tokenRef que é sempre atualizado no render
   useEffect(() => {
-    const interceptor = api.interceptors.request.use((config) => {
+    const reqInterceptor = api.interceptors.request.use((config) => {
       if (tokenRef.current) config.headers.Authorization = `Bearer ${tokenRef.current}`
       return config
     })
-    return () => api.interceptors.request.eject(interceptor)
-  }, [])
+
+    // Ao receber 401, renova o token e refaz a requisição original
+    const resInterceptor = api.interceptors.response.use(
+      res => res,
+      async (error) => {
+        const original = error.config
+        if (error.response?.status === 401 && !original._retry) {
+          original._retry = true
+          const newToken = await renovarToken()
+          if (newToken) {
+            original.headers.Authorization = `Bearer ${newToken}`
+            return api(original)
+          }
+        }
+        return Promise.reject(error)
+      }
+    )
+
+    return () => {
+      api.interceptors.request.eject(reqInterceptor)
+      api.interceptors.response.eject(resInterceptor)
+    }
+  }, [renovarToken])
 
   useEffect(() => {
     if (accessToken) buscarPerfil()

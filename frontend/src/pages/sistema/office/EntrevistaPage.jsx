@@ -115,7 +115,12 @@ export default function EntrevistaPage() {
       await api.post('/entrevistas/', payload)
       setSucesso(true)
     } catch (err) {
-      setErro(err.response?.data?.detail || 'Erro ao salvar. Tente novamente.')
+      const data = err.response?.data
+      let msg = data?.detail
+      if (!msg && data && typeof data === 'object') {
+        msg = Object.values(data).flat().join(' ')
+      }
+      setErro(msg || 'Erro ao salvar. Tente novamente.')
     } finally {
       setSalvando(false)
     }

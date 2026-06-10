@@ -116,11 +116,6 @@ class EntrevistaSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['criado_em', 'atualizado_em']
 
-    def validate_descricao(self, value):
-        if len(value) < 500:
-            raise serializers.ValidationError('A descrição deve ter no mínimo 500 caracteres.')
-        return value
-
 
 class ArquiteturaTecnicaSerializer(serializers.ModelSerializer):
     class Meta:

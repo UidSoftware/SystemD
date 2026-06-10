@@ -56,7 +56,7 @@ const menuFinanceiro = [
 const menuNovoProjeto = [
   { label: 'Leads',               path: '/sistema/office/novo-projeto/leads',               emoji: '📝' },
   { label: 'Prospectos',          path: '/sistema/prospectos',                               emoji: '🔍' },
-  { label: 'Entrevistas',         path: '/sistema/entrevistas',                              emoji: '📋' },
+  { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista',            emoji: '📋' },
   { label: 'Arquitetura Tecnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica', emoji: '🏗️' },
 ]
 

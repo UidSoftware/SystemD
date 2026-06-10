@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
@@ -69,6 +69,7 @@ const menuOffice = [
 const menuPorPerfil = {
   ADMIN: [
     { label: 'Dashboard',     path: '/sistema/',              emoji: '🏠', submenu: undefined },
+    { label: 'Notificacoes',  path: '/sistema/notificacoes',  emoji: '🔔' },
     { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
     { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
@@ -80,7 +81,8 @@ const menuPorPerfil = {
     { label: 'Configuracoes', path: '/sistema/configuracoes', emoji: '⚙️' },
   ],
   OPERACIONAL: [
-    { label: 'Dashboard',   path: '/sistema/',           emoji: '🏠' },
+    { label: 'Dashboard',    path: '/sistema/',            emoji: '🏠' },
+    { label: 'Notificacoes', path: '/sistema/notificacoes', emoji: '🔔' },
     { label: 'Leads',       path: '/sistema/leads',      emoji: '🎯' },
     { label: 'Prospectos',  path: '/sistema/prospectos', emoji: '🔍' },
     { label: 'Entrevistas', path: '/sistema/entrevistas', emoji: '📋' },
@@ -103,7 +105,7 @@ const menuPorPerfil = {
   ],
 }
 
-function NavItem({ item, onClose, location }) {
+function NavItem({ item, onClose, location, badge }) {
   const isActive = item.path !== '/sistema/'
     ? location.pathname === item.path || location.pathname.startsWith(item.path + '/')
     : location.pathname === '/sistema/'
@@ -146,6 +148,16 @@ function NavItem({ item, onClose, location }) {
         {item.emoji || '•'}
       </span>
       <span style={{ flex: 1 }}>{item.label}</span>
+      {badge > 0 && (
+        <span style={{
+          background: '#f87171', color: '#fff',
+          fontSize: 10, fontWeight: 700, lineHeight: 1,
+          borderRadius: 10, padding: '3px 6px', minWidth: 16, textAlign: 'center',
+          flexShrink: 0,
+        }}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </NavLink>
   )
 }
@@ -292,6 +304,20 @@ export default function Sidebar({ onClose }) {
   const [senhaSucesso, setSenhaSucesso] = useState(false)
   const [salvandoSenha, setSalvandoSenha] = useState(false)
 
+  const [notificacoesPendentes, setNotificacoesPendentes] = useState(0)
+
+  useEffect(() => {
+    if (perfil !== 'ADMIN' && perfil !== 'OPERACIONAL') return
+    const buscarPendentes = () => {
+      api.get('/notificacoes/', { params: { resolvida: false } })
+        .then(r => setNotificacoesPendentes(r.data.count))
+        .catch(() => {})
+    }
+    buscarPendentes()
+    const intervalo = setInterval(buscarPendentes, 60000)
+    return () => clearInterval(intervalo)
+  }, [perfil])
+
   const handleLogout = async () => {
     await logout()
     navigate('/login')
@@ -373,7 +399,8 @@ export default function Sidebar({ onClose }) {
           {menu.map((item) => (
             item.submenu
               ? <GroupItem key={item.path} item={item} onClose={onClose} location={location} />
-              : <NavItem key={item.path} item={item} onClose={onClose} location={location} />
+              : <NavItem key={item.path} item={item} onClose={onClose} location={location}
+                  badge={item.path === '/sistema/notificacoes' ? notificacoesPendentes : 0} />
           ))}
         </nav>
 

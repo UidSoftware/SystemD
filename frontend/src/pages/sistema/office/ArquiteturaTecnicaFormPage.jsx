@@ -61,6 +61,34 @@ const inputStyle = {
   borderRadius: 8, padding: '9px 12px', outline: 'none', boxSizing: 'border-box',
 }
 
+// Stack padrão Uid (CLAUDE.md). Campos que divergem geram notificação
+// para o responsável documentar a decisão em ADR ao salvar.
+const STACK_PADRAO = {
+  linguagem: 'Python',
+  framework: 'Django REST Framework',
+  banco: 'PostgreSQL',
+  autenticacao: 'JWT',
+  padrao_api: 'REST',
+  frontend_fw: 'React 18',
+  build_tool: 'Vite',
+  estilizacao: 'Tailwind CSS',
+  estado_global: 'Zustand',
+  server_state: 'TanStack Query',
+}
+
+const STACK_LABELS = {
+  linguagem: 'Linguagem (backend)',
+  framework: 'Framework (backend)',
+  banco: 'Banco de dados',
+  autenticacao: 'Autenticação',
+  padrao_api: 'Padrão de API',
+  frontend_fw: 'Framework (frontend)',
+  build_tool: 'Build tool',
+  estilizacao: 'Estilização',
+  estado_global: 'Estado global',
+  server_state: 'Server state',
+}
+
 export default function ArquiteturaTecnicaFormPage() {
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -90,6 +118,10 @@ export default function ArquiteturaTecnicaFormPage() {
   }, [])
 
   const entrevistaSelecionada = entrevistas.find(e => String(e.id) === String(form.entrevista))
+
+  const divergenciasStack = Object.entries(STACK_PADRAO)
+    .filter(([campo, padrao]) => form[campo] !== padrao)
+    .map(([campo, padrao]) => ({ campo, label: STACK_LABELS[campo], padrao, atual: form[campo] }))
 
   const selecionarEntrevista = (id) => {
     const e = entrevistas.find(ent => String(ent.id) === String(id))
@@ -153,6 +185,22 @@ export default function ArquiteturaTecnicaFormPage() {
         </div>
 
         {erro && <div style={{ background: 'rgba(248,71,71,0.1)', border: '1px solid rgba(248,71,71,0.3)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, color: '#f87171', fontSize: 14 }}>{erro}</div>}
+
+        {divergenciasStack.length > 0 && (
+          <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, padding: '14px 16px', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#f87171', marginBottom: 8 }}>
+              ⚠️ Stack fora do padrão Uid
+            </div>
+            <div style={{ fontSize: 12, color: '#e2d9f3', lineHeight: 1.7, marginBottom: 8 }}>
+              {divergenciasStack.map(d => (
+                <div key={d.campo}>• {d.label}: <strong>{d.atual}</strong> (padrão Uid: {d.padrao})</div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: '#a78bca' }}>
+              Ao salvar, será criada uma notificação para o responsável documentar essa decisão em ADR antes de acionar Forge/Loom.
+            </div>
+          </div>
+        )}
 
         <Section num="01" title="Identificação">
           <Field label="Entrevista" required>

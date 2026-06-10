@@ -1,10 +1,12 @@
 import calendar
 from datetime import date
 
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
-from .models import OS, FaseOS
+from .models import OS, FaseOS, ArquiteturaTecnica
 
 
 def _add_months(dt, months):
@@ -69,4 +71,80 @@ def os_gera_receitas(sender, instance, **kwargs):
                 vencimento=venc,
                 referencia_mes=venc,
                 status='PENDENTE',
+            )
+
+
+# Campos de stack que possuem um valor padrão Uid definido no model.
+# Se algum vier diferente do default, é uma decisão de stack fora do
+# padrão e precisa de ADR — vira notificação para o responsável decidir.
+CAMPOS_STACK = {
+    'linguagem':     'Linguagem (backend)',
+    'framework':     'Framework (backend)',
+    'banco':         'Banco de dados',
+    'autenticacao':  'Autenticação',
+    'padrao_api':    'Padrão de API',
+    'frontend_fw':   'Framework (frontend)',
+    'build_tool':    'Build tool',
+    'estilizacao':   'Estilização',
+    'estado_global': 'Estado global',
+    'server_state':  'Server state',
+}
+
+
+@receiver(post_save, sender=ArquiteturaTecnica)
+def arquitetura_verifica_stack_padrao(sender, instance, **kwargs):
+    from notificacoes.models import Notificacao, PrioridadeNotificacao, TipoNotificacao
+
+    divergencias = []
+    for campo, label in CAMPOS_STACK.items():
+        valor_atual = getattr(instance, campo)
+        valor_padrao = ArquiteturaTecnica._meta.get_field(campo).default
+        if valor_atual != valor_padrao:
+            divergencias.append(f'{label}: "{valor_atual}" (padrão Uid: "{valor_padrao}")')
+
+    referencia = f'arquitetura_tecnica:{instance.id}'
+
+    with transaction.atomic():
+        existente = (
+            Notificacao.objects
+            .filter(referencia=referencia, tipo=TipoNotificacao.STACK_FORA_PADRAO)
+            .select_for_update()
+            .first()
+        )
+
+        if not divergencias:
+            if existente and not existente.resolvida:
+                existente.resolvida = True
+                existente.resolvida_em = timezone.now()
+                existente.save()
+            return
+
+        responsavel = instance.entrevista.prospecto.responsavel
+        descricao = (
+            f'Projeto "{instance.projeto}" (Entrevista: {instance.entrevista.sistema}) '
+            'está com stack divergente do padrão Uid:\n'
+            + '\n'.join(f'- {d}' for d in divergencias)
+            + '\n\nDocumentar a decisão em ADR antes de acionar Forge/Loom.'
+        )
+        dados = dict(
+            titulo=f'Stack fora do padrão — {instance.projeto}',
+            descricao=descricao,
+            link='/sistema/office/novo-projeto/arquitetura-tecnica',
+            prioridade=PrioridadeNotificacao.ALTA,
+            perfil_destino='ADMIN',
+            atribuido_a=responsavel,
+            resolvida=False,
+            resolvida_por=None,
+            resolvida_em=None,
+        )
+
+        if existente:
+            for campo, valor in dados.items():
+                setattr(existente, campo, valor)
+            existente.save()
+        else:
+            Notificacao.objects.create(
+                tipo=TipoNotificacao.STACK_FORA_PADRAO,
+                referencia=referencia,
+                **dados,
             )

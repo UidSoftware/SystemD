@@ -201,7 +201,7 @@ if unidade_id:
 
 ```bash
 # Rebuild backend (mudanças Python)
-cd /root/SytemD && docker compose -f docker-compose.prod.yml build backend
+cd /root/SystemD && docker compose -f docker-compose.prod.yml build backend
 docker compose -f docker-compose.prod.yml up -d backend
 docker exec sytemd-backend-1 python manage.py makemigrations ordens
 docker exec sytemd-backend-1 python manage.py migrate

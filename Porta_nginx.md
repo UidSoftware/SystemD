@@ -38,7 +38,7 @@ fluir-backend       uid-backend         cliente3-backend
 |---------|-----------------|---------------|
 | nginx-proxy | `/var/www/nginx-proxy/` | 80 / 443 (host) |
 | Studio Fluir | `/var/www/studio-fluir/` | 8001 |
-| Uid Sistema | `/root/SytemD/` | 8002 |
+| Uid Sistema | `/root/SystemD/` | 8002 |
 | Próximo cliente | novo diretório | 8003+ |
 
 ---

@@ -44,7 +44,13 @@ CNPJ: 60.939.393/0001-25 | Micro Empresa | Simples Nacional
 Sede: Uberlândia/MG | Operação: 100% digital/remota
 Contato: (34) 99134-9194 | uidsoftwaretecnologia@gmail.com | www.uidsoftware.com.br
 
-> ⚠️ O nome correto é **SystemD**. Containers e diretório usam `sytemd` por erro histórico — **não alterar**, pois quebra toda a infra.
+> ⚠️ O nome correto do projeto/repositório é **SystemD** (diretório na VPS: `/root/SystemD`,
+> repo: `UidSoftware/SystemD`). Os nomes internos do Docker (containers `sytemd-db-1`,
+> `sytemd-backend-1`, `sytemd-nginx-1`, volumes `sytemd_pgdata`, `sytemd_static_volume`,
+> `sytemd_frontend_build`, rede `sytemd_default`) continuam com o nome antigo `sytemd`
+> de propósito — fixados via `COMPOSE_PROJECT_NAME=sytemd` em `.env`/`.env.prod`.
+> **Não remover essa variável nem renomear esses recursos**: o volume `sytemd_pgdata`
+> contém o banco de produção (`uid_sistema`) e perderia os dados se o project name mudasse.
 
 ---
 
@@ -747,7 +753,7 @@ UPDATE vitrine_lead SET convertido = true WHERE id = X;
 | **Office Uid** | **8004** | office.uidsoftware.com.br |
 | Novos clientes | 8003+ | — |
 
-- Deploy: `/root/SytemD/`
+- Deploy: `/root/SystemD/`
 - SSL: certbot com renovação automática no nginx-proxy
 - PostgreSQL MCP: exposto em 127.0.0.1:5433 para o Planner (não público)
 
@@ -764,7 +770,7 @@ make shell            # shell Django
 make logs             # tail logs
 make createsuperuser  # cria admin
 
-# Produção — rodar na VPS em /root/SytemD/
+# Produção — rodar na VPS em /root/SystemD/
 git pull origin main                                              # ← SEMPRE PRIMEIRO
 docker compose -f docker-compose.prod.yml build backend
 docker compose -f docker-compose.prod.yml up -d backend
@@ -814,7 +820,7 @@ Cobertura atual — **72 testes, todos passando**:
 sudo chown -R $USER:$USER backend/<app>/migrations/
 
 # Na VPS (caso necessário)
-docker run --rm -v /root/SytemD/backend:/app python:3.12-slim chown -R 1000:1000 /app/<diretorio>/
+docker run --rm -v /root/SystemD/backend:/app python:3.12-slim chown -R 1000:1000 /app/<diretorio>/
 ```
 
 ---
@@ -974,7 +980,7 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 **Arquivos alterados:**
 - `/root/.claude/settings.json` — PATH completo adicionado na seção `env` (resolve docker/git não encontrados no sandbox do Boss CLI)
 - `/root/.claude/CLAUDE.md` — criado (global dos globais): regras que se aplicam a todos os projetos + conteúdo migrado do uid-office
-- `/root/SytemD/CLAUDE.md` — bloco `⛔ PIPELINE OBRIGATÓRIO` adicionado no topo + referência ao CLAUDE.md global
+- `/root/SystemD/CLAUDE.md` — bloco `⛔ PIPELINE OBRIGATÓRIO` adicionado no topo + referência ao CLAUDE.md global
 - `/root/.claude/agents/hotfix.md` — proibição de edição explícita + edge cases cobertos + allowlist Bash
 - `/root/.claude/agents/planner.md` — proibições explícitas adicionadas + tratamento de urgência + MCP status flow
 - `/root/.claude/agents/sentinel.md` — regra "0 falhas absoluto" reforçada + não edita código + barreira Pilot formalizada
@@ -1009,9 +1015,9 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 - Status: ✅ Aprovado por Sentinel
 - Observacao: comandos docker nao executaveis dentro do container Office (sem Docker-in-Docker). Executar manualmente no host da VPS:
   ```bash
-  docker compose -f /root/SytemD/docker-compose.prod.yml build --no-cache frontend-builder
+  docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
   docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
-  docker compose -f /root/SytemD/docker-compose.prod.yml restart nginx
+  docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
   ```
 
 **Sentinel:**
@@ -1045,7 +1051,7 @@ Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → E
 **Observação — Pilot bloqueado no sandbox:**
 O Pilot não consegue executar `git`/`docker` dentro do container Boss CLI (sem Docker-in-Docker e sem git instalado no container). Deploy foi executado manualmente no host. Padrão a seguir até o Pilot ser corrigido:
 ```bash
-cd /root/SytemD
+cd /root/SystemD
 git add <arquivos>
 git commit -m "mensagem"
 git push origin main

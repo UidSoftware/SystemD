@@ -381,6 +381,13 @@ export default function ProspectosPage() {
 
             {erro && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{erro}</p>}
 
+            {modal.lead && (
+              <div style={{ background: 'rgba(6,59,248,0.08)', border: '1px solid rgba(6,59,248,0.25)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b8fff', marginBottom: 6 }}>📨 Mensagem original do Lead</div>
+                <div style={{ fontSize: 13, color: '#e2d9f3', lineHeight: 1.5 }}>{modal.lead_mensagem}</div>
+              </div>
+            )}
+
             {campos.map(({ label, field, type }) => (
               <div key={field} style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>

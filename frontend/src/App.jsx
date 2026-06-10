@@ -20,7 +20,7 @@ import BoardPage from './pages/sistema/office/BoardPage'
 import AgentsPage from './pages/sistema/office/AgentsPage'
 import ActivityFeedPage from './pages/sistema/office/ActivityFeedPage'
 import LeadsNovoProjetoPage from './pages/sistema/office/LeadsNovoProjetoPage'
-import EntrevistaPage from './pages/sistema/office/EntrevistaPage'
+import EntrevistasPage from './pages/sistema/EntrevistasPage'
 import ArquiteturaTecnicaFormPage from './pages/sistema/office/ArquiteturaTecnicaFormPage'
 import MeusProjetosPage from './pages/sistema/portal/MeusProjetosPage'
 import SuportePage from './pages/sistema/portal/SuportePage'
@@ -59,6 +59,7 @@ export default function App() {
           {/* Admin + Operacional */}
           <Route path="/sistema/leads" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><LeadsPage /></PrivateRoute>} />
           <Route path="/sistema/prospectos" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><ProspectosPage /></PrivateRoute>} />
+          <Route path="/sistema/entrevistas" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><EntrevistasPage /></PrivateRoute>} />
           <Route path="/sistema/clientes" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><ClientesPage /></PrivateRoute>} />
           <Route path="/sistema/os" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><OSPage /></PrivateRoute>} />
           <Route path="/sistema/os/:id" element={<PrivateRoute perfisPermitidos={['ADMIN', 'OPERACIONAL']}><OSDetailPage /></PrivateRoute>} />
@@ -90,7 +91,6 @@ export default function App() {
           <Route path="/sistema/office/agents" element={<PrivateRoute perfisPermitidos={['ADMIN']}><AgentsPage /></PrivateRoute>} />
           <Route path="/sistema/office/activity" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ActivityFeedPage /></PrivateRoute>} />
           <Route path="/sistema/office/novo-projeto/leads" element={<PrivateRoute perfisPermitidos={['ADMIN']}><LeadsPage /></PrivateRoute>} />
-          <Route path="/sistema/office/novo-projeto/entrevista" element={<PrivateRoute perfisPermitidos={['ADMIN']}><EntrevistaPage /></PrivateRoute>} />
           <Route path="/sistema/office/novo-projeto/arquitetura-tecnica" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ArquiteturaTecnicaFormPage /></PrivateRoute>} />
 
           {/* Portal do Cliente */}

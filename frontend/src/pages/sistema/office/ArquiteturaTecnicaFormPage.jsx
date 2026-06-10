@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import api from '../../../services/api'
 
@@ -64,7 +64,10 @@ const inputStyle = {
 export default function ArquiteturaTecnicaFormPage() {
   const hoje = new Date().toISOString().split('T')[0]
 
+  const [entrevistas, setEntrevistas] = useState([])
+
   const [form, setForm] = useState({
+    entrevista: '',
     projeto: '', cliente: '', versao: '1.0.0', data_levantamento: hoje, responsavel: '',
     linguagem: 'Python', framework: 'Django REST Framework', banco: 'PostgreSQL',
     autenticacao: 'JWT', padrao_api: 'REST',
@@ -82,6 +85,22 @@ export default function ArquiteturaTecnicaFormPage() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  useEffect(() => {
+    api.get('/entrevistas/').then(r => setEntrevistas(r.data.results)).catch(() => {})
+  }, [])
+
+  const entrevistaSelecionada = entrevistas.find(e => String(e.id) === String(form.entrevista))
+
+  const selecionarEntrevista = (id) => {
+    const e = entrevistas.find(ent => String(ent.id) === String(id))
+    setForm(f => ({
+      ...f,
+      entrevista: id,
+      projeto: e?.sistema || f.projeto,
+      cliente: e?.prospecto_nome || f.cliente,
+    }))
+  }
+
   const chips = (field, options) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
       {options.map(op => (
@@ -92,6 +111,7 @@ export default function ArquiteturaTecnicaFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!form.entrevista) { setErro('Selecione a entrevista de origem.'); return }
     if (!form.projeto || !form.cliente) { setErro('Preencha o nome do projeto e o cliente.'); return }
     setSalvando(true); setErro('')
     try {
@@ -115,7 +135,7 @@ export default function ArquiteturaTecnicaFormPage() {
             "Planner, nova arquitetura salva para <strong>{form.projeto}</strong>. Inicie o pipeline."
           </p>
         </div>
-        <button onClick={() => { setSucesso(false); setForm(f => ({ ...f, projeto: '', cliente: '' })) }}
+        <button onClick={() => { setSucesso(false); setForm(f => ({ ...f, entrevista: '', projeto: '', cliente: '' })) }}
           style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
           ➕ Novo projeto
         </button>
@@ -135,6 +155,35 @@ export default function ArquiteturaTecnicaFormPage() {
         {erro && <div style={{ background: 'rgba(248,71,71,0.1)', border: '1px solid rgba(248,71,71,0.3)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, color: '#f87171', fontSize: 14 }}>{erro}</div>}
 
         <Section num="01" title="Identificação">
+          <Field label="Entrevista" required>
+            <select style={inputStyle} value={form.entrevista} onChange={e => selecionarEntrevista(e.target.value)}>
+              <option value="">Selecione...</option>
+              {entrevistas.map(en => <option key={en.id} value={en.id}>{en.sistema} — {en.prospecto_nome}</option>)}
+            </select>
+          </Field>
+
+          {entrevistaSelecionada && (
+            <div style={{ background: 'rgba(6,59,248,0.08)', border: '1px solid rgba(6,59,248,0.25)', borderRadius: 8, padding: '12px 14px', marginBottom: '1rem' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b8fff', marginBottom: 8 }}>🔗 Cadeia Lead → Prospecto → Entrevista</div>
+              {entrevistaSelecionada.lead_mensagem && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: '#6b6b8a' }}>📨 Mensagem do Lead ({entrevistaSelecionada.lead_nome})</div>
+                  <div style={{ fontSize: 13, color: '#e2d9f3', lineHeight: 1.5 }}>{entrevistaSelecionada.lead_mensagem}</div>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#6b6b8a' }}>Prospecto</div>
+                  <div style={{ fontSize: 13, color: '#e2d9f3' }}>{entrevistaSelecionada.prospecto_nome}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#6b6b8a' }}>Sistema (Entrevista)</div>
+                  <div style={{ fontSize: 13, color: '#e2d9f3' }}>{entrevistaSelecionada.sistema}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Nome do projeto" required><input style={inputStyle} value={form.projeto} onChange={e => set('projeto', e.target.value)} placeholder="ex: Sistema Salão Corte & Estilo" /></Field>
             <Field label="Cliente" required><input style={inputStyle} value={form.cliente} onChange={e => set('cliente', e.target.value)} placeholder="ex: Corte & Estilo" /></Field>

@@ -107,7 +107,10 @@ class OSCreateSerializer(serializers.ModelSerializer):
 
 
 class EntrevistaSerializer(serializers.ModelSerializer):
-    cliente_nome = serializers.CharField(source='cliente.nome_empresa', read_only=True)
+    prospecto_nome = serializers.CharField(source='prospecto.nome_empresa', read_only=True)
+    lead_id = serializers.IntegerField(source='prospecto.lead.id', read_only=True)
+    lead_nome = serializers.CharField(source='prospecto.lead.nome', read_only=True)
+    lead_mensagem = serializers.CharField(source='prospecto.lead.mensagem', read_only=True)
     segmento_display = serializers.CharField(source='get_segmento_display', read_only=True)
     orcamento_faixa_display = serializers.CharField(source='get_orcamento_faixa_display', read_only=True)
 
@@ -118,6 +121,10 @@ class EntrevistaSerializer(serializers.ModelSerializer):
 
 
 class ArquiteturaTecnicaSerializer(serializers.ModelSerializer):
+    entrevista_sistema = serializers.CharField(source='entrevista.sistema', read_only=True)
+    prospecto_nome = serializers.CharField(source='entrevista.prospecto.nome_empresa', read_only=True)
+    lead_mensagem = serializers.CharField(source='entrevista.prospecto.lead.mensagem', read_only=True)
+
     class Meta:
         model = ArquiteturaTecnica
         fields = '__all__'

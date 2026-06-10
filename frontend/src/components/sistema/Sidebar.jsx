@@ -54,7 +54,7 @@ const menuFinanceiro = [
 const menuNovoProjeto = [
   { label: 'Leads',               path: '/sistema/office/novo-projeto/leads',               emoji: '📝' },
   { label: 'Prospectos',          path: '/sistema/prospectos',                               emoji: '🔍' },
-  { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista',           emoji: '📋' },
+  { label: 'Entrevistas',         path: '/sistema/entrevistas',                              emoji: '📋' },
   { label: 'Arquitetura Tecnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica', emoji: '🏗️' },
 ]
 
@@ -80,10 +80,11 @@ const menuPorPerfil = {
     { label: 'Configuracoes', path: '/sistema/configuracoes', emoji: '⚙️' },
   ],
   OPERACIONAL: [
-    { label: 'Dashboard',  path: '/sistema/',           emoji: '🏠' },
-    { label: 'Leads',      path: '/sistema/leads',      emoji: '🎯' },
-    { label: 'Prospectos', path: '/sistema/prospectos', emoji: '🔍' },
-    { label: 'Clientes',   path: '/sistema/clientes',   emoji: '👥' },
+    { label: 'Dashboard',   path: '/sistema/',           emoji: '🏠' },
+    { label: 'Leads',       path: '/sistema/leads',      emoji: '🎯' },
+    { label: 'Prospectos',  path: '/sistema/prospectos', emoji: '🔍' },
+    { label: 'Entrevistas', path: '/sistema/entrevistas', emoji: '📋' },
+    { label: 'Clientes',    path: '/sistema/clientes',   emoji: '👥' },
     { label: 'OS',         path: '/sistema/os',         emoji: '📋' },
     { label: 'Entregas',   path: '/sistema/entregas',   emoji: '🚚' },
     { label: 'Email',      path: '/sistema/email',      emoji: '📧' },

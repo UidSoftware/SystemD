@@ -211,7 +211,7 @@ class EntrevistaViewSet(viewsets.ModelViewSet):
         return [IsAdminOrOperacional()]
 
     def get_queryset(self):
-        return Entrevista.objects.select_related('cliente').filter(ativo=True)
+        return Entrevista.objects.select_related('prospecto', 'prospecto__lead').filter(ativo=True)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -228,4 +228,6 @@ class ArquiteturaTecnicaViewSet(viewsets.ModelViewSet):
         return [IsAdminOrOperacional()]
 
     def get_queryset(self):
-        return ArquiteturaTecnica.objects.all()
+        return ArquiteturaTecnica.objects.select_related(
+            'entrevista', 'entrevista__prospecto', 'entrevista__prospecto__lead',
+        ).all()

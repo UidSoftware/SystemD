@@ -162,7 +162,7 @@ class OrcamentoFaixa(models.TextChoices):
 
 
 class Entrevista(models.Model):
-    cliente          = models.ForeignKey('clientes.Cliente', on_delete=PROTECT, related_name='entrevistas')
+    prospecto        = models.ForeignKey('prospectos.Prospecto', on_delete=PROTECT, related_name='entrevistas')
     sistema          = models.CharField(max_length=100)
     descricao        = models.TextField()
     cores_empresa    = models.CharField(max_length=100)
@@ -185,10 +185,12 @@ class Entrevista(models.Model):
         ordering = ['-criado_em']
 
     def __str__(self):
-        return f'{self.sistema} — {self.cliente}'
+        return f'{self.sistema} — {self.prospecto.nome_empresa}'
 
 
 class ArquiteturaTecnica(models.Model):
+    entrevista         = models.ForeignKey('ordens.Entrevista', on_delete=PROTECT, related_name='arquiteturas')
+
     # Identificação
     projeto            = models.CharField(max_length=200)
     cliente            = models.CharField(max_length=200)

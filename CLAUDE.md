@@ -1056,5 +1056,33 @@ docker compose -f docker-compose.prod.yml restart nginx
 
 ---
 
+### [2026-06-09] — Hotfix: cadastro de Entrevista travava com erro genérico ("Erro ao salvar. Tente novamente.")
+
+**Tarefas executadas:**
+- fix(entrevista): remove `validate_descricao` (mínimo de 500 caracteres) do `EntrevistaSerializer`
+- fix(entrevista): `EntrevistaPage.jsx` agora exibe a mensagem real de erro de validação do DRF (campo a campo) em vez do genérico "Erro ao salvar. Tente novamente."
+
+**Causa raiz:**
+- Backend: `EntrevistaSerializer.validate_descricao` exigia mínimo de 500 caracteres na descrição — mas o campo é um resumo livre do projeto, sem regra de tamanho mínimo ou máximo
+- Frontend: o `catch` do submit só lia `err.response?.data?.detail`, mas o DRF retorna erros de campo no formato `{"descricao": ["..."]}` (HTTP 400) — a mensagem real nunca chegava a aparecer, só o fallback genérico
+- Sincronização git: 2 deploys anteriores (`8519537`, `9f87aaf`) falharam silenciosamente no CI/CD com "local changes would be overwritten by merge" — working tree da VPS ficou com mudanças não commitadas (mesmos arquivos), bloqueando o `git pull`. Resolvido com `stash` → `pull` → `stash pop` antes deste commit.
+
+**Arquivos alterados:**
+- `backend/ordens/serializers.py` — remove `validate_descricao`
+- `frontend/src/pages/sistema/office/EntrevistaPage.jsx` — exibe erros de validação por campo retornados pelo DRF
+
+**Commits:**
+- `9673d3f` — fix(entrevista): remove validação de tamanho mínimo na descrição e expõe erros de validação no frontend
+
+**Deploy:**
+- Data: 2026-06-09 (horário BRT)
+- CI/CD GitHub Actions ("Deploy SystemD", run 27249802958) — sucesso
+- Status: ✅ Em produção
+
+**Validação:**
+- `EntrevistaSerializer` testado via `manage.py shell` no container `backend` em produção: payload com descrição curta (< 500 caracteres) → `VALID: True, ERRORS: {}`
+
+---
+
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 2026-06-02 (emoji 💾 botão Salvar DespesasPage — em produção)*
+*Última atualização: 2026-06-09 (hotfix Entrevista — descrição sem mínimo/máximo + erros DRF expostos no frontend — em produção)*

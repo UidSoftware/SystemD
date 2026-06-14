@@ -283,6 +283,12 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
             saldo_anterior = ultimo.saldo_atual if ultimo else conta.saldo_inicial
             saldo_atual    = saldo_anterior + despesa.valor_liquido
 
+            lancamento_original = (
+                LivroCaixa.objects.select_for_update()
+                .filter(origem='DESPESA', origem_id=despesa.id, estornado=False)
+                .first()
+            )
+
             lancamento = LivroCaixa.objects.create(
                 conta=conta,
                 tipo='ENTRADA',
@@ -294,7 +300,13 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
                 saldo_anterior=saldo_anterior,
                 saldo_atual=saldo_atual,
                 criado_por=request.user,
+                estorno_de=lancamento_original,
+                estornado=True,
             )
+
+            if lancamento_original:
+                lancamento_original.estornado = True
+                lancamento_original.save(update_fields=['estornado'])
 
             despesa.estornado      = True
             despesa.data_estorno   = data_estorno

@@ -253,6 +253,15 @@ class DespesaEstornarTest(APITestCase):
         lc = LivroCaixa.objects.filter(origem='ESTORNO').first()
         self.assertEqual(lc.saldo_atual, Decimal('500.00'))
 
+    def test_estorno_marca_lancamento_original_e_o_proprio_como_estornados(self):
+        self.client.force_authenticate(self.admin)
+        self.client.post(self._url(), self._payload(), format='json')
+        original = LivroCaixa.objects.get(origem='DESPESA', origem_id=self.despesa.id)
+        estorno = LivroCaixa.objects.get(origem='ESTORNO', origem_id=self.despesa.id)
+        self.assertTrue(original.estornado)
+        self.assertTrue(estorno.estornado)
+        self.assertEqual(estorno.estorno_de_id, original.id)
+
     def test_financeiro_nao_pode_estornar(self):
         self.client.force_authenticate(self.fin)
         res = self.client.post(self._url(), self._payload(), format='json')
@@ -318,6 +327,38 @@ class DreEstornoTest(APITestCase):
         junho = res.data['meses'][5]
         self.assertEqual(Decimal(str(junho['despesas_fixas'])), Decimal('97.90'))
         self.assertEqual(Decimal(str(junho['total_despesas'])), Decimal('97.90'))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Dashboard — estorno não pode inflar receita/despesa do mês (lançamento "lavagem")
+# ──────────────────────────────────────────────────────────────────────────────
+
+class DashboardEstornoTest(APITestCase):
+
+    def setUp(self):
+        self.admin = make_user('admin@uid.com', 'ADMIN')
+        self.conta = make_conta(saldo_inicial=Decimal('500.00'))
+        self.url = reverse('dashboard')
+
+    def test_despesa_paga_e_estornada_no_mes_nao_infla_dashboard(self):
+        self.client.force_authenticate(self.admin)
+        hoje = date.today()
+        despesa = make_despesa(self.conta, status='PAGO', valor=Decimal('97.90'))
+        despesa.pagamento = hoje
+        despesa.save(update_fields=['pagamento'])  # dispara signal: cria LivroCaixa SAIDA origem=DESPESA
+        url_estornar = reverse('despesas-estornar-despesa', args=[despesa.id])
+        res = self.client.post(
+            url_estornar,
+            {'data_estorno': str(hoje), 'motivo': 'Pagamento Duplicado'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        res = self.client.get(self.url, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(Decimal(str(res.data['despesa_mes'])), Decimal('0'))
+        self.assertEqual(Decimal(str(res.data['receita_mes'])), Decimal('0'))
+        self.assertEqual(Decimal(str(res.data['resultado_mes'])), Decimal('0'))
 
 
 # ──────────────────────────────────────────────────────────────────────────────

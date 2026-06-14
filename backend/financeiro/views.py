@@ -172,7 +172,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
     serializer_class = DespesaSerializer
     permission_classes = [IsAdminOrFinanceiro]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['tipo', 'status', 'conta']
+    filterset_fields = ['tipo', 'status', 'conta', 'estornado']
     search_fields = ['descricao', 'fornecedor']
     ordering_fields = ['vencimento', 'valor_liquido', 'status']
 
@@ -465,7 +465,7 @@ def dre(request):
             recebimento__year=ano, recebimento__month=mes, status='RECEBIDO', ativo=True,
         )
         desp_qs = Despesa.objects.filter(
-            pagamento__year=ano, pagamento__month=mes, status='PAGO', ativo=True,
+            pagamento__year=ano, pagamento__month=mes, status='PAGO', ativo=True, estornado=False,
         )
 
         receita_bruta  = rec_qs.aggregate(v=Sum('valor_bruto'))['v'] or Decimal('0')

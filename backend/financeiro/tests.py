@@ -289,6 +289,38 @@ class DespesaEstornarTest(APITestCase):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# DRE — não pode contar despesas estornadas
+# ──────────────────────────────────────────────────────────────────────────────
+
+class DreEstornoTest(APITestCase):
+
+    def setUp(self):
+        self.admin = make_user('admin@uid.com', 'ADMIN')
+        self.conta = make_conta()
+        self.url = reverse('dre')
+
+    def test_despesa_estornada_nao_entra_no_total_despesas(self):
+        self.client.force_authenticate(self.admin)
+        Despesa.objects.create(
+            descricao='VPS', tipo='FIXA', status='PAGO',
+            valor_bruto=Decimal('97.90'), desconto=Decimal('0.00'), valor_liquido=Decimal('97.90'),
+            conta=self.conta, vencimento=date(2026, 7, 4), pagamento=date(2026, 6, 1),
+            estornado=True, criado_por=self.admin,
+        )
+        Despesa.objects.create(
+            descricao='VPS', tipo='FIXA', status='PAGO',
+            valor_bruto=Decimal('97.90'), desconto=Decimal('0.00'), valor_liquido=Decimal('97.90'),
+            conta=self.conta, vencimento=date(2026, 6, 4), pagamento=date(2026, 6, 1),
+            estornado=False, criado_por=self.admin,
+        )
+        res = self.client.get(self.url, {'ano': 2026}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        junho = res.data['meses'][5]
+        self.assertEqual(Decimal(str(junho['despesas_fixas'])), Decimal('97.90'))
+        self.assertEqual(Decimal(str(junho['total_despesas'])), Decimal('97.90'))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # LivroCaixa — imutabilidade
 # ──────────────────────────────────────────────────────────────────────────────
 

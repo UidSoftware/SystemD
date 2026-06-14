@@ -7,6 +7,8 @@ class TipoNotificacao(models.TextChoices):
     STACK_FORA_PADRAO = 'STACK_FORA_PADRAO', 'Stack fora do padrão'
     IMPEDIMENTO_ESTEIRA = 'IMPEDIMENTO_ESTEIRA', 'Impedimento na esteira'
     LEAD_NAO_QUALIFICADO = 'LEAD_NAO_QUALIFICADO', 'Lead não qualificado'
+    PRONTO_PARA_PLANNER = 'PRONTO_PARA_PLANNER', 'Pronto para o Planner'
+    LIMITE_CLAUDE_ATIVO = 'LIMITE_CLAUDE_ATIVO', 'Limite de uso do Claude ativo'
 
 
 class PrioridadeNotificacao(models.TextChoices):

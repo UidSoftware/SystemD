@@ -148,3 +148,48 @@ def arquitetura_verifica_stack_padrao(sender, instance, **kwargs):
                 referencia=referencia,
                 **dados,
             )
+
+
+@receiver(post_save, sender=ArquiteturaTecnica)
+def arquitetura_dispara_planner(sender, instance, **kwargs):
+    from notificacoes.models import Notificacao, PrioridadeNotificacao, TipoNotificacao
+
+    referencia_stack = f'arquitetura_tecnica:{instance.id}'
+    referencia_planner = f'arquitetura_tecnica:{instance.id}:planner'
+
+    with transaction.atomic():
+        divergencia_pendente = (
+            Notificacao.objects
+            .filter(referencia=referencia_stack, tipo=TipoNotificacao.STACK_FORA_PADRAO, resolvida=False)
+            .select_for_update()
+            .exists()
+        )
+        if divergencia_pendente:
+            return
+
+        ja_disparado = (
+            Notificacao.objects
+            .filter(referencia=referencia_planner, tipo=TipoNotificacao.PRONTO_PARA_PLANNER)
+            .select_for_update()
+            .exists()
+        )
+        if ja_disparado:
+            return
+
+        descricao = (
+            f'Arquitetura Técnica #{instance.id} do projeto "{instance.projeto}" '
+            f'(Entrevista: {instance.entrevista.sistema}) está pronta, sem '
+            'divergência pendente do padrão Uid. Pode acionar o Planner para '
+            'iniciar o Fluxo 1.'
+        )
+        Notificacao.objects.create(
+            tipo=TipoNotificacao.PRONTO_PARA_PLANNER,
+            referencia=referencia_planner,
+            titulo=f'Pronto para Planner — {instance.projeto}',
+            descricao=descricao,
+            link='/sistema/office/novo-projeto/arquitetura-tecnica',
+            prioridade=PrioridadeNotificacao.ALTA,
+            perfil_destino='ADMIN',
+            atribuido_a=instance.entrevista.prospecto.responsavel,
+            resolvida=False,
+        )

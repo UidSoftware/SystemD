@@ -1090,5 +1090,67 @@ docker compose -f docker-compose.prod.yml restart nginx
 
 ---
 
+## Automação — Disparo do Planner (2026-06-15)
+
+### Como o SystemD se conecta à fábrica
+
+Quando uma **Arquitetura Técnica** é salva sem divergência de stack pendente,
+o signal `arquitetura_dispara_planner` cria automaticamente uma notificação
+`PRONTO_PARA_PLANNER` no banco (`notificacoes_notificacao`).
+
+Essa notificação é o **gatilho** que conecta o SystemD (CRM/pipeline) ao
+Claw Empire (fábrica de software):
+
+```
+Arquitetura Técnica salva (sem STACK_FORA_PADRAO pendente)
+         ↓
+signal arquitetura_dispara_planner
+         ↓
+notificacoes_notificacao: tipo=PRONTO_PARA_PLANNER, resolvida=false
+         ↓
+[CRON 4h no host VPS] /opt/uid-automation/disparar_planner.py
+         ↓
+management command: python manage.py disparar_planner --list
+         ↓
+Claw Empire API: POST /api/tasks → task para o Planner
+         ↓
+Planner lê todo o contexto via MCP PostgreSQL e inicia Fluxo 1
+```
+
+### Management command: disparar_planner
+
+Localizado em `ordens/management/commands/disparar_planner.py`.
+
+```bash
+# Listar arquiteturas prontas para o Planner (JSON)
+docker exec sytemd-backend-1 python manage.py disparar_planner --list
+
+# Marcar notificação como resolvida após task criada no Empire
+docker exec sytemd-backend-1 python manage.py disparar_planner --mark-done <notificacao_id>
+```
+
+### Retomada automática por limite de tokens
+
+O host da VPS tem um watchdog (`retomar_agente.py`) que roda a cada 30 minutos.
+Se uma task do Claw Empire ficar `in_progress` sem atividade por 25 minutos
+(indicativo de token limit), uma nova task de retomada é criada automaticamente
+para o mesmo agente, com instrução para avaliar o estado atual e continuar
+de onde parou. Máximo de 5 retomadas por cadeia.
+
+### Regra do timing (4 horas)
+
+O cron dispara o Planner a cada 4 horas — alinhado à renovação do token do Claude Code.
+Isso garante que o Planner sempre inicia com 0% de uso, maximizando o budget disponível
+para um Fluxo 1 completo.
+
+### Histórico de projetos disparados automaticamente
+
+| Data | Projeto | ArquiteturaTecnica id | Task Empire |
+|---|---|---|---|
+| 2026-06-15 | ContratId | 1 | `2eb2803e` |
+
+
+---
+
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
 *Última atualização: 2026-06-09 (hotfix Entrevista — descrição sem mínimo/máximo + erros DRF expostos no frontend — em produção)*

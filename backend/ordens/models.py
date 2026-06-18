@@ -38,6 +38,11 @@ class OS(models.Model):
     data_inicio   = models.DateField(null=True, blank=True)
     data_entrega  = models.DateField(null=True, blank=True)
     observacoes   = models.TextField(blank=True)
+    caminho_servidor = models.CharField(
+        max_length=500, blank=True,
+        verbose_name="Caminho no servidor",
+        help_text="Caminho do projeto no servidor VPS. Ex: /root/SystemD",
+    )
     ativo         = models.BooleanField(default=True)
     criado_em     = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -259,6 +264,11 @@ class Manutencao(models.Model):
         blank=True,
         verbose_name='Caminho no servidor',
         help_text='Preenchido automaticamente com base no sistema selecionado.',
+    )
+    disparada_em = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Disparada em',
+        help_text='Preenchido automaticamente pelo disparar_hotfix.',
     )
     feito        = models.BooleanField(default=False, verbose_name='Concluído')
     ativo        = models.BooleanField(default=True)

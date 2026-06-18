@@ -139,10 +139,10 @@ class ManutencaoSerializer(serializers.ModelSerializer):
         model = Manutencao
         fields = [
             'id', 'os', 'os_titulo', 'os_cliente',
-            'descricao', 'caminho', 'feito',
+            'descricao', 'caminho', 'feito', 'disparada_em',
             'ativo', 'criado_em', 'atualizado_em',
         ]
-        read_only_fields = ['criado_em', 'atualizado_em']
+        read_only_fields = ['criado_em', 'atualizado_em', 'disparada_em']
 
 
 class OSParaManutencaoSerializer(serializers.ModelSerializer):
@@ -151,4 +151,4 @@ class OSParaManutencaoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OS
-        fields = ['id', 'titulo', 'cliente_nome', 'status']
+        fields = ['id', 'titulo', 'cliente_nome', 'status', 'caminho_servidor']

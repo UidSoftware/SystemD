@@ -46,6 +46,12 @@ function inferirCaminho(os) {
   return ''
 }
 
+function statusBadge(item) {
+  if (item.feito)        return { label: 'Concluído',  bg: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'rgba(16,185,129,0.25)' }
+  if (item.disparada_em) return { label: 'Despachada', bg: 'rgba(99,102,241,0.15)', color: '#818cf8', border: 'rgba(99,102,241,0.25)' }
+  return                        { label: 'Pendente',   bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' }
+}
+
 // ──────────────────────────── componente ─────────────────────────
 export default function ManutencaoPage() {
   const [itens, setItens] = useState([])
@@ -54,7 +60,7 @@ export default function ManutencaoPage() {
   const [erro, setErro] = useState('')
 
   // Filtros
-  const [filtroFeito, setFiltroFeito] = useState('') // '' | 'true' | 'false'
+  const [filtroStatus, setFiltroStatus] = useState('') // '' | 'pendente' | 'despachada' | 'concluido'
 
   // Modal
   const [modal, setModal] = useState(false)
@@ -68,10 +74,8 @@ export default function ManutencaoPage() {
     setCarregando(true)
     setErro('')
     try {
-      const params = {}
-      if (filtroFeito !== '') params.feito = filtroFeito
       const [resItens, resSistemas] = await Promise.all([
-        osApi.listarManutencoes(params),
+        osApi.listarManutencoes({}),
         osApi.listarSistemasManutencao(),
       ])
       setItens(resItens.data.results || resItens.data)
@@ -81,7 +85,7 @@ export default function ManutencaoPage() {
     } finally {
       setCarregando(false)
     }
-  }, [filtroFeito])
+  }, [])
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -109,7 +113,7 @@ export default function ManutencaoPage() {
 
   const handleOsChange = (osId) => {
     const osSelecionada = sistemas.find(s => String(s.id) === String(osId))
-    const caminho = inferirCaminho(osSelecionada)
+    const caminho = osSelecionada?.caminho_servidor || inferirCaminho(osSelecionada)
     setForm(f => ({ ...f, os: osId, caminho }))
   }
 
@@ -166,6 +170,13 @@ export default function ManutencaoPage() {
   }
 
   // ──────── render ────────
+  const itensFiltrados = itens.filter(item => {
+    if (filtroStatus === 'pendente')   return !item.feito && !item.disparada_em
+    if (filtroStatus === 'despachada') return !item.feito && !!item.disparada_em
+    if (filtroStatus === 'concluido')  return item.feito
+    return true
+  })
+
   return (
     <SistemaLayout titulo="Manutenções">
       {/* Header */}
@@ -186,18 +197,19 @@ export default function ManutencaoPage() {
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
-          { label: 'Todos', value: '' },
-          { label: 'Pendentes', value: 'false' },
-          { label: 'Concluídos', value: 'true' },
+          { label: 'Todos',       value: '' },
+          { label: 'Pendentes',   value: 'pendente' },
+          { label: 'Despachadas', value: 'despachada' },
+          { label: 'Concluídos',  value: 'concluido' },
         ].map(op => (
           <button
             key={op.value}
-            onClick={() => setFiltroFeito(op.value)}
+            onClick={() => setFiltroStatus(op.value)}
             style={{
               padding: '6px 14px', fontSize: 12, borderRadius: 20,
-              border: filtroFeito === op.value ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
-              background: filtroFeito === op.value ? 'rgba(6,59,248,0.15)' : 'transparent',
-              color: filtroFeito === op.value ? '#6b8fff' : '#a78bca',
+              border: filtroStatus === op.value ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
+              background: filtroStatus === op.value ? 'rgba(6,59,248,0.15)' : 'transparent',
+              color: filtroStatus === op.value ? '#6b8fff' : '#a78bca',
               cursor: 'pointer',
             }}
           >
@@ -217,10 +229,10 @@ export default function ManutencaoPage() {
       {/* Mobile — cards */}
       {!carregando && !erro && (
         <div className="md:hidden flex flex-col" style={{ gap: 12 }}>
-          {itens.length === 0 && (
+          {itensFiltrados.length === 0 && (
             <p style={{ color: '#a78bca', textAlign: 'center', padding: 40 }}>Nenhuma manutenção encontrada.</p>
           )}
-          {itens.map(item => (
+          {itensFiltrados.map(item => (
             <div
               key={item.id}
               style={{
@@ -240,12 +252,12 @@ export default function ManutencaoPage() {
                 </div>
                 <span style={{
                   padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                  background: item.feito ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                  color: item.feito ? '#10b981' : '#f59e0b',
-                  border: `1px solid ${item.feito ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                  background: statusBadge(item).bg,
+                  color: statusBadge(item).color,
+                  border: `1px solid ${statusBadge(item).border}`,
                   flexShrink: 0,
                 }}>
-                  {item.feito ? 'Concluído' : 'Pendente'}
+                  {statusBadge(item).label}
                 </span>
               </div>
               <p style={{ color: '#a78bca', fontSize: 13, margin: '0 0 6px' }}>{item.descricao}</p>
@@ -301,7 +313,7 @@ export default function ManutencaoPage() {
                 </tr>
               </thead>
               <tbody>
-                {itens.length === 0 && (
+                {itensFiltrados.length === 0 && (
                   <tr>
                     <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#6b6b8a', fontSize: 13 }}>
                       Nenhuma manutenção encontrada.
@@ -330,11 +342,11 @@ export default function ManutencaoPage() {
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{
                         padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                        background: item.feito ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                        color: item.feito ? '#10b981' : '#f59e0b',
-                        border: `1px solid ${item.feito ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                        background: statusBadge(item).bg,
+                        color: statusBadge(item).color,
+                        border: `1px solid ${statusBadge(item).border}`,
                       }}>
-                        {item.feito ? 'Concluído' : 'Pendente'}
+                        {statusBadge(item).label}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px' }}>

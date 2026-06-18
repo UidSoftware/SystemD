@@ -37,6 +37,8 @@ import AportesPage from './pages/sistema/financeiro/AportesPage'
 import VisaoGeralPage from './pages/sistema/financeiro/VisaoGeralPage'
 import DREPage from './pages/sistema/financeiro/DREPage'
 import PorClientePage from './pages/sistema/financeiro/PorClientePage'
+import ReceitasRecebidasPage from './pages/sistema/financeiro/ReceitasRecebidasPage'
+import DespesasPagasPage from './pages/sistema/financeiro/DespesasPagasPage'
 // Relatorios
 import ReceitasRelatorioPage from './pages/sistema/relatorios/ReceitasRelatorioPage'
 import DespesasRelatorioPage from './pages/sistema/relatorios/DespesasRelatorioPage'
@@ -77,7 +79,9 @@ export default function App() {
           {/* Financeiro */}
           <Route path="/sistema/financeiro/visao-geral" element={<PrivateRoute perfisPermitidos={FIN}><VisaoGeralPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/receitas" element={<PrivateRoute perfisPermitidos={FIN}><ReceitasPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/receitas-recebidas" element={<PrivateRoute perfisPermitidos={FIN}><ReceitasRecebidasPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/despesas" element={<PrivateRoute perfisPermitidos={FIN}><DespesasPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/despesas-pagas" element={<PrivateRoute perfisPermitidos={FIN}><DespesasPagasPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/fornecedores" element={<PrivateRoute perfisPermitidos={FIN}><FornecedoresPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/aportes" element={<PrivateRoute perfisPermitidos={['ADMIN']}><AportesPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/contas" element={<PrivateRoute perfisPermitidos={FIN}><ContasPage /></PrivateRoute>} />

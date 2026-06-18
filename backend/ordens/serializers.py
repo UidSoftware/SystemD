@@ -151,4 +151,4 @@ class OSParaManutencaoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OS
-        fields = ['id', 'titulo', 'cliente_nome', 'status', 'caminho_servidor']
+        fields = ['id', 'titulo', 'cliente_nome', 'status', 'caminho_servidor', 'url']

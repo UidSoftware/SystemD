@@ -43,6 +43,11 @@ class OS(models.Model):
         verbose_name="Caminho no servidor",
         help_text="Caminho do projeto no servidor VPS. Ex: /root/SystemD",
     )
+    url = models.URLField(
+        blank=True,
+        verbose_name="URL do sistema",
+        help_text="Ex: https://uidsoftware.com.br",
+    )
     ativo         = models.BooleanField(default=True)
     criado_em     = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

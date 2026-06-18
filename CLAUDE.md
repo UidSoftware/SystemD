@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema Interno Uid Software (SystemD)
 
-> Ler o CLAUDE.md global (`/opt/uid-office/CLAUDE.md`) — contém as regras gerais da Uid que se aplicam a todos os projetos.
+> Ler o CLAUDE.md global (`/opt/claw-empire/CLAUDE.md`) — contém as regras gerais da Uid que se aplicam a todos os projetos.
 
 ---
 
@@ -890,9 +890,11 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ---
 
-## Agents da Fábrica Uid (UidOffice — VPS)
+## Agents da Fábrica Uid (Claw Empire — VPS)
 
-Os agents estão em `/opt/uid-office/.claude/agents/` na VPS e em `/home/uidsoftware/CODE/UidOffice/.claude/agents/` local.
+> **UidOffice foi substituído pelo Claw Empire** (`empire.uidsoftware.com.br`). O backup do UidOffice está em `/opt/backups/uid-office-20260605/`.
+
+Os agents estão em `/opt/claw-empire/.claude/agents/` na VPS.
 
 | Agent | Papel | Quando usar |
 |-------|-------|-------------|
@@ -909,12 +911,12 @@ Os agents estão em `/opt/uid-office/.claude/agents/` na VPS e em `/home/uidsoft
 
 ```bash
 # Carregar credenciais do Office e rodar agent
-cd /opt/uid-office && export $(cat .env | xargs) && cd /diretorio-projeto
+cd /opt/claw-empire && export $(cat .env | xargs) && cd /diretorio-projeto
 claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
 
-# O Office usa CLAUDE_CODE_OAUTH_TOKEN (não claude login)
+# O Claw Empire usa CLAUDE_CODE_OAUTH_TOKEN (não claude login)
 # claude login NÃO funciona em servidor headless (sem browser)
-# Sempre exportar as vars do /opt/uid-office/.env antes de rodar
+# Sempre exportar as vars do /opt/claw-empire/.env antes de rodar
 ```
 
 ### Permissões da VPS (`/root/.claude/settings.json`)
@@ -932,15 +934,15 @@ claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
 }
 ```
 
-### Como os bonequinhos aparecem no Office
+### Como os bonequinhos aparecem no Claw Empire
 
-O Office (pixel art) mostra personagens trabalhando via hooks `SubagentStart`/`SubagentStop`.
+O Claw Empire (pixel art) mostra personagens trabalhando via hooks `SubagentStart`/`SubagentStop`.
 Os bonequinhos aparecem quando o Agent tool é chamado — cada subagente spawnado dispara `SubagentStart` e aciona a animação do personagem correspondente.
 
 O pipeline usa subagentes sequenciais por papel: **Hotfix → Planner → Ursula/Bob → Sentinel → Pilot**.
-Cada agent tem seu CLAUDE.md em `/opt/uid-office/.claude/agents/` que define o papel e instrui a chamar o próximo via Agent tool.
+Cada agent tem seu CLAUDE.md em `/opt/claw-empire/.claude/agents/` que define o papel e instrui a chamar o próximo via Agent tool.
 
-**Regra absoluta do Hotfix** (`/opt/uid-office/.claude/agents/hotfix.md`):
+**Regra absoluta do Hotfix** (`/opt/claw-empire/.claude/agents/hotfix.md`):
 - Primeira linha: `EXPRESSAMENTE PROIBIDO QUEBRAR O FLUXO DE TRABALHO`
 - O Hotfix NÃO analisa, NÃO implementa, NÃO dá instruções de deploy
 - Única ação: invocar Planner via Agent tool com `subagent_type: "planner"`
@@ -949,17 +951,17 @@ Cada agent tem seu CLAUDE.md em `/opt/uid-office/.claude/agents/` que define o p
 
 O Boss CLI foi movido para dentro do painel direito do Office — **não é mais um overlay full-screen**.
 
-**Estrutura do RightSidebar** (`/opt/uid-office/frontend/src/components/layout/RightSidebar.tsx`):
+**Estrutura do RightSidebar** (histórico — UidOffice substituído pelo Claw Empire):
 - 3 abas: **Events** | **Conversation** | **⬡ Boss**
 - Clicar no sprite do boss → muda automaticamente para a aba Boss
 - Props: `isBossCliActive?: boolean` e `onBossCliClose?: () => void`
 
-**BossCliPanel** (`/opt/uid-office/frontend/src/components/layout/BossCliPanel.tsx`):
+**BossCliPanel** (histórico — agora integrado ao Claw Empire):
 - Fase form: select de projeto + textarea + botão Enviar (inline, sem modal)
 - Fase terminal: xterm.js embutido no sidebar — canvas do jogo permanece visível ao lado
 - WebSocket em `wss://{host}/boss` — stream do PTY em tempo real
 
-**BossCliModal** (`/opt/uid-office/frontend/src/components/overlay/BossCliModal.tsx`):
+**BossCliModal** (histórico — agora integrado ao Claw Empire):
 - Mantido no repo mas não mais usado em `page.tsx` — substituído pelo BossCliPanel
 
 ### Primeiro teste da pipeline (19/05/2026)

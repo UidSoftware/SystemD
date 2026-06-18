@@ -34,7 +34,6 @@ const BTN_GHOST = {
 const CAMINHOS_CONHECIDOS = {
   'systemd':      '/root/SystemD',
   'studio fluir': '/var/www/studio-fluir',
-  'uid office':   '/opt/uid-office',
 }
 
 function inferirCaminho(os) {

@@ -1153,4 +1153,41 @@ para um Fluxo 1 completo.
 ---
 
 *Uid Software e Tecnologia LTDA — Uberlândia/MG*
-*Última atualização: 2026-06-09 (hotfix Entrevista — descrição sem mínimo/máximo + erros DRF expostos no frontend — em produção)*
+
+---
+
+### [2026-06-18] — Cadastro de Manutenção (implementado — pendente commit + deploy)
+
+**Status:** Código implementado no worktree Empire — **não commitado, não deployado**
+
+**Contexto:** Hotfix disparado via Boss CLI para criar sistema de cadastro de manutenções.
+A esteira quebrou por bug na HotfixSKILL (Agent tool usado como fallback para chamar o
+Planner, que implementou sem commitar, sem chamar Sentinel nem Pilot). Bug corrigido nas
+skills em 2026-06-18. Ver Empire CLAUDE.md para diagnóstico completo.
+
+**O que foi implementado (worktree `9d265c44` — não commitado em main):**
+
+Backend (`backend/ordens/`):
+- Model `Manutencao` — FK para OS, campos `descricao`/`caminho`/`feito`/`ativo`, soft delete
+- `ManutencaoSerializer` com `os_titulo` e `os_cliente` read-only
+- `ManutencaoViewSet` — CRUD IsAdmin, filtro `?feito=`, soft delete no destroy
+- `SistemasParaManutencaoViewSet` — combobox de OSs ativas para o frontend
+- Migration `0006_manutencao.py` — **não aplicada em produção**
+- Endpoints: `GET/POST /api/manutencoes/`, `PATCH/DELETE /api/manutencoes/{id}/`, `GET /api/sistemas-para-manutencao/`
+
+Frontend (`frontend/src/`):
+- `pages/sistema/office/ManutencaoPage.jsx` — lista + filtros + modal criar/editar
+- Combobox de sistemas com auto-preenchimento de caminho (`CAMINHOS_CONHECIDOS`)
+- Rota `/sistema/office/manutencoes` (PrivateRoute ADMIN)
+- Item "Manutenções" no menu Office da Sidebar
+- 5 novos métodos em `services/osApi.js`
+
+**Próximo passo para completar:**
+1. Commit no worktree + Sentinel + Pilot via Empire, ou dispatch manual
+2. Aplicar migration: `docker exec sytemd-backend-1 python manage.py migrate`
+3. Build e deploy do frontend
+
+
+---
+
+*Última atualização: 2026-06-18 (Manutenção implementada no worktree — pendente commit e deploy)*

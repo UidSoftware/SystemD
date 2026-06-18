@@ -1,12 +1,18 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import OSViewSet, ContratoViewSet, ChamadoViewSet, MensagemChamadoViewSet, ChamadoGlobalViewSet, MensagemGlobalViewSet, EntrevistaViewSet, ArquiteturaTecnicaViewSet
+from .views import (
+    OSViewSet, ContratoViewSet, ChamadoViewSet, MensagemChamadoViewSet,
+    ChamadoGlobalViewSet, MensagemGlobalViewSet, EntrevistaViewSet,
+    ArquiteturaTecnicaViewSet, ManutencaoViewSet, SistemasParaManutencaoViewSet,
+)
 
 router = DefaultRouter()
 router.register('os', OSViewSet, basename='os')
 router.register('chamados', ChamadoGlobalViewSet, basename='chamado')
 router.register('entrevistas', EntrevistaViewSet, basename='entrevista')
 router.register('arquitetura-tecnica', ArquiteturaTecnicaViewSet, basename='arquitetura-tecnica')
+router.register('manutencoes', ManutencaoViewSet, basename='manutencao')
+router.register('sistemas-manutencao', SistemasParaManutencaoViewSet, basename='sistemas-manutencao')
 
 urlpatterns = router.urls + [
     # Contrato aninhado na OS

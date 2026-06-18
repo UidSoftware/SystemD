@@ -238,3 +238,37 @@ class ArquiteturaTecnica(models.Model):
 
     def __str__(self):
         return f'{self.projeto} v{self.versao}'
+
+
+class Manutencao(models.Model):
+    """Pedido de manutenção vinculado a um sistema (OS) existente.
+
+    O campo `sistema` aponta para uma OS.
+    O campo `caminho` é preenchido automaticamente com o caminho
+    do sistema no servidor, inferido do título/cliente da OS.
+    """
+    os           = models.ForeignKey(
+        OS,
+        on_delete=PROTECT,
+        related_name='manutencoes',
+        verbose_name='Sistema (OS)',
+    )
+    descricao    = models.TextField(verbose_name='Descrição')
+    caminho      = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name='Caminho no servidor',
+        help_text='Preenchido automaticamente com base no sistema selecionado.',
+    )
+    feito        = models.BooleanField(default=False, verbose_name='Concluído')
+    ativo        = models.BooleanField(default=True)
+    criado_em    = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Manutenção'
+        verbose_name_plural = 'Manutenções'
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return f'Manutenção #{self.pk} — {self.os.titulo}'

@@ -63,6 +63,7 @@ const menuOffice = [
   { label: 'Board',         path: '/sistema/office/board',        emoji: '📌' },
   { label: 'Agents',        path: '/sistema/office/agents',       emoji: '🤖' },
   { label: 'Activity Feed', path: '/sistema/office/activity',     emoji: '📡' },
+  { label: 'Manutencoes',   path: '/sistema/office/manutencoes',  emoji: '🔧' },
   { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
 ]
 

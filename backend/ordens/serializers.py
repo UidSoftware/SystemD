@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from usuarios.models import Usuario
-from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, Entrevista, ArquiteturaTecnica
+from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, Entrevista, ArquiteturaTecnica, Manutencao
 
 
 class FaseOSSerializer(serializers.ModelSerializer):
@@ -129,3 +129,26 @@ class ArquiteturaTecnicaSerializer(serializers.ModelSerializer):
         model = ArquiteturaTecnica
         fields = '__all__'
         read_only_fields = ['criado_em', 'atualizado_em']
+
+
+class ManutencaoSerializer(serializers.ModelSerializer):
+    os_titulo = serializers.CharField(source='os.titulo', read_only=True)
+    os_cliente = serializers.CharField(source='os.cliente.nome_empresa', read_only=True)
+
+    class Meta:
+        model = Manutencao
+        fields = [
+            'id', 'os', 'os_titulo', 'os_cliente',
+            'descricao', 'caminho', 'feito',
+            'ativo', 'criado_em', 'atualizado_em',
+        ]
+        read_only_fields = ['criado_em', 'atualizado_em']
+
+
+class OSParaManutencaoSerializer(serializers.ModelSerializer):
+    """Serializer mínimo para alimentar o combobox de sistemas na ManutencaoPage."""
+    cliente_nome = serializers.CharField(source='cliente.nome_empresa', read_only=True)
+
+    class Meta:
+        model = OS
+        fields = ['id', 'titulo', 'cliente_nome', 'status']

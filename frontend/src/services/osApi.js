@@ -26,4 +26,13 @@ export const osApi = {
   // Chamados globais (portal cliente)
   listarChamadosGlobal: (params) => api.get('/chamados/', { params }),
   criarChamadoGlobal:   (data)   => api.post('/chamados/', data),
+
+  // Manutenções
+  listarManutencoes:    (params) => api.get('/manutencoes/', { params }),
+  criarManutencao:      (data)   => api.post('/manutencoes/', data),
+  editarManutencao:     (id, d)  => api.patch(`/manutencoes/${id}/`, d),
+  deletarManutencao:    (id)     => api.delete(`/manutencoes/${id}/`),
+
+  // Sistemas para combobox de manutenção
+  listarSistemasManutencao: () => api.get('/sistemas-manutencao/'),
 }

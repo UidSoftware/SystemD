@@ -2,11 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS, Entrevista, ArquiteturaTecnica
+from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS, Entrevista, ArquiteturaTecnica, Manutencao
 from .serializers import (
     OSListSerializer, OSDetailSerializer, OSCreateSerializer,
     ContratoSerializer, ChamadoSerializer, MensagemChamadoSerializer,
     EntrevistaSerializer, ArquiteturaTecnicaSerializer,
+    ManutencaoSerializer, OSParaManutencaoSerializer,
 )
 from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import IsAdmin, IsAdminOrOperacional
@@ -231,3 +232,39 @@ class ArquiteturaTecnicaViewSet(viewsets.ModelViewSet):
         return ArquiteturaTecnica.objects.select_related(
             'entrevista', 'entrevista__prospecto', 'entrevista__prospecto__lead',
         ).all()
+
+
+class ManutencaoViewSet(viewsets.ModelViewSet):
+    """CRUD de pedidos de manutenção. Somente ADMIN."""
+    serializer_class = ManutencaoSerializer
+    http_method_names = ['get', 'post', 'patch', 'put', 'delete']
+
+    def get_permissions(self):
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        qs = Manutencao.objects.select_related('os', 'os__cliente').filter(ativo=True)
+        feito = self.request.query_params.get('feito')
+        os_id = self.request.query_params.get('os')
+        if feito is not None:
+            qs = qs.filter(feito=feito.lower() in ('true', '1'))
+        if os_id:
+            qs = qs.filter(os_id=os_id)
+        return qs
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SistemasParaManutencaoViewSet(viewsets.ReadOnlyModelViewSet):
+    """Lista OSs ativas para alimentar o combobox de sistemas na ManutencaoPage."""
+    serializer_class = OSParaManutencaoSerializer
+
+    def get_permissions(self):
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        return OS.objects.select_related('cliente').filter(ativo=True).order_by('titulo')

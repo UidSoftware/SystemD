@@ -23,6 +23,7 @@ import LeadsNovoProjetoPage from './pages/sistema/office/LeadsNovoProjetoPage'
 import EntrevistasPage from './pages/sistema/EntrevistasPage'
 import NotificacoesPage from './pages/sistema/NotificacoesPage'
 import ArquiteturaTecnicaFormPage from './pages/sistema/office/ArquiteturaTecnicaFormPage'
+import ManutencaoPage from './pages/sistema/office/ManutencaoPage'
 import MeusProjetosPage from './pages/sistema/portal/MeusProjetosPage'
 import SuportePage from './pages/sistema/portal/SuportePage'
 import MinhasFaturasPage from './pages/sistema/portal/MinhasFaturasPage'
@@ -94,6 +95,7 @@ export default function App() {
           <Route path="/sistema/office/activity" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ActivityFeedPage /></PrivateRoute>} />
           <Route path="/sistema/office/novo-projeto/leads" element={<PrivateRoute perfisPermitidos={['ADMIN']}><LeadsPage /></PrivateRoute>} />
           <Route path="/sistema/office/novo-projeto/arquitetura-tecnica" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ArquiteturaTecnicaFormPage /></PrivateRoute>} />
+          <Route path="/sistema/office/manutencoes" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ManutencaoPage /></PrivateRoute>} />
 
           {/* Portal do Cliente */}
           <Route path="/sistema/meus-projetos" element={<PrivateRoute perfisPermitidos={['CLIENTE']}><MeusProjetosPage /></PrivateRoute>} />

@@ -1156,38 +1156,45 @@ para um Fluxo 1 completo.
 
 ---
 
-### [2026-06-18] — Cadastro de Manutenção (implementado — pendente commit + deploy)
+### [2026-06-18] — Cadastro de Manutenção
 
-**Status:** Código implementado no worktree Empire — **não commitado, não deployado**
-
-**Contexto:** Hotfix disparado via Boss CLI para criar sistema de cadastro de manutenções.
-A esteira quebrou por bug na HotfixSKILL (Agent tool usado como fallback para chamar o
-Planner, que implementou sem commitar, sem chamar Sentinel nem Pilot). Bug corrigido nas
-skills em 2026-06-18. Ver Empire CLAUDE.md para diagnóstico completo.
-
-**O que foi implementado (worktree `9d265c44` — não commitado em main):**
-
-Backend (`backend/ordens/`):
+**Tarefas executadas:**
 - Model `Manutencao` — FK para OS, campos `descricao`/`caminho`/`feito`/`ativo`, soft delete
 - `ManutencaoSerializer` com `os_titulo` e `os_cliente` read-only
 - `ManutencaoViewSet` — CRUD IsAdmin, filtro `?feito=`, soft delete no destroy
 - `SistemasParaManutencaoViewSet` — combobox de OSs ativas para o frontend
-- Migration `0006_manutencao.py` — **não aplicada em produção**
+- Migration `0006_manutencao.py`
 - Endpoints: `GET/POST /api/manutencoes/`, `PATCH/DELETE /api/manutencoes/{id}/`, `GET /api/sistemas-para-manutencao/`
-
-Frontend (`frontend/src/`):
-- `pages/sistema/office/ManutencaoPage.jsx` — lista + filtros + modal criar/editar
+- `ManutencaoPage.jsx` — lista + filtros Todos/Pendentes/Concluidos + modal criar/editar
 - Combobox de sistemas com auto-preenchimento de caminho (`CAMINHOS_CONHECIDOS`)
 - Rota `/sistema/office/manutencoes` (PrivateRoute ADMIN)
 - Item "Manutenções" no menu Office da Sidebar
 - 5 novos métodos em `services/osApi.js`
 
-**Próximo passo para completar:**
-1. Commit no worktree + Sentinel + Pilot via Empire, ou dispatch manual
-2. Aplicar migration: `docker exec sytemd-backend-1 python manage.py migrate`
-3. Build e deploy do frontend
+**Arquivos alterados:**
+- `backend/ordens/migrations/0006_manutencao.py` (novo)
+- `backend/ordens/models.py`
+- `backend/ordens/serializers.py`
+- `backend/ordens/urls.py`
+- `backend/ordens/views.py`
+- `frontend/src/App.jsx`
+- `frontend/src/components/sistema/Sidebar.jsx`
+- `frontend/src/pages/sistema/office/ManutencaoPage.jsx` (novo)
+- `frontend/src/services/osApi.js`
+
+**Commits:**
+- `799316d` — feat(ordens): cadastro de manutencao — model + API + frontend
+
+**Deploy:**
+- Data: 2026-06-18
+- CI/CD GitHub Actions — merge do branch `climpire/9d265c44` em main + push
+- Status: ✅ Em produção
+
+**Sentinel:**
+- 0 issues CRITICAL/HIGH
+- Resultado: APROVADO
 
 
 ---
 
-*Última atualização: 2026-06-18 (Manutenção implementada no worktree — pendente commit e deploy)*
+*Última atualização: 2026-06-18 (Manutenção deployada via CI/CD)*

@@ -69,15 +69,23 @@ export default function DespesasPage() {
   const carregar = useCallback(() => {
     setCarregando(true)
     const params = {}
-    if (filtros.status) params.status = filtros.status
-    if (filtros.tipo)   params.tipo   = filtros.tipo
+    // Não passa status para a API — filtramos no frontend para excluir PAGO e CANCELADO por padrão
+    if (filtros.tipo) params.tipo = filtros.tipo
     Promise.all([
       financeiroApi.listarDespesas(params),
       financeiroApi.listarContas(),
       financeiroApi.listarFornecedores(),
       financeiroApi.listarCategorias({ tipo: 'SAIDA' }),
     ]).then(([r, c, forn, cat]) => {
-      setDados(r.data.results ?? r.data)
+      let lista = r.data.results ?? r.data
+      // Filtrar por status no frontend
+      if (filtros.status) {
+        lista = lista.filter(item => item.status === filtros.status)
+      } else {
+        // Sem filtro selecionado: mostrar apenas PENDENTE e ATRASADO
+        lista = lista.filter(item => item.status !== 'PAGO' && item.status !== 'CANCELADO')
+      }
+      setDados(lista)
       setContas(c.data.results ?? c.data)
       setFornecedores(Array.isArray(forn.data) ? forn.data : (forn.data.results ?? []))
       setCategorias(cat.data.results ?? cat.data)
@@ -267,8 +275,9 @@ export default function DespesasPage() {
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           <select style={{ ...inputStyle, width: 160 }} value={filtros.status} onChange={e => setFiltros(f => ({ ...f, status: e.target.value }))}>
-            <option value="">Todos status</option>
-            {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            <option value="">Todos (pendentes)</option>
+            <option value="PENDENTE">Pendente</option>
+            <option value="ATRASADO">Atrasado</option>
           </select>
           <select style={{ ...inputStyle, width: 160 }} value={filtros.tipo} onChange={e => setFiltros(f => ({ ...f, tipo: e.target.value }))}>
             <option value="">Todos tipos</option>

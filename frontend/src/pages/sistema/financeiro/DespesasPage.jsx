@@ -3,6 +3,12 @@ import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+function nomeMes(chave) {
+  const [ano, mes] = chave.split('-')
+  return MESES_PT[parseInt(mes) - 1] + ' ' + ano
+}
+
 const STATUS_CFG = {
   PENDENTE:  { label: 'Pendente',  cor: '#f59e0b' },
   PAGO:      { label: 'Pago',      cor: '#10b981' },
@@ -260,6 +266,16 @@ export default function DespesasPage() {
     )
   }
 
+  // Agrupar por mes de vencimento (ordem crescente — proximos vencimentos primeiro)
+  const porMes = {}
+  dados.forEach(item => {
+    const chave = item.vencimento.slice(0, 7)
+    if (!porMes[chave]) porMes[chave] = []
+    porMes[chave].push(item)
+  })
+  const mesesOrdenados = Object.keys(porMes).sort((a, b) => a.localeCompare(b))
+  const totalMes = (itens) => itens.reduce((acc, i) => acc + parseFloat(i.valor_liquido || 0), 0)
+
   return (
     <SistemaLayout>
       <div style={{ padding: '24px 24px 0' }}>
@@ -302,7 +318,53 @@ export default function DespesasPage() {
           )}
         </div>
 
-        {carregando ? <Spinner /> : dados.length === 0 ? <Vazio /> : <FinanceiroTable colunas={colunas} dados={dados} />}
+        {carregando ? <Spinner /> : mesesOrdenados.length === 0 ? <Vazio /> : (
+          <div style={{ paddingBottom: 32 }}>
+            {mesesOrdenados.map(chave => {
+              const itens = porMes[chave]
+              const total = totalMes(itens)
+              return (
+                <div key={chave} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 15 }}>{nomeMes(chave)}</span>
+                    <span style={{ fontWeight: 700, color: '#f87171', fontSize: 15 }}>{formatMoeda(total)}</span>
+                  </div>
+                  <div>
+                    {itens.map(item => (
+                      <div key={item.id} style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ color: '#f1f5f9', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {item.descricao}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {item.fornecedor && <span style={{ color: '#a78bca', fontSize: 11 }}>{item.fornecedor}</span>}
+                            <BadgeStatus status={item.tipo} config={TIPO_CFG} />
+                            <BadgeStatus status={item.status} config={STATUS_CFG} />
+                            {item.estornado && <span style={{ fontSize: 10, background: 'rgba(167,139,202,0.2)', color: '#a78bca', borderRadius: 4, padding: '1px 5px' }}>Estornada</span>}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ color: '#f87171', fontWeight: 700, fontSize: 14 }}>{formatMoeda(item.valor_liquido)}</div>
+                          <div style={{ color: '#6b6b8a', fontSize: 11, marginTop: 2 }}>venc. {formatData(item.vencimento)}</div>
+                          <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' }}>
+                            {(item.status === 'PENDENTE' || item.status === 'ATRASADO') && !item.estornado && (
+                              <button style={{ ...btnAcao('#063BF8'), border: '1px solid #063BF8' }} title="Confirmar pagamento"
+                                onClick={() => { setModalPagar(item); setFormPag({ pagamento: '', conta: item.conta, forma_pagamento: '' }) }}>$</button>
+                            )}
+                            {!item.estornado && <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(item)} title="Editar">✏️</button>}
+                            {item.status !== 'CANCELADO' && !item.estornado && (
+                              <button style={btnAcao('#f87171')} onClick={() => cancelar(item)} title="Cancelar">🗑️</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {modal && (

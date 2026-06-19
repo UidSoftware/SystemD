@@ -136,6 +136,7 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
     )
     serializer_class = ReceitaSerializer
     permission_classes = [IsAdminOrFinanceiro]
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['tipo', 'status', 'cliente', 'os', 'conta']
     search_fields = ['descricao']
@@ -171,6 +172,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
     )
     serializer_class = DespesaSerializer
     permission_classes = [IsAdminOrFinanceiro]
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['tipo', 'status', 'conta', 'estornado']
     search_fields = ['descricao', 'fornecedor']

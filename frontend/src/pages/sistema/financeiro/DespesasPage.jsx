@@ -61,7 +61,7 @@ export default function DespesasPage() {
   const [formPag, setFormPag]                 = useState({ pagamento: '', conta: '', forma_pagamento: '' })
   const [salvando, setSalvando]               = useState(false)
   const [erro, setErro]                       = useState('')
-  const [filtros, setFiltros]                 = useState({ status: '', tipo: '' })
+  const [filtros, setFiltros]                 = useState({ status: '', tipo: '', data_inicio: '', data_fim: '' })
   const [novaCategoria, setNovaCategoria]     = useState('')
   const [salvandoCategoria, setSalvandoCategoria] = useState(false)
   const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
@@ -85,6 +85,8 @@ export default function DespesasPage() {
         // Sem filtro selecionado: mostrar apenas PENDENTE e ATRASADO
         lista = lista.filter(item => item.status !== 'PAGO' && item.status !== 'CANCELADO')
       }
+      if (filtros.data_inicio) lista = lista.filter(item => item.vencimento >= filtros.data_inicio)
+      if (filtros.data_fim)    lista = lista.filter(item => item.vencimento <= filtros.data_fim)
       setDados(lista)
       setContas(c.data.results ?? c.data)
       setFornecedores(Array.isArray(forn.data) ? forn.data : (forn.data.results ?? []))
@@ -283,6 +285,21 @@ export default function DespesasPage() {
             <option value="">Todos tipos</option>
             {Object.entries(TIPO_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: 10, color: '#a78bca' }}>Vencimento de</label>
+            <input type="date" style={{ ...inputStyle, width: 150 }} value={filtros.data_inicio} onChange={e => setFiltros(f => ({ ...f, data_inicio: e.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: 10, color: '#a78bca' }}>até</label>
+            <input type="date" style={{ ...inputStyle, width: 150 }} value={filtros.data_fim} onChange={e => setFiltros(f => ({ ...f, data_fim: e.target.value }))} />
+          </div>
+          {(filtros.data_inicio || filtros.data_fim || filtros.status || filtros.tipo) && (
+            <button
+              onClick={() => setFiltros({ status: '', tipo: '', data_inicio: '', data_fim: '' })}
+              style={{ alignSelf: 'flex-end', background: 'transparent', border: '1px solid rgba(167,139,202,0.3)', color: '#a78bca', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
+              Limpar filtros
+            </button>
+          )}
         </div>
 
         {carregando ? <Spinner /> : dados.length === 0 ? <Vazio /> : <FinanceiroTable colunas={colunas} dados={dados} />}

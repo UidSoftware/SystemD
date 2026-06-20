@@ -1199,4 +1199,31 @@ para um Fluxo 1 completo.
 
 ---
 
-*Última atualização: 2026-06-18 (Manutenção deployada via CI/CD)*
+### [2026-06-20] — EntrevistaPage no pipeline Novo Projeto
+
+**Tarefas executadas:**
+- `EntrevistaPage.jsx` — formulário de 13 campos no pipeline Novo Projeto (Office → Novo Projeto → Entrevista)
+- Rota `/sistema/office/novo-projeto/entrevista` (PrivateRoute ADMIN) em App.jsx
+- Sidebar.jsx — menuNovoProjeto aponta para nova rota de Entrevista
+
+**Arquivos alterados:**
+- `frontend/src/pages/sistema/office/EntrevistaPage.jsx` (novo)
+- `frontend/src/App.jsx`
+- `frontend/src/components/sistema/Sidebar.jsx`
+
+**Commits:**
+- `aae0b11` — feat(office): EntrevistaPage no pipeline Novo Projeto
+
+**Deploy:**
+- Data: 2026-06-20
+- CI/CD GitHub Actions — push branch climpire/e128e7ee-1 para origin/main (fast-forward)
+- URL: https://uidsoftware.com.br
+- Status: ✅ Em produção
+
+**Sentinel:**
+- Branch limpo (1 commit ahead, 0 behind main), features de produção preservadas
+- Resultado: APROVADO
+
+---
+
+*Última atualização: 2026-06-20 (EntrevistaPage deployada via CI/CD)*

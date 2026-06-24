@@ -1,18 +1,18 @@
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 
-export default function EscritorioPage() {
+export default function ContratosPage() {
   return (
-    <SistemaLayout titulo="Escritório">
+    <SistemaLayout titulo="Contratos">
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <iframe
-          src="https://empire.uidsoftware.com.br"
+          src="https://contratid.uidsoftware.com.br/contratid/"
           style={{
             flex: 1,
             width: '100%',
             border: 'none',
             minHeight: 'calc(100vh - 56px)',
           }}
-          title="Uid Office"
+          title="ContratId"
           allow="fullscreen"
         />
       </div>

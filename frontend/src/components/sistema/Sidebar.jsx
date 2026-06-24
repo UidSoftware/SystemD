@@ -76,7 +76,7 @@ const menuPorPerfil = {
     { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
     { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
-    { label: 'Contratos',     path: 'https://contratid.uidsoftware.com.br/contratid/', emoji: '📄', external: true },
+    { label: 'Contratos',     path: '/sistema/contratos',                               emoji: '📄' },
     { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
     { label: 'Financeiro',    path: '/sistema/financeiro',    emoji: '💰', submenu: menuFinanceiro },
     { label: 'Relatorios',    path: '/sistema/relatorios',    emoji: '📊', submenu: menuRelatorios },

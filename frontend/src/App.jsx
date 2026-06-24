@@ -16,6 +16,7 @@ import OSPage from './pages/sistema/OSPage'
 import OSDetailPage from './pages/sistema/OSDetailPage'
 import UnidadesPage from './pages/sistema/UnidadesPage'
 import EscritorioPage from './pages/sistema/EscritorioPage'
+import ContratosPage from './pages/sistema/ContratosPage'
 import BoardPage from './pages/sistema/office/BoardPage'
 import AgentsPage from './pages/sistema/office/AgentsPage'
 import ActivityFeedPage from './pages/sistema/office/ActivityFeedPage'
@@ -95,6 +96,7 @@ export default function App() {
 
           {/* Office */}
           <Route path="/sistema/office/escritorio" element={<PrivateRoute perfisPermitidos={['ADMIN']}><EscritorioPage /></PrivateRoute>} />
+          <Route path="/sistema/contratos" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ContratosPage /></PrivateRoute>} />
           <Route path="/sistema/office/board" element={<PrivateRoute perfisPermitidos={['ADMIN']}><BoardPage /></PrivateRoute>} />
           <Route path="/sistema/office/agents" element={<PrivateRoute perfisPermitidos={['ADMIN']}><AgentsPage /></PrivateRoute>} />
           <Route path="/sistema/office/activity" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ActivityFeedPage /></PrivateRoute>} />

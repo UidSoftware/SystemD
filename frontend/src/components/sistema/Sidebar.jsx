@@ -76,6 +76,7 @@ const menuPorPerfil = {
     { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
     { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
+    { label: 'Contratos',     path: 'https://contratid.uidsoftware.com.br/contratid/', emoji: '📄', external: true },
     { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
     { label: 'Financeiro',    path: '/sistema/financeiro',    emoji: '💰', submenu: menuFinanceiro },
     { label: 'Relatorios',    path: '/sistema/relatorios',    emoji: '📊', submenu: menuRelatorios },
@@ -112,6 +113,32 @@ function NavItem({ item, onClose, location, badge }) {
   const isActive = item.path !== '/sistema/'
     ? location.pathname === item.path || location.pathname.startsWith(item.path + '/')
     : location.pathname === '/sistema/'
+
+  const linkStyle = {
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '9px 16px', fontSize: '0.825rem', fontWeight: 500,
+    color: 'var(--color-text-muted)', textDecoration: 'none',
+    borderRadius: 8, margin: '1px 8px', backgroundColor: 'transparent',
+    borderLeft: '2px solid transparent', transition: 'all 0.15s ease', cursor: 'pointer',
+  }
+
+  if (item.external) {
+    return (
+      <a
+        href={item.path}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClose}
+        style={linkStyle}
+        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'var(--color-text-sub)' }}
+        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+      >
+        <span style={{ fontSize: 16, lineHeight: 1, width: 20, textAlign: 'center', flexShrink: 0 }}>{item.emoji || '•'}</span>
+        <span style={{ flex: 1 }}>{item.label}</span>
+        <span style={{ fontSize: 10, opacity: 0.5 }}>↗</span>
+      </a>
+    )
+  }
 
   return (
     <NavLink

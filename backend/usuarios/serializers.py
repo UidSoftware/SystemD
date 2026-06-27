@@ -10,6 +10,7 @@ class UsuarioTokenSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         token['nome'] = user.nome
         token['perfil'] = user.perfil
+        token['setor'] = user.setor.nome if user.setor else None
         return token
 
 

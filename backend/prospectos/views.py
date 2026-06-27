@@ -13,7 +13,7 @@ class ProspectoViewSet(viewsets.ModelViewSet):
     serializer_class = ProspectoSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['convertido', 'ativo', 'segmento', 'responsavel']
-    search_fields = ['nome_empresa', 'nome_contato', 'email', 'cidade']
+    search_fields = ['nome_empresa', 'cidade', 'socios__nome', 'socios__email']
     ordering_fields = ['criado_em', 'nome_empresa']
     ordering = ['-criado_em']
 
@@ -23,7 +23,7 @@ class ProspectoViewSet(viewsets.ModelViewSet):
         return [IsAdminOrOperacional()]
 
     def get_queryset(self):
-        return Prospecto.objects.filter(ativo=True).select_related('responsavel', 'lead')
+        return Prospecto.objects.filter(ativo=True).select_related('responsavel', 'lead').prefetch_related('socios')
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -33,7 +33,7 @@ class ProspectoViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='converter')
     def converter(self, request, pk=None):
-        from clientes.models import Cliente
+        from clientes.models import Cliente, SocioCliente
         from clientes.serializers import ClienteSerializer
 
         prospecto = self.get_object()
@@ -42,10 +42,6 @@ class ProspectoViewSet(viewsets.ModelViewSet):
 
         dados_cliente = {
             'nome_empresa': request.data.get('nome_empresa', prospecto.nome_empresa),
-            'nome_contato': request.data.get('nome_contato', prospecto.nome_contato),
-            'email': request.data.get('email', prospecto.email),
-            'telefone': request.data.get('telefone', prospecto.telefone or ''),
-            'whatsapp': request.data.get('whatsapp', prospecto.whatsapp or ''),
             'segmento': request.data.get('segmento', prospecto.segmento or ''),
             'cidade': request.data.get('cidade', prospecto.cidade or ''),
             'estado': request.data.get('estado', prospecto.estado or ''),
@@ -57,6 +53,27 @@ class ProspectoViewSet(viewsets.ModelViewSet):
         serializer = ClienteSerializer(data=dados_cliente)
         if serializer.is_valid():
             cliente = serializer.save()
+            # Copia sócios do prospecto para o cliente
+            socios_novos = request.data.get('socios', None)
+            if socios_novos is not None:
+                for s in socios_novos:
+                    SocioCliente.objects.create(
+                        cliente=cliente,
+                        nome=s.get('nome', ''),
+                        email=s.get('email', ''),
+                        telefone=s.get('telefone', ''),
+                        whatsapp=s.get('whatsapp', ''),
+                        cpf=s.get('cpf', ''),
+                        principal=s.get('principal', False),
+                    )
+            else:
+                for s in prospecto.socios.all():
+                    SocioCliente.objects.create(
+                        cliente=cliente,
+                        nome=s.nome, email=s.email,
+                        telefone=s.telefone, whatsapp=s.whatsapp,
+                        cpf=s.cpf, principal=s.principal,
+                    )
             prospecto.convertido = True
             prospecto.convertido_em = timezone.now()
             prospecto.save()

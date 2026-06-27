@@ -58,6 +58,8 @@ const menuNovoProjeto = [
   { label: 'Prospectos',          path: '/sistema/prospectos',                               emoji: '🔍' },
   { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista',            emoji: '📋' },
   { label: 'Arquitetura Tecnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica', emoji: '🏗️' },
+  { label: 'Orcamentos',          path: '/sistema/orcamentos',                              emoji: '💰' },
+  { label: 'Contratos',           path: '/sistema/contratos',                                emoji: '📄' },
 ]
 
 const menuOffice = [
@@ -66,7 +68,6 @@ const menuOffice = [
   { label: 'Agents',        path: '/sistema/office/agents',       emoji: '🤖' },
   { label: 'Activity Feed', path: '/sistema/office/activity',     emoji: '📡' },
   { label: 'Manutencoes',   path: '/sistema/office/manutencoes',  emoji: '🔧' },
-  { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
 ]
 
 const menuPorPerfil = {
@@ -74,6 +75,7 @@ const menuPorPerfil = {
     { label: 'Dashboard',     path: '/sistema/',              emoji: '🏠', submenu: undefined },
     { label: 'Notificacoes',  path: '/sistema/notificacoes',  emoji: '🔔' },
     { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
+    { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
     { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
     { label: 'Contratos',     path: '/sistema/contratos',                               emoji: '📄' },

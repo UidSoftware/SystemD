@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'prospectos',
     'entregas',
     'notificacoes',
+    'orcamentos',
 ]
 
 MIDDLEWARE = [

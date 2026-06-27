@@ -10,10 +10,6 @@ class Prospecto(models.Model):
     )
 
     nome_empresa  = models.CharField(max_length=150)
-    nome_contato  = models.CharField(max_length=150)
-    email         = models.EmailField()
-    telefone      = models.CharField(max_length=20, blank=True)
-    whatsapp      = models.CharField(max_length=20, blank=True)
     segmento      = models.CharField(max_length=50, blank=True)
     cidade        = models.CharField(max_length=100, blank=True)
     estado        = models.CharField(max_length=2, blank=True)
@@ -40,3 +36,21 @@ class Prospecto(models.Model):
 
     def __str__(self):
         return self.nome_empresa
+
+
+class SocioProspecto(models.Model):
+    prospecto = models.ForeignKey(Prospecto, on_delete=models.CASCADE, related_name='socios')
+    nome      = models.CharField(max_length=150)
+    email     = models.EmailField(blank=True)
+    telefone  = models.CharField(max_length=20, blank=True)
+    whatsapp  = models.CharField(max_length=20, blank=True)
+    cpf       = models.CharField(max_length=20, blank=True)
+    principal = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-principal', 'nome']
+        verbose_name = 'Sócio do Prospecto'
+        verbose_name_plural = 'Sócios do Prospecto'
+
+    def __str__(self):
+        return f'{self.nome} — {self.prospecto.nome_empresa}'

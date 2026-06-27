@@ -217,6 +217,8 @@ src/
 ├── components/sistema/
 │   ├── SistemaLayout.jsx        ← layout base com Sidebar + Header (main overflow-y-auto)
 │   ├── Sidebar.jsx              ← dinâmica por perfil + submenu Financeiro + modal alterar-senha
+│   │                              Menu ADMIN: Office → Novo Projeto (top-level) → Clientes → OS → ...
+│   │                              Novo Projeto: Leads → Prospectos → Entrevista → Arq.Técnica → Orçamentos → Contratos
 │   ├── PrivateRoute.jsx         ← aceita perfisPermitidos[]
 │   └── FinanceiroTable.jsx      ← tabela, modais, badges, formatadores reutilizáveis
 ├── pages/sistema/
@@ -310,14 +312,20 @@ class UsuarioEmailConfig(models.Model):
     ativo       = BooleanField(default=True)
 ```
 
-### Cliente (`clientes/models.py`)
+### Cliente + SocioCliente (`clientes/models.py`)
 ```python
 class Cliente(models.Model):
-    nome_empresa, nome_contato, email, dominio_email
+    nome_empresa, dominio_email
     usuario      = OneToOneField(Usuario, null=True, related_name='cliente_perfil')
-    # + telefone, whatsapp, segmento, cidade, estado, cnpj_cpf, origem, observacoes
-    tem_entregas = BooleanField(default=False)  # ← acesso ao módulo /entregas/
+    # + segmento, cidade, estado, cnpj_cpf, origem, observacoes
+    tem_entregas = BooleanField(default=False)
     ativo        = BooleanField(default=True)
+
+class SocioCliente(models.Model):
+    cliente   = ForeignKey(Cliente, CASCADE, related_name='socios')
+    nome, email, telefone, whatsapp, cpf
+    principal = BooleanField(default=False)
+    # Padrão idêntico ao SocioProspecto
 ```
 
 ### Lead (`vitrine/models.py`)
@@ -329,16 +337,21 @@ class Lead(models.Model):
     convertido          = BooleanField(default=False)  # ← True após converter → Prospecto
 ```
 
-### Prospecto (`prospectos/models.py`)
+### Prospecto + SocioProspecto (`prospectos/models.py`)
 ```python
 class Prospecto(models.Model):
-    lead          = ForeignKey('vitrine.Lead', null=True, SET_NULL)
-    nome_empresa, nome_contato, email, telefone, whatsapp
-    segmento, cidade, estado, cnpj_cpf, origem, observacoes
-    responsavel   = ForeignKey('usuarios.Usuario', null=True, SET_NULL)
-    convertido    = BooleanField(default=False)   # ← True após → Cliente
+    lead         = ForeignKey('vitrine.Lead', null=True, SET_NULL)
+    nome_empresa, segmento, cidade, estado, cnpj_cpf, origem, observacoes
+    responsavel  = ForeignKey('usuarios.Usuario', null=True, SET_NULL)
+    convertido   = BooleanField(default=False)
     convertido_em = DateTimeField(null=True)
-    ativo         = BooleanField(default=True)    # soft delete
+    ativo        = BooleanField(default=True)
+
+class SocioProspecto(models.Model):
+    prospecto = ForeignKey(Prospecto, CASCADE, related_name='socios')
+    nome, email, telefone, whatsapp, cpf
+    principal = BooleanField(default=False)   # sócio exibido por padrão
+    # Suporta múltiplos sócios. UI: editor inline com + Adicionar sócio
 ```
 
 ### Unidade + Entrega (`entregas/models.py`)
@@ -442,9 +455,94 @@ class LivroCaixa(models.Model):  # db_table='fin_livro_caixa' — IMUTÁVEL
     criado_em, criado_por, estornado(bool), estorno_de(self FK)
 ```
 
+
+### Entrevista (`ordens/models.py`)
+```python
+class Entrevista(models.Model):
+    prospecto        = ForeignKey('prospectos.Prospecto', PROTECT, related_name='entrevistas')
+    sistema          = CharField(100)   # nome do sistema a desenvolver
+    descricao        = TextField()      # mín. 500 chars
+    cores_empresa, dominio, redes_sociais, palavras_chave, publico_alvo, concorrentes
+    whatsapp_business = BooleanField(default=False)
+    segmento         = CharField(choices=SegmentoEntrevista)
+    orcamento_faixa  = CharField(choices=OrcamentoFaixa)  # MEI|PEQUENO|MEDIO
+    prazo_desejado   = DateField(null=True)
+    ativo            = BooleanField(default=True)
+    # UI: tabela + modal (substituiu form avulso)
+```
+
+### ArquiteturaTecnica (`ordens/models.py`)
+```python
+class ArquiteturaTecnica(models.Model):
+    entrevista = ForeignKey('ordens.Entrevista', PROTECT, related_name='arquiteturas')
+    projeto, cliente, versao, data_levantamento, responsavel
+    # Stack BE: linguagem, framework, banco, autenticacao, padrao_api
+    # Stack FE: frontend_fw, build_tool, estilizacao, estado_global, server_state
+    # Infra:    ambiente_deploy, servidor_web, docker, ssl, cicd, pwa, dominio_uid
+    # Obs:      padrao_rotas, perfis_acesso, integracoes, restricoes, notas_claude
+    ativo = BooleanField(default=True)  # adicionado em migration 0009
+    # Stack padrão Uid: Python/DRF/PostgreSQL/JWT/REST + React18/Vite/Tailwind/Zustand/TanStack
+    # Divergências geram alerta visual vermelho no modal
+    # UI: tabela + modal
+```
+
+### Orcamento + ItemOrcamento (`orcamentos/models.py`)
+```python
+class Orcamento(models.Model):
+    STATUS = rascunho | enviado | aprovado | recusado | expirado | cancelado
+    cliente   = ForeignKey('clientes.Cliente', null=True, blank=True, SET_NULL)
+    prospecto = ForeignKey('prospectos.Prospecto', null=True, blank=True, SET_NULL)
+    # ↑ AMBOS nullable — toggle no modal: "Cliente" ou "Prospecto" (um ou outro)
+    numero         = PositiveIntegerField(auto-incremento em save())
+    emitido_em     = DateField(auto_now_add)
+    valido_ate, status, desconto (Decimal), forma_pagamento, observacoes
+    contratid_orcamento_id = IntegerField(null=True)  # ID no ContratID após sync
+    contratid_synced_at    = DateTimeField(null=True)
+    ativo = BooleanField(default=True)
+    # Propriedades: subtotal, total_geral (subtotal - desconto)
+
+class ItemOrcamento(models.Model):
+    orcamento      = ForeignKey(Orcamento, CASCADE, related_name='itens')
+    ordem, descricao, quantidade (Decimal,3), valor_unitario (Decimal,2)
+    # Propriedade: subtotal = quantidade * valor_unitario
+```
+
+### ContratID — Integração SSO + Sync (`orcamentos/services.py`)
+```
+SSO: SystemD gera JWT com sua SECRET_KEY (= SYSTEMD_JWT_KEY do ContratID)
+     POST /api/auth/sso/ → recebe access token do ContratID (5min)
+Sync automático em todo create/update de Orcamento:
+     POST /api/orcamentos/  (novo)  ou  PATCH /api/orcamentos/{id}/  (edição)
+     Dados: nome/email/telefone/cpf_cnpj/cidade/estado do cliente OU prospecto
+     Salva contratid_orcamento_id e contratid_synced_at no registro SystemD
+Sync manual: POST /api/orcamentos/{id}/sincronizar/
+```
+
 ---
 
 ## Endpoints por app
+
+
+### Orcamentos (`/api/orcamentos/`)
+| Endpoint | Permissão | Descrição |
+|----------|-----------|----------|
+| `GET/POST orcamentos/` | ADMIN, OPERACIONAL | Lista + criar (auto-sync ContratID) |
+| `PATCH orcamentos/{id}/` | ADMIN, OPERACIONAL | Editar (re-sync ContratID) |
+| `DELETE orcamentos/{id}/` | ADMIN, OPERACIONAL | Soft delete |
+| `POST orcamentos/{id}/sincronizar/` | ADMIN | Re-sync manual |
+Filtros: `?status=`, `?page=`
+
+### Entrevistas (`/api/entrevistas/`)
+| Endpoint | Permissão |
+|----------|-----------|
+| `GET/POST entrevistas/` | ADMIN, OPERACIONAL |
+| `PATCH/DELETE entrevistas/{id}/` | ADMIN, OPERACIONAL (soft delete) |
+
+### Arquitetura Técnica (`/api/arquitetura-tecnica/`)
+| Endpoint | Permissão |
+|----------|-----------|
+| `GET/POST arquitetura-tecnica/` | ADMIN, OPERACIONAL |
+| `PATCH/DELETE arquitetura-tecnica/{id}/` | ADMIN, OPERACIONAL (soft delete) |
 
 ### Auth (`/api/auth/`)
 | Endpoint | Acesso | Descrição |

@@ -231,7 +231,13 @@ class ArquiteturaTecnicaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return ArquiteturaTecnica.objects.select_related(
             'entrevista', 'entrevista__prospecto', 'entrevista__prospecto__lead',
-        ).all()
+        ).filter(ativo=True)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ManutencaoViewSet(viewsets.ModelViewSet):

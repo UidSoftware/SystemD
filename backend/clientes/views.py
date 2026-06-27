@@ -11,7 +11,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrOperacional]
 
     def get_queryset(self):
-        return Cliente.objects.filter(ativo=True)
+        return Cliente.objects.filter(ativo=True).prefetch_related('socios')
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -21,9 +21,6 @@ class ClienteViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='enviar-acesso', permission_classes=[IsAdmin])
     def enviar_acesso(self, request, pk=None):
-        """
-        Cria usuário CLIENTE vinculado (se ainda não existe) e envia email de primeiro acesso.
-        """
         from django.contrib.auth.tokens import default_token_generator
         from django.utils.encoding import force_bytes
         from django.utils.http import urlsafe_base64_encode
@@ -33,19 +30,29 @@ class ClienteViewSet(viewsets.ModelViewSet):
 
         cliente = self.get_object()
 
-        # Cria usuário se ainda não estiver vinculado
+        # Pega sócio principal para email/nome
+        socio = cliente.socios.filter(principal=True).first() or cliente.socios.first()
+        if not socio or not socio.email:
+            return Response(
+                {'erro': 'Cliente não possui sócio com email cadastrado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email_socio = socio.email
+        nome_socio = socio.nome
+
         if cliente.usuario is None:
-            if Usuario.objects.filter(email=cliente.email).exists():
-                usuario = Usuario.objects.get(email=cliente.email)
+            if Usuario.objects.filter(email=email_socio).exists():
+                usuario = Usuario.objects.get(email=email_socio)
                 if usuario.perfil != 'CLIENTE':
                     return Response(
-                        {'erro': f'Já existe um usuário com o email {cliente.email} mas com perfil {usuario.perfil}.'},
+                        {'erro': f'Já existe um usuário com o email {email_socio} mas com perfil {usuario.perfil}.'},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
             else:
                 usuario = Usuario.objects.create_user(
-                    email=cliente.email,
-                    nome=cliente.nome_contato,
+                    email=email_socio,
+                    nome=nome_socio,
                     password=None,
                     perfil='CLIENTE',
                 )
@@ -54,7 +61,6 @@ class ClienteViewSet(viewsets.ModelViewSet):
         else:
             usuario = cliente.usuario
 
-        # Gera token e envia email
         uid = urlsafe_base64_encode(force_bytes(usuario.pk))
         token = default_token_generator.make_token(usuario)
         link = f"{settings.FRONTEND_URL}/definir-senha/?uid={uid}&token={token}"

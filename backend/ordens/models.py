@@ -238,6 +238,7 @@ class ArquiteturaTecnica(models.Model):
     restricoes         = models.TextField(blank=True)
     notas_claude       = models.TextField(blank=True)
 
+    ativo              = models.BooleanField(default=True)
     criado_em          = models.DateTimeField(auto_now_add=True)
     atualizado_em      = models.DateTimeField(auto_now=True)
 

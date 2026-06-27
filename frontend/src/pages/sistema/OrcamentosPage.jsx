@@ -3,18 +3,10 @@ import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 
 const inputStyle = {
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 8,
-  color: '#f1f5f9',
-  padding: '8px 12px',
-  fontSize: 13,
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontFamily: 'inherit',
+  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 8, color: '#f1f5f9', padding: '8px 12px', fontSize: 13,
+  outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit',
 }
-
 const STATUS_CORES = {
   rascunho: { bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
   enviado:  { bg: 'rgba(59,130,246,0.2)',  color: '#60a5fa' },
@@ -27,25 +19,108 @@ const STATUS_LABELS = {
   rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado',
   recusado: 'Recusado', expirado: 'Expirado', cancelado: 'Cancelado',
 }
+const UNIDADES = [
+  { key: 'UN', label: 'Un' }, { key: 'HORA', label: 'Hora' },
+  { key: 'MES', label: 'Mês' }, { key: 'PROJETO', label: 'Projeto' },
+  { key: 'LICENCA', label: 'Licença' }, { key: 'GB', label: 'GB' }, { key: 'DIA', label: 'Dia' },
+]
 
 function Badge({ status }) {
   const c = STATUS_CORES[status] || STATUS_CORES.rascunho
   return <span style={{ background: c.bg, color: c.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{STATUS_LABELS[status] || status}</span>
 }
-
 function fmt(val) {
   return (parseFloat(val) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-const ITEM_VAZIO = { ordem: 1, descricao: '', quantidade: '1', valor_unitario: '' }
+const ITEM_VAZIO = { produto: null, ordem: 1, descricao: '', quantidade: '1', unidade: 'UN', valor_unitario: '' }
 const FORM_VAZIO = {
-  tipoVinculo: 'cliente',
-  cliente: '', prospecto: '',
-  valido_ate: '', status: 'rascunho',
-  desconto: '0', forma_pagamento: '', observacoes: '',
-  itens: [{ ...ITEM_VAZIO }],
+  tipoVinculo: 'cliente', cliente: '', prospecto: '',
+  valido_ate: '', status: 'rascunho', desconto: '0',
+  forma_pagamento: '', observacoes: '', itens: [{ ...ITEM_VAZIO }],
 }
 
+// ── Modal Catálogo ─────────────────────────────────────────────────────────
+function ModalCatalogo({ onSelecionar, onFechar }) {
+  const [lista, setLista]   = useState([])
+  const [busca, setBusca]   = useState('')
+  const [tipo, setTipo]     = useState('')
+  const [carregando, setCarregando] = useState(false)
+
+  const buscar = useCallback(async (q = busca, t = tipo) => {
+    setCarregando(true)
+    try {
+      const params = {}
+      if (q) params.search = q
+      if (t) params.tipo   = t
+      const res = await api.get('/produtos/', { params })
+      setLista(res.data.results || [])
+    } finally { setCarregando(false) }
+  }, [busca, tipo])
+
+  useEffect(() => { buscar('', '') }, [])
+
+  const tipoCor = { SERVICO: '#6b8fff', PRODUTO: '#34d399' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, width: '100%', maxWidth: 640, padding: 24, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, margin: 0 }}>Selecionar do Catálogo</h3>
+          <button onClick={onFechar} style={{ background: 'none', border: 'none', color: '#a78bca', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Filtros */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          {[{ key: '', label: 'Todos' }, { key: 'SERVICO', label: 'Serviços' }, { key: 'PRODUTO', label: 'Produtos' }].map(t => (
+            <button key={t.key} onClick={() => { setTipo(t.key); buscar(busca, t.key) }}
+              style={{ background: tipo === t.key ? '#063BF8' : 'rgba(255,255,255,0.06)', color: tipo === t.key ? '#fff' : '#a78bca', border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 11, cursor: 'pointer' }}>
+              {t.label}
+            </button>
+          ))}
+          <input
+            placeholder="Buscar..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && buscar(busca, tipo)}
+            style={{ ...inputStyle, flex: 1, padding: '5px 10px', fontSize: 12 }}
+          />
+        </div>
+
+        {/* Lista */}
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {carregando ? (
+            <p style={{ color: '#a78bca', textAlign: 'center', padding: 24 }}>Carregando...</p>
+          ) : lista.length === 0 ? (
+            <p style={{ color: '#a78bca', textAlign: 'center', padding: 24 }}>Nenhum item encontrado</p>
+          ) : lista.map(p => (
+            <div key={p.id}
+              onClick={() => onSelecionar(p)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', marginBottom: 4, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', transition: 'background 0.1s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(6,59,248,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: 11, color: tipoCor[p.tipo] || '#a78bca', fontWeight: 600 }}>{p.tipo_display}</span>
+                  {p.categoria && <span style={{ fontSize: 10, color: '#64748b' }}>· {p.categoria}</span>}
+                </div>
+                <div style={{ fontSize: 13, color: '#f1f5f9', fontWeight: 600 }}>{p.nome}</div>
+                {p.descricao && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{p.descricao.slice(0, 80)}{p.descricao.length > 80 ? '…' : ''}</div>}
+              </div>
+              <div style={{ textAlign: 'right', marginLeft: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#34d399' }}>{fmt(p.preco_padrao)}</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>/{p.unidade_display || p.unidade}</div>
+                {p.preco_minimo && <div style={{ fontSize: 10, color: '#f87171', marginTop: 2 }}>mín {fmt(p.preco_minimo)}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Página principal ───────────────────────────────────────────────────────
 export default function OrcamentosPage() {
   const [orcamentos, setOrcamentos]     = useState([])
   const [total, setTotal]               = useState(0)
@@ -53,7 +128,6 @@ export default function OrcamentosPage() {
   const [pagina, setPagina]             = useState(1)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [filtroStatus, setFiltroStatus] = useState('')
-
   const [clientes, setClientes]         = useState([])
   const [prospectos, setProspectos]     = useState([])
   const [modal, setModal]               = useState(null)
@@ -61,6 +135,7 @@ export default function OrcamentosPage() {
   const [salvando, setSalvando]         = useState(false)
   const [erro, setErro]                 = useState('')
   const [syncInfo, setSyncInfo]         = useState(null)
+  const [showCatalogo, setShowCatalogo] = useState(false)
 
   const carregar = useCallback(async (pag = 1, status = filtroStatus) => {
     setCarregando(true)
@@ -99,7 +174,14 @@ export default function OrcamentosPage() {
       forma_pagamento: o.forma_pagamento || '',
       observacoes:     o.observacoes || '',
       itens: o.itens && o.itens.length
-        ? o.itens.map(i => ({ ordem: i.ordem, descricao: i.descricao, quantidade: String(i.quantidade), valor_unitario: String(i.valor_unitario) }))
+        ? o.itens.map(i => ({
+            produto:       i.produto || null,
+            ordem:         i.ordem,
+            descricao:     i.descricao,
+            quantidade:    String(i.quantidade),
+            unidade:       i.unidade || 'UN',
+            valor_unitario: String(i.valor_unitario),
+          }))
         : [{ ...ITEM_VAZIO }],
     })
     setErro(''); setSyncInfo(null)
@@ -119,8 +201,26 @@ export default function OrcamentosPage() {
 
   const addItem = () => setModal(m => ({
     ...m,
-    itens: [...m.itens, { ordem: m.itens.length + 1, descricao: '', quantidade: '1', valor_unitario: '' }],
+    itens: [...m.itens, { ...ITEM_VAZIO, ordem: m.itens.length + 1 }],
   }))
+
+  const addDoCatalogo = (produto) => {
+    setModal(m => ({
+      ...m,
+      itens: [
+        ...m.itens.filter(i => i.descricao.trim() || i.valor_unitario),
+        {
+          produto:       produto.id,
+          ordem:         m.itens.length + 1,
+          descricao:     produto.nome,
+          quantidade:    '1',
+          unidade:       produto.unidade,
+          valor_unitario: String(produto.preco_padrao),
+        },
+      ],
+    }))
+    setShowCatalogo(false)
+  }
 
   const removeItem = (idx) => setModal(m => {
     const itens = m.itens.filter((_, i) => i !== idx).map((it, i) => ({ ...it, ordem: i + 1 }))
@@ -163,17 +263,15 @@ export default function OrcamentosPage() {
   const desc   = modal ? (parseFloat(modal.desconto) || 0) : 0
   const totalG = sub - desc
 
-  const tabBtn = (tipo, label) => ({
+  const tabBtn = (tipo) => ({
     background:   modal?.tipoVinculo === tipo ? '#063BF8' : 'rgba(255,255,255,0.06)',
     color:        modal?.tipoVinculo === tipo ? '#fff'    : '#a78bca',
     border:       'none',
     borderRadius: tipo === 'cliente' ? '8px 0 0 8px' : '0 8px 8px 0',
-    padding:      '8px 20px',
-    fontSize:     13,
-    fontWeight:   600,
-    cursor:       'pointer',
-    flex:         1,
+    padding:      '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flex: 1,
   })
+
+  const unLabel = (key) => UNIDADES.find(u => u.key === key)?.label || key
 
   return (
     <SistemaLayout titulo="Orçamentos">
@@ -246,7 +344,6 @@ export default function OrcamentosPage() {
               })}
             </tbody>
           </table>
-
           {totalPaginas > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 16 }}>
               {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(p => (
@@ -260,9 +357,15 @@ export default function OrcamentosPage() {
         </div>
       </div>
 
+      {/* Modal catálogo */}
+      {showCatalogo && (
+        <ModalCatalogo onSelecionar={addDoCatalogo} onFechar={() => setShowCatalogo(false)} />
+      )}
+
+      {/* Modal orçamento */}
       {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 820, padding: 28, maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '20px 16px', overflowY: 'auto' }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 860, padding: 28, marginTop: 20, marginBottom: 20 }}>
             <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
               {editandoId ? 'Editar Orçamento' : 'Novo Orçamento'}
             </h2>
@@ -279,18 +382,11 @@ export default function OrcamentosPage() {
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vincular a</label>
               <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <button onClick={() => setModal(m => ({ ...m, tipoVinculo: 'cliente', prospecto: '' }))}
-                  style={tabBtn('cliente', 'Cliente')}>
-                  👥 Cliente
-                </button>
-                <button onClick={() => setModal(m => ({ ...m, tipoVinculo: 'prospecto', cliente: '' }))}
-                  style={tabBtn('prospecto', 'Prospecto')}>
-                  🔍 Prospecto
-                </button>
+                <button onClick={() => setModal(m => ({ ...m, tipoVinculo: 'cliente', prospecto: '' }))} style={tabBtn('cliente')}>👥 Cliente</button>
+                <button onClick={() => setModal(m => ({ ...m, tipoVinculo: 'prospecto', cliente: '' }))} style={tabBtn('prospecto')}>🔍 Prospecto</button>
               </div>
             </div>
 
-            {/* Select dinâmico */}
             {modal.tipoVinculo === 'cliente' ? (
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cliente</label>
@@ -330,30 +426,47 @@ export default function OrcamentosPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <label style={{ fontSize: 12, color: '#a78bca', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Itens</label>
-                <button onClick={addItem}
-                  style={{ background: 'rgba(6,59,248,0.2)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>
-                  + Adicionar item
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setShowCatalogo(true)}
+                    style={{ background: 'rgba(167,139,202,0.15)', color: '#a78bca', border: '1px solid rgba(167,139,202,0.3)', borderRadius: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>
+                    📦 Do catálogo
+                  </button>
+                  <button onClick={addItem}
+                    style={{ background: 'rgba(6,59,248,0.2)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>
+                    + Linha manual
+                  </button>
+                </div>
               </div>
+
               <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
-                      {['#', 'Descrição', 'Qtd', 'Valor Unit.', 'Subtotal', ''].map((h, i) => (
-                        <th key={i} style={{ padding: '8px 10px', fontSize: 10, color: '#6b6b8a', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i >= 2 && i <= 4 ? 'right' : 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{h}</th>
+                      {['#', 'Descrição', 'Un', 'Qtd', 'Valor Unit.', 'Subtotal', ''].map((h, i) => (
+                        <th key={i} style={{ padding: '8px 10px', fontSize: 10, color: '#6b6b8a', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i >= 3 && i <= 5 ? 'right' : 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {modal.itens.map((item, idx) => {
                       const st = (parseFloat(item.quantidade) || 0) * (parseFloat(item.valor_unitario) || 0)
+                      const doCatalogo = !!item.produto
                       return (
-                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                          <td style={{ padding: '6px 10px', color: '#6b6b8a', fontSize: 12, width: 28 }}>{idx + 1}</td>
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: doCatalogo ? 'rgba(6,59,248,0.03)' : 'transparent' }}>
+                          <td style={{ padding: '6px 10px', color: '#6b6b8a', fontSize: 12, width: 28 }}>
+                            {idx + 1}
+                            {doCatalogo && <span title="Do catálogo" style={{ marginLeft: 4, fontSize: 10 }}>📦</span>}
+                          </td>
                           <td style={{ padding: '4px 6px' }}>
                             <input value={item.descricao} onChange={e => setItem(idx, 'descricao', e.target.value)}
                               placeholder="Descrição do serviço/produto"
                               style={{ ...inputStyle, padding: '6px 10px', fontSize: 12 }} />
+                          </td>
+                          <td style={{ padding: '4px 6px', width: 90 }}>
+                            <select value={item.unidade} onChange={e => setItem(idx, 'unidade', e.target.value)}
+                              style={{ ...inputStyle, padding: '5px 6px', fontSize: 11 }}>
+                              {UNIDADES.map(u => <option key={u.key} value={u.key}>{u.label}</option>)}
+                            </select>
                           </td>
                           <td style={{ padding: '4px 6px', width: 70 }}>
                             <input type="number" value={item.quantidade} onChange={e => setItem(idx, 'quantidade', e.target.value)}

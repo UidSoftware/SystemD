@@ -56,9 +56,11 @@ class Orcamento(models.Model):
 
 class ItemOrcamento(models.Model):
     orcamento      = models.ForeignKey(Orcamento, on_delete=models.CASCADE, related_name='itens')
+    produto        = models.ForeignKey('produtos.Produto', null=True, blank=True, on_delete=models.SET_NULL, related_name='itens_orcamento')
     ordem          = models.PositiveSmallIntegerField(default=1)
     descricao      = models.CharField(max_length=300)
     quantidade     = models.DecimalField(max_digits=10, decimal_places=3, default=1)
+    unidade        = models.CharField(max_length=10, default='UN')
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2)
 
     @property

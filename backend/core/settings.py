@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'entregas',
     'notificacoes',
     'orcamentos',
+    'produtos',
 ]
 
 MIDDLEWARE = [

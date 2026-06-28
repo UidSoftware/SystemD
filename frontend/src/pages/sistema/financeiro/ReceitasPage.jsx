@@ -22,11 +22,19 @@ const TIPO_CFG = {
   OUTRO:            { label: 'Outro',       cor: '#6b7280' },
 }
 
+const FREQUENCIA_OPTS = [
+  { value: 'MENSAL',    label: 'Mensal'    },
+  { value: 'QUINZENAL', label: 'Quinzenal' },
+  { value: 'SEMANAL',   label: 'Semanal'   },
+  { value: 'ANUAL',     label: 'Anual'     },
+]
+
 const formVazio = {
-  tipo: 'MENSALIDADE', descricao: '', cliente: '', os: '',
+  tipo: 'ENTRADA_CONTRATO', descricao: '', cliente: '', os: '',
   categoria: '',
   valor_bruto: '', desconto: '0', conta: '',
   vencimento: '', referencia_mes: '', observacoes: '',
+  recorrente: false, frequencia: 'MENSAL', quantidade: 12,
 }
 
 const btnAcao = (cor) => ({
@@ -52,6 +60,8 @@ export default function ReceitasPage() {
   const [novaCategoria, setNovaCategoria] = useState('')
   const [salvandoCategoria, setSalvandoCategoria] = useState(false)
   const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
+  const [jaFoiRecebido, setJaFoiRecebido] = useState(false)
+  const [recebimentoInline, setRecebimentoInline] = useState('')
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -86,7 +96,7 @@ export default function ReceitasPage() {
   useEffect(() => { carregar() }, [carregar])
 
   const abrirNovo = () => {
-    setEditando(null); setForm(formVazio); setErro(''); setModal(true)
+    setEditando(null); setForm(formVazio); setErro(''); setJaFoiRecebido(false); setRecebimentoInline(''); setModal(true)
   }
   const abrirEdicao = (r) => {
     setEditando(r)
@@ -129,6 +139,13 @@ export default function ReceitasPage() {
       os: form.os || null,
       categoria: form.categoria || null,
       referencia_mes: form.referencia_mes ? form.referencia_mes + '-01' : null,
+      recorrente: form.recorrente,
+      frequencia: form.recorrente ? form.frequencia : '',
+      quantidade: form.recorrente ? parseInt(form.quantidade) : 1,
+      ...(jaFoiRecebido && !editando ? {
+        status: 'RECEBIDO',
+        recebimento: recebimentoInline || new Date().toISOString().slice(0, 10),
+      } : {}),
     }
     try {
       if (editando) await financeiroApi.editarReceita(editando.id, payload)
@@ -294,7 +311,14 @@ export default function ReceitasPage() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Tipo *</label>
-              <select style={inputStyle} value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
+              <select style={inputStyle} value={form.tipo} onChange={e => {
+                const novoTipo = e.target.value
+                setForm(f => ({
+                  ...f,
+                  tipo: novoTipo,
+                  recorrente: novoTipo === 'MENSALIDADE' ? true : f.recorrente,
+                }))
+              }}>
                 {Object.entries(TIPO_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
             </div>
@@ -382,6 +406,68 @@ export default function ReceitasPage() {
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Mês de referência</label>
               <input style={inputStyle} type="month" value={form.referencia_mes} onChange={e => setForm(f => ({ ...f, referencia_mes: e.target.value }))} />
             </div>
+
+            {/* Bloco recorrência */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={form.recorrente}
+                  onChange={e => setForm(f => ({ ...f, recorrente: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: '#063BF8', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: 13, color: '#e2d9f3', fontWeight: 500 }}>Lancamento recorrente</span>
+              </label>
+              {form.recorrente && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Frequencia *</label>
+                      <select style={inputStyle} value={form.frequencia} onChange={e => setForm(f => ({ ...f, frequencia: e.target.value }))}>
+                        {FREQUENCIA_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Qtd de parcelas *</label>
+                      <input style={inputStyle} type="number" min="2" max="60" value={form.quantidade}
+                        onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))} />
+                    </div>
+                  </div>
+                  {parseInt(form.quantidade) >= 2 && (
+                    <div style={{ marginTop: 10, background: 'rgba(6,59,248,0.08)', border: '1px solid rgba(6,59,248,0.2)', borderRadius: 8, padding: '8px 12px' }}>
+                      <span style={{ fontSize: 12, color: '#6b8fff' }}>
+                        Serao criados {form.quantidade} lancamentos. 1 vencimento em {form.vencimento || '(data nao informada)'}, os demais calculados automaticamente ({FREQUENCIA_OPTS.find(o => o.value === form.frequencia)?.label}).
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {!editando && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={jaFoiRecebido}
+                    onChange={e => { setJaFoiRecebido(e.target.checked); if (!e.target.checked) setRecebimentoInline('') }}
+                    style={{ width: 16, height: 16, accentColor: '#10b981', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 13, color: '#e2d9f3', fontWeight: 500 }}>Ja foi recebido?</span>
+                  {form.recorrente && jaFoiRecebido && (
+                    <span style={{ fontSize: 11, color: '#10b981' }}>so o 1º sera marcado como recebido</span>
+                  )}
+                </label>
+                {jaFoiRecebido && (
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Data de recebimento</label>
+                    <input style={{ ...inputStyle, maxWidth: 220 }} type="date" value={recebimentoInline}
+                      onChange={e => setRecebimentoInline(e.target.value)} />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Observações</label>
               <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />

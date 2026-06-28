@@ -143,7 +143,42 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
     ordering_fields = ['vencimento', 'valor_liquido', 'status']
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        recorrente = self.request.data.get('recorrente', False)
+        frequencia = self.request.data.get('frequencia', '')
+        quantidade = int(self.request.data.get('quantidade', 1) or 1)
+
+        if recorrente and quantidade > 1 and frequencia:
+            from financeiro.models import Receita
+            import calendar as cal
+            vencimento_base = serializer.validated_data.get('vencimento')
+
+            def proxima_data(base, n, freq):
+                if freq == 'MENSAL':
+                    mes = base.month - 1 + n
+                    ano = base.year + mes // 12
+                    mes = mes % 12 + 1
+                    ultimo_dia = cal.monthrange(ano, mes)[1]
+                    return base.replace(year=ano, month=mes, day=min(base.day, ultimo_dia))
+                elif freq == 'SEMANAL':
+                    return base + timedelta(weeks=n)
+                elif freq == 'QUINZENAL':
+                    return base + timedelta(days=15 * n)
+                elif freq == 'ANUAL':
+                    return base.replace(year=base.year + n)
+                return base
+
+            campos_base = {k: v for k, v in serializer.validated_data.items()}
+            campos_base['criado_por'] = self.request.user
+            pagar_primeiro = campos_base.get('status') == 'RECEBIDO'
+
+            for i in range(quantidade):
+                campos_base['vencimento'] = proxima_data(vencimento_base, i, frequencia)
+                if pagar_primeiro and i > 0:
+                    Receita.objects.create(**{**campos_base, 'status': 'PENDENTE', 'recebimento': None})
+                else:
+                    Receita.objects.create(**campos_base)
+        else:
+            serializer.save(criado_por=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
@@ -210,9 +245,14 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
             campos_base = {k: v for k, v in dados.items()}
             campos_base['criado_por'] = self.request.user
 
+            pagar_primeiro = campos_base.get('status') == 'PAGO'
             for i in range(quantidade):
                 campos_base['vencimento'] = proxima_data(vencimento_base, i, frequencia)
-                Despesa.objects.create(**campos_base)
+                if pagar_primeiro and i > 0:
+                    campos_iter = {**campos_base, 'status': 'PENDENTE', 'pagamento': None, 'forma_pagamento': ''}
+                    Despesa.objects.create(**campos_iter)
+                else:
+                    Despesa.objects.create(**campos_base)
         else:
             serializer.save(criado_por=self.request.user)
 
@@ -386,6 +426,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminOrFinanceiro])
     def totais(self, request):
+        from .models import Conta
         conta_id = request.query_params.get('conta')
         qs = LivroCaixa.objects.filter(estornado=False)
         if conta_id:
@@ -396,10 +437,25 @@ class LivroCaixaViewSet(ReadCreateViewSet):
         )
         total_entradas = agg['total_entradas'] or Decimal('0')
         total_saidas   = agg['total_saidas']   or Decimal('0')
+
+        # Saldo real = último saldo_atual da cadeia por conta (inclui saldo_inicial)
+        if conta_id:
+            try:
+                conta = Conta.objects.get(id=conta_id)
+                ultimo = LivroCaixa.objects.filter(conta=conta).order_by('data', 'criado_em').last()
+                saldo_atual = ultimo.saldo_atual if ultimo else conta.saldo_inicial
+            except Conta.DoesNotExist:
+                saldo_atual = total_entradas - total_saidas
+        else:
+            saldo_atual = Decimal('0')
+            for conta in Conta.objects.filter(ativo=True):
+                ultimo = LivroCaixa.objects.filter(conta=conta).order_by('data', 'criado_em').last()
+                saldo_atual += (ultimo.saldo_atual if ultimo else conta.saldo_inicial)
+
         return Response({
             'total_entradas': total_entradas,
             'total_saidas':   total_saidas,
-            'saldo_atual':    total_entradas - total_saidas,
+            'saldo_atual':    saldo_atual,
         })
 
 

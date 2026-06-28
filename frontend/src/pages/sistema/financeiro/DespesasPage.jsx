@@ -71,6 +71,8 @@ export default function DespesasPage() {
   const [novaCategoria, setNovaCategoria]     = useState('')
   const [salvandoCategoria, setSalvandoCategoria] = useState(false)
   const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
+  const [jaEstaPago, setJaEstaPago]           = useState(false)
+  const [formPagInline, setFormPagInline]     = useState({ pagamento: '', forma_pagamento: '' })
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -102,7 +104,7 @@ export default function DespesasPage() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  const abrirNovo = () => { setEditando(null); setForm(formVazio); setErro(''); setMostrarNovaCategoria(false); setModal(true) }
+  const abrirNovo = () => { setEditando(null); setForm(formVazio); setErro(''); setMostrarNovaCategoria(false); setJaEstaPago(false); setFormPagInline({ pagamento: '', forma_pagamento: '' }); setModal(true) }
   const abrirEdicao = (d) => {
     setEditando(d)
     setForm({
@@ -181,6 +183,11 @@ export default function DespesasPage() {
       recorrente: form.recorrente,
       frequencia: form.recorrente ? form.frequencia : '',
       quantidade: form.recorrente ? parseInt(form.quantidade) : 1,
+      ...(jaEstaPago && !editando ? {
+        status: 'PAGO',
+        pagamento: formPagInline.pagamento || new Date().toISOString().slice(0, 10),
+        forma_pagamento: formPagInline.forma_pagamento,
+      } : {}),
     }
     try {
       if (editando) await financeiroApi.editarDespesa(editando.id, payload)
@@ -468,6 +475,40 @@ export default function DespesasPage() {
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Mes de referencia</label>
               <input style={inputStyle} type="month" value={form.referencia_mes} onChange={e => setForm(f => ({ ...f, referencia_mes: e.target.value }))} />
             </div>
+
+            {!editando && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={jaEstaPago}
+                    onChange={e => { setJaEstaPago(e.target.checked); if (!e.target.checked) setFormPagInline({ pagamento: '', forma_pagamento: '' }) }}
+                    style={{ width: 16, height: 16, accentColor: '#10b981', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 13, color: '#e2d9f3', fontWeight: 500 }}>Ja esta pago?</span>
+                  {form.recorrente && jaEstaPago && (
+                    <span style={{ fontSize: 11, color: '#10b981' }}>so a 1ª parcela sera marcada como paga</span>
+                  )}
+                </label>
+                {jaEstaPago && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Data de pagamento</label>
+                      <input style={inputStyle} type="date" value={formPagInline.pagamento}
+                        onChange={e => setFormPagInline(f => ({ ...f, pagamento: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Forma de pagamento</label>
+                      <select style={inputStyle} value={formPagInline.forma_pagamento}
+                        onChange={e => setFormPagInline(f => ({ ...f, forma_pagamento: e.target.value }))}>
+                        <option value="">Selecione</option>
+                        {FORMA_PAGAMENTO_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Observacoes</label>

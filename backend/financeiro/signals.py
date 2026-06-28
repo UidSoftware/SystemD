@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -11,8 +11,8 @@ def _ultimo_saldo(conta):
     ultimo = (
         LivroCaixa.objects.select_for_update()
         .filter(conta=conta)
-        .order_by('-data', '-criado_em')
-        .first()
+        .order_by('data', 'criado_em')
+        .last()
     )
     if ultimo:
         return ultimo.saldo_atual
@@ -21,13 +21,19 @@ def _ultimo_saldo(conta):
 
 def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, criado_por=None):
     with transaction.atomic():
+        # Serializa todos os lançamentos da mesma conta — previne race condition
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT pg_advisory_xact_lock(%s)', [conta.id])
+
         if LivroCaixa.objects.filter(origem=origem, origem_id=origem_id).exists():
             return
+
         saldo_anterior = _ultimo_saldo(conta)
         if tipo == 'ENTRADA':
             saldo_atual = saldo_anterior + valor
         else:
             saldo_atual = saldo_anterior - valor
+
         LivroCaixa.objects.create(
             conta=conta,
             tipo=tipo,

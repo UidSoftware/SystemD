@@ -19,13 +19,36 @@ def _ultimo_saldo(conta):
     return conta.saldo_inicial
 
 
+def _reconstruir_cadeia(conta):
+    lancamentos = list(
+        LivroCaixa.objects.filter(conta=conta)
+        .order_by('data', 'criado_em')
+        .select_for_update()
+    )
+    saldo = conta.saldo_inicial
+    for lc in lancamentos:
+        lc.saldo_anterior = saldo
+        saldo = saldo + lc.valor if lc.tipo == 'ENTRADA' else saldo - lc.valor
+        lc.saldo_atual = saldo
+    LivroCaixa.objects.bulk_update(lancamentos, ['saldo_anterior', 'saldo_atual'])
+
+
 def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, criado_por=None):
     with transaction.atomic():
         # Serializa todos os lançamentos da mesma conta — previne race condition
         with connection.cursor() as cursor:
             cursor.execute('SELECT pg_advisory_xact_lock(%s)', [conta.id])
 
-        if LivroCaixa.objects.filter(origem=origem, origem_id=origem_id).exists():
+        existente = LivroCaixa.objects.filter(origem=origem, origem_id=origem_id).first()
+        if existente:
+            # Se data ou valor mudaram, atualiza e reconstrói a cadeia
+            mudou = existente.data != data or existente.valor != valor or existente.descricao != descricao
+            if mudou:
+                existente.data = data
+                existente.valor = valor
+                existente.descricao = descricao
+                existente.save(update_fields=['data', 'valor', 'descricao'])
+                _reconstruir_cadeia(conta)
             return
 
         saldo_anterior = _ultimo_saldo(conta)

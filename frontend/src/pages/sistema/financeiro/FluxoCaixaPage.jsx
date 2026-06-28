@@ -41,13 +41,15 @@ export default function FluxoCaixaPage() {
     return true
   })
 
-  // Agrupar por mês
+  // Agrupar por mês — estornados não entram nos totais mas aparecem na lista faded
   const porMes = {}
   filtrados.forEach(lc => {
     const chave = lc.data.slice(0, 7)
     if (!porMes[chave]) porMes[chave] = { entradas: 0, saidas: 0, itens: [] }
-    if (lc.tipo === 'ENTRADA') porMes[chave].entradas += parseFloat(lc.valor)
-    else porMes[chave].saidas += parseFloat(lc.valor)
+    if (!lc.estornado) {
+      if (lc.tipo === 'ENTRADA') porMes[chave].entradas += parseFloat(lc.valor)
+      else porMes[chave].saidas += parseFloat(lc.valor)
+    }
     porMes[chave].itens.push(lc)
   })
 
@@ -58,9 +60,8 @@ export default function FluxoCaixaPage() {
   const saldoBase = (() => {
     if (!filtros.ano) return 0
     const anoNum = parseInt(filtros.ano)
-    const anteriores = lancamentos.filter(lc => parseInt(lc.data.slice(0, 4)) < anoNum)
+    const anteriores = lancamentos.filter(lc => parseInt(lc.data.slice(0, 4)) < anoNum && !lc.estornado)
     if (!anteriores.length) return 0
-    // Soma entradas - saidas anteriores ao ano
     return anteriores.reduce((acc, lc) => {
       return lc.tipo === 'ENTRADA' ? acc + parseFloat(lc.valor) : acc - parseFloat(lc.valor)
     }, 0)

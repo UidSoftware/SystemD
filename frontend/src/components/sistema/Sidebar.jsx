@@ -48,6 +48,7 @@ const menuFinanceiro = [
   { label: 'Despesas Pagas',      path: '/sistema/financeiro/despesas-pagas',      emoji: '💳' },
   { label: 'Aportes',             path: '/sistema/financeiro/aportes',             emoji: '💰' },
   { label: 'Contas Bancarias',    path: '/sistema/financeiro/contas',              emoji: '🏦' },
+  { label: 'Conciliação',          path: '/sistema/financeiro/conciliacao',          emoji: '🔄' },
   { label: 'Livro Caixa',         path: '/sistema/financeiro/livro-caixa',         emoji: '📒' },
   { label: 'Fornecedores',        path: '/sistema/financeiro/fornecedores',        emoji: '🤝' },
 ]

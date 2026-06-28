@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Aporte, Categoria, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
+from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, Receita
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -121,4 +121,74 @@ class LivroCaixaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'criado_em', 'saldo_anterior', 'saldo_atual', 'estornado', 'estorno_de',
+        ]
+
+
+class ItemConciliacaoSerializer(serializers.ModelSerializer):
+    lancamento_lc_data  = serializers.DateField(source='lancamento_lc.data', read_only=True)
+    lancamento_lc_desc  = serializers.CharField(source='lancamento_lc.descricao', read_only=True)
+    tipo_label          = serializers.SerializerMethodField()
+    status_label        = serializers.SerializerMethodField()
+
+    def get_tipo_label(self, obj):
+        return 'Entrada' if obj.tipo == 'ENTRADA' else 'Saída'
+
+    def get_status_label(self, obj):
+        labels = {
+            'CONCILIADO':       'Conciliado',
+            'FALTANDO_SISTEMA': 'Faltando no Sistema',
+            'FALTANDO_BANCO':   'Faltando no Banco',
+        }
+        return labels.get(obj.status, obj.status)
+
+    class Meta:
+        model = ItemConciliacao
+        fields = [
+            'id', 'data_banco', 'descricao_banco', 'valor', 'tipo', 'tipo_label',
+            'status', 'status_label', 'lancamento_lc', 'lancamento_lc_data',
+            'lancamento_lc_desc', 'confirmado',
+        ]
+
+
+class ConciliacaoExtratoSerializer(serializers.ModelSerializer):
+    conta_nome    = serializers.CharField(source='conta.nome', read_only=True)
+    status_label  = serializers.SerializerMethodField()
+    itens         = ItemConciliacaoSerializer(many=True, read_only=True)
+
+    def get_status_label(self, obj):
+        labels = {
+            'PENDENTE':           'Pendente',
+            'PROCESSADO':         'Processado',
+            'COM_DIVERGENCIAS':   'Com Divergências',
+        }
+        return labels.get(obj.status, obj.status)
+
+    class Meta:
+        model = ConciliacaoExtrato
+        fields = [
+            'id', 'conta', 'conta_nome', 'arquivo', 'periodo', 'processado_em',
+            'status', 'status_label', 'total_banco', 'total_sistema', 'divergencias',
+            'itens',
+        ]
+        read_only_fields = ['id', 'processado_em', 'status', 'total_banco', 'total_sistema', 'divergencias']
+
+
+class ConciliacaoListSerializer(serializers.ModelSerializer):
+    conta_nome   = serializers.CharField(source='conta.nome', read_only=True)
+    status_label = serializers.SerializerMethodField()
+
+    def get_status_label(self, obj):
+        labels = {
+            'PENDENTE':           'Pendente',
+            'PROCESSADO':         'Processado',
+            'COM_DIVERGENCIAS':   'Com Divergências',
+        }
+        return labels.get(obj.status, obj.status)
+
+    class Meta:
+        model = ConciliacaoExtrato
+        fields = [
+            'id', 'conta', 'conta_nome', 'arquivo', 'periodo',
+            'processado_em', 'status', 'status_label',
+            'total_banco', 'total_sistema', 'divergencias',
         ]

@@ -49,6 +49,12 @@ export const financeiroApi = {
   totaisLivroCaixa:      (p) => f('/livro-caixa/totais/', p),
   estornar:              (id, d) => post(`/livro-caixa/${id}/estornar/`, d),
 
+  // Conciliação Bancária
+  listarConciliacoes:    (p) => f('/conciliacoes/', p),
+  detalharConciliacao:   (id) => f(`/conciliacoes/${id}/`),
+  processarConciliacao:  (d) => post('/conciliacoes/processar/', d),
+  confirmarConciliacao:  (id, d) => post(`/conciliacoes/${id}/confirmar/`, d),
+
   // Helpers para selects em formularios financeiros
   listarClientesOpts:    (p) => api.get('/clientes/', { params: p }),
   listarOSOpts:          (p) => api.get('/os/', { params: p }),

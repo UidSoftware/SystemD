@@ -32,6 +32,7 @@ import MeusProjetosPage from './pages/sistema/portal/MeusProjetosPage'
 import SuportePage from './pages/sistema/portal/SuportePage'
 import MinhasFaturasPage from './pages/sistema/portal/MinhasFaturasPage'
 // Financeiro
+import ConciliacaoPage from './pages/sistema/financeiro/ConciliacaoPage'
 import FornecedoresPage from './pages/sistema/financeiro/FornecedoresPage'
 import ContasPage from './pages/sistema/financeiro/ContasPage'
 import LivroCaixaPage from './pages/sistema/financeiro/LivroCaixaPage'
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="/sistema/financeiro/aportes" element={<PrivateRoute perfisPermitidos={['ADMIN']}><AportesPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/contas" element={<PrivateRoute perfisPermitidos={FIN}><ContasPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/livro-caixa" element={<PrivateRoute perfisPermitidos={FIN}><LivroCaixaPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/conciliacao" element={<PrivateRoute perfisPermitidos={FIN}><ConciliacaoPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN}><FluxoCaixaPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN}><DREPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN}><PorClientePage /></PrivateRoute>} />

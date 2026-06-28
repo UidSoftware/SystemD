@@ -2,18 +2,20 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    AporteViewSet, CategoriaViewSet, ContaViewSet, DespesaViewSet, FornecedorViewSet,
+    AporteViewSet, CategoriaViewSet, ConciliacaoViewSet, ContaViewSet,
+    DespesaViewSet, FornecedorViewSet,
     LivroCaixaViewSet, ReceitaViewSet, dashboard, dre, fluxo_caixa, receita_por_cliente,
 )
 
 router = DefaultRouter()
-router.register('categorias',   CategoriaViewSet,   basename='categorias')
-router.register('contas',       ContaViewSet,       basename='contas')
-router.register('aportes',      AporteViewSet,      basename='aportes')
-router.register('receitas',     ReceitaViewSet,     basename='receitas')
-router.register('despesas',     DespesaViewSet,     basename='despesas')
-router.register('fornecedores', FornecedorViewSet,  basename='fornecedores')
-router.register('livro-caixa',  LivroCaixaViewSet,  basename='livro-caixa')
+router.register('categorias',    CategoriaViewSet,    basename='categorias')
+router.register('contas',        ContaViewSet,        basename='contas')
+router.register('aportes',       AporteViewSet,       basename='aportes')
+router.register('receitas',      ReceitaViewSet,      basename='receitas')
+router.register('despesas',      DespesaViewSet,      basename='despesas')
+router.register('fornecedores',  FornecedorViewSet,   basename='fornecedores')
+router.register('livro-caixa',   LivroCaixaViewSet,   basename='livro-caixa')
+router.register('conciliacoes',  ConciliacaoViewSet,  basename='conciliacoes')
 
 urlpatterns = [
     path('', include(router.urls)),

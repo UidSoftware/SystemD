@@ -13,10 +13,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrOperacionalOrFinanceiro
 
-from .models import Aporte, Categoria, Conta, Despesa, FormaPagamento, Fornecedor, LivroCaixa, Receita
+from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, Receita
 from .serializers import (
-    AporteSerializer, CategoriaSerializer, ContaSerializer, DespesaSerializer,
-    FornecedorSerializer, LivroCaixaSerializer, ReceitaSerializer,
+    AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
+    FornecedorSerializer, ItemConciliacaoSerializer, LivroCaixaSerializer, ReceitaSerializer,
 )
 
 
@@ -765,3 +765,212 @@ def dashboard(request):
         })
 
     return Response(data)
+
+
+class ConciliacaoViewSet(ModelViewSet):
+    permission_classes = [IsAdminOrFinanceiro]
+    filter_backends    = [DjangoFilterBackend]
+    filterset_fields   = ['conta', 'status']
+
+    def get_queryset(self):
+        return ConciliacaoExtrato.objects.filter(ativo=True).order_by('-processado_em')
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ConciliacaoListSerializer
+        return ConciliacaoExtratoSerializer
+
+    @action(detail=False, methods=['post'], url_path='processar')
+    def processar(self, request):
+        arquivo  = request.data.get('arquivo')
+        nome_conta = request.data.get('conta', '').upper()
+        mes_str  = request.data.get('mes')
+        senha    = request.data.get('senha', '609393')
+
+        if not arquivo or not nome_conta:
+            return Response({'erro': 'arquivo e conta são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            conta = Conta.objects.get(nome__iexact=nome_conta, ativo=True)
+        except Conta.DoesNotExist:
+            return Response({'erro': f'Conta "{nome_conta}" não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        import re
+        from datetime import datetime
+        from pathlib import Path
+        from financeiro.parsers import extrair_texto_pdf, parse_c6, parse_btg
+
+        # Infere período
+        if mes_str:
+            try:
+                periodo = datetime.strptime(mes_str + '-01', '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'erro': 'Formato de mes inválido. Use YYYY-MM.'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            m = re.search(r'(\d{4})-(\d{2})', Path(arquivo).name)
+            if m:
+                from datetime import date as date_type
+                periodo = date_type(int(m.group(1)), int(m.group(2)), 1)
+            else:
+                return Response({'erro': 'Não foi possível inferir o mês. Informe o campo mes.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            texto = extrair_texto_pdf(arquivo, senha=senha)
+        except Exception as e:
+            return Response({'erro': f'Erro ao ler PDF: {e}'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        ano = periodo.year
+        if 'C6' in nome_conta:
+            transacoes_banco = parse_c6(texto, ano=ano)
+        else:
+            transacoes_banco = parse_btg(texto, ano=ano)
+
+        transacoes_banco = [
+            t for t in transacoes_banco
+            if t['data'].year == periodo.year and t['data'].month == periodo.month
+        ]
+
+        from datetime import date as date_type
+        primeiro_dia = periodo
+        if periodo.month == 12:
+            ultimo_dia = date_type(periodo.year + 1, 1, 1)
+        else:
+            ultimo_dia = date_type(periodo.year, periodo.month + 1, 1)
+
+        lancamentos_sistema = list(
+            LivroCaixa.objects.filter(
+                conta=conta,
+                data__gte=primeiro_dia,
+                data__lt=ultimo_dia,
+                estornado=False,
+            ).order_by('data', 'criado_em')
+        )
+
+        usados_sistema = set()
+        itens = []
+
+        for t in transacoes_banco:
+            match = None
+            for i, lc in enumerate(lancamentos_sistema):
+                if i in usados_sistema:
+                    continue
+                diff_dias = abs((lc.data - t['data']).days)
+                if diff_dias <= 1 and lc.valor == t['valor'] and lc.tipo == t['tipo']:
+                    match = lc
+                    usados_sistema.add(i)
+                    break
+
+            itens.append({
+                'data_banco': t['data'],
+                'descricao_banco': t['descricao'],
+                'valor': t['valor'],
+                'tipo': t['tipo'],
+                'status': 'CONCILIADO' if match else 'FALTANDO_SISTEMA',
+                'lancamento_lc': match,
+            })
+
+        for i, lc in enumerate(lancamentos_sistema):
+            if i not in usados_sistema:
+                itens.append({
+                    'data_banco': lc.data,
+                    'descricao_banco': lc.descricao,
+                    'valor': lc.valor,
+                    'tipo': lc.tipo,
+                    'status': 'FALTANDO_BANCO',
+                    'lancamento_lc': lc,
+                })
+
+        faltando_sistema = [x for x in itens if x['status'] == 'FALTANDO_SISTEMA']
+        faltando_banco   = [x for x in itens if x['status'] == 'FALTANDO_BANCO']
+
+        from decimal import Decimal as D
+        total_banco   = sum(t['valor'] for t in transacoes_banco if t['tipo'] == 'ENTRADA') - \
+                        sum(t['valor'] for t in transacoes_banco if t['tipo'] == 'SAIDA')
+        total_sistema = sum(lc.valor for lc in lancamentos_sistema if lc.tipo == 'ENTRADA') - \
+                        sum(lc.valor for lc in lancamentos_sistema if lc.tipo == 'SAIDA')
+
+        with transaction.atomic():
+            conc = ConciliacaoExtrato.objects.create(
+                conta=conta,
+                arquivo=arquivo,
+                periodo=periodo,
+                status='COM_DIVERGENCIAS' if (faltando_sistema or faltando_banco) else 'PROCESSADO',
+                total_banco=total_banco,
+                total_sistema=total_sistema,
+                divergencias=len(faltando_sistema) + len(faltando_banco),
+            )
+
+            for item in itens:
+                ItemConciliacao.objects.create(
+                    conciliacao=conc,
+                    data_banco=item['data_banco'],
+                    descricao_banco=item['descricao_banco'],
+                    valor=item['valor'],
+                    tipo=item['tipo'],
+                    status=item['status'],
+                    lancamento_lc=item['lancamento_lc'],
+                )
+
+        return Response(ConciliacaoExtratoSerializer(conc).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='confirmar')
+    def confirmar(self, request, pk=None):
+        conc = self.get_object()
+        ids_confirmar = request.data.get('itens', [])
+
+        if ids_confirmar:
+            itens_qs = conc.itens.filter(id__in=ids_confirmar, status='FALTANDO_SISTEMA', confirmado=False)
+        else:
+            itens_qs = conc.itens.filter(status='FALTANDO_SISTEMA', confirmado=False)
+
+        from financeiro.parsers import inferir_categoria_descricao
+        criados = 0
+        erros   = []
+
+        for item in itens_qs:
+            try:
+                with transaction.atomic():
+                    if item.tipo == 'ENTRADA':
+                        Aporte.objects.create(
+                            conta=conc.conta,
+                            descricao=item.descricao_banco[:255],
+                            valor=item.valor,
+                            data=item.data_banco,
+                        )
+                    else:
+                        cat_nome  = inferir_categoria_descricao(item.descricao_banco)
+                        categoria = None
+                        if cat_nome:
+                            categoria = Categoria.objects.filter(nome__icontains=cat_nome).first()
+
+                        Despesa.objects.create(
+                            conta=conc.conta,
+                            descricao=item.descricao_banco[:255],
+                            valor_bruto=item.valor,
+                            vencimento=item.data_banco,
+                            pagamento=item.data_banco,
+                            status='PAGO',
+                            tipo='VARIAVEL',
+                            forma_pagamento='PIX',
+                            categoria=categoria,
+                        )
+
+                    item.confirmado = True
+                    item.save(update_fields=['confirmado'])
+                    criados += 1
+            except Exception as e:
+                erros.append(f'{item.descricao_banco[:40]}: {e}')
+
+        # Atualiza status da conciliação se não há mais divergências
+        restantes = conc.itens.filter(status='FALTANDO_SISTEMA', confirmado=False).count()
+        if restantes == 0:
+            faltando_banco = conc.itens.filter(status='FALTANDO_BANCO').count()
+            conc.status = 'COM_DIVERGENCIAS' if faltando_banco else 'PROCESSADO'
+            conc.divergencias = faltando_banco
+            conc.save(update_fields=['status', 'divergencias'])
+
+        return Response({
+            'criados': criados,
+            'erros':   erros,
+            'conciliacao': ConciliacaoExtratoSerializer(conc).data,
+        })

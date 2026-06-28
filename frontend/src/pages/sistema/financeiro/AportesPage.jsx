@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../../../contexts/AuthContext'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
@@ -10,10 +11,11 @@ const TIPO_CFG = {
   EMPRESTIMO:     { label: 'Empréstimo',       cor: '#f59e0b' },
 }
 
-const formVazio = { tipo: 'CAPITAL_SOCIAL', descricao: '', valor: '', conta: '', data: new Date().toISOString().slice(0,10), responsavel: 'Luiz Eduardo', observacoes: '' }
+const formVazio = { tipo: 'CAPITAL_SOCIAL', descricao: '', valor: '', conta: '', data: new Date().toISOString().slice(0,10), responsavel: '', observacoes: '' }
 const btnAcao = (cor) => ({ background: `${cor}22`, color: cor, border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, cursor: 'pointer' })
 
 export default function AportesPage() {
+  const { usuario } = useAuth()
   const [dados, setDados] = useState([])
   const [contas, setContas] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -34,7 +36,7 @@ export default function AportesPage() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  const abrirNovo = () => { setEditando(null); setForm(formVazio); setErro(''); setModal(true) }
+  const abrirNovo = () => { setEditando(null); setForm({ ...formVazio, responsavel: usuario?.nome || '' }); setErro(''); setModal(true) }
   const abrirEdicao = (a) => {
     setEditando(a)
     setForm({ tipo: a.tipo, descricao: a.descricao, valor: a.valor, conta: a.conta, data: a.data, responsavel: a.responsavel, observacoes: a.observacoes || '' })

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const IS = {
   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
@@ -55,6 +56,7 @@ const FORM_VAZIO = {
 
 export default function ProdutosPage() {
   const [lista, setLista]               = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [total, setTotal]               = useState(0)
   const [carregando, setCarregando]     = useState(true)
   const [pagina, setPagina]             = useState(1)
@@ -92,9 +94,7 @@ export default function ProdutosPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Desativar este item do catálogo?')) return
-    await api.delete('/produtos/' + id + '/')
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Desativar este item do catálogo?', onConfirm: async () => { await api.delete('/produtos/' + id + '/'); carregar(pagina) } })
   }
 
   const set = (k, v) => setModal(m => ({ ...m, [k]: v }))
@@ -291,6 +291,7 @@ export default function ProdutosPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

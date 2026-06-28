@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 function Chip({ label, active, onClick }) {
   return (
@@ -108,6 +109,7 @@ const ENTREVISTA_VAZIA = {
 
 export default function EntrevistasPage() {
   const [entrevistas, setEntrevistas] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [prospectos, setProspectos] = useState([])
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
@@ -192,9 +194,7 @@ export default function EntrevistasPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Excluir esta entrevista?')) return
-    await api.delete(`/entrevistas/${id}/`)
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Excluir esta entrevista?', onConfirm: async () => { await api.delete(`/entrevistas/${id}/`); carregar(pagina) } })
   }
 
   const cardStyle = {
@@ -402,6 +402,7 @@ export default function EntrevistasPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

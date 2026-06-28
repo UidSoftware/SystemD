@@ -27,6 +27,7 @@ export default function FornecedoresPage() {
   const [editando, setEditando]     = useState(null)
   const [form, setForm]             = useState(formVazio)
   const [salvando, setSalvando]     = useState(false)
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [erro, setErro]             = useState('')
   const [busca, setBusca]           = useState('')
 
@@ -90,11 +91,7 @@ export default function FornecedoresPage() {
     }
   }
 
-  const desativar = async (d) => {
-    if (!confirm(`Desativar fornecedor "${d.forn_nome}"?`)) return
-    await financeiroApi.deletarFornecedor(d.id)
-    carregar()
-  }
+  const desativar = (d) => setModalConfirmar({ msg: `Desativar fornecedor "${d.forn_nome}"?`, onConfirm: async () => { await financeiroApi.deletarFornecedor(d.id); carregar() } })
 
   const colunas = [
     { key: 'forn_nome',     label: 'Nome' },
@@ -311,6 +308,7 @@ export default function FornecedoresPage() {
           </form>
         </ModalBase>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

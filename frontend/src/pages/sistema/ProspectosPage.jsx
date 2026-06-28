@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.05)',
@@ -126,6 +127,7 @@ export default function ProspectosPage() {
   const isAdmin = usuario?.perfil === 'ADMIN'
 
   const [prospectos, setProspectos] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [pagina, setPagina] = useState(1)
@@ -214,9 +216,7 @@ export default function ProspectosPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Excluir este prospecto?')) return
-    await api.delete(`/prospectos/${id}/`)
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Excluir este prospecto?', onConfirm: async () => { await api.delete(`/prospectos/${id}/`); carregar(pagina) } })
   }
 
   const abrirConverter = (p) => {
@@ -535,6 +535,7 @@ export default function ProspectosPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

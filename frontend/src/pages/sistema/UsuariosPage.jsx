@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import { adminApi } from '../../services/adminApi'
 import api from '../../services/api'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const PERFIS = [
   { value: 'ADMIN',       label: 'Admin',       cor: '#FF0000' },
@@ -27,6 +28,7 @@ function BadgePerfil({ perfil }) {
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [setores, setSetores] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
@@ -107,9 +109,7 @@ export default function UsuariosPage() {
   }
 
   const desativar = async (u) => {
-    if (!confirm(`Desativar "${u.nome}"?`)) return
-    await adminApi.desativarUsuario(u.id)
-    carregar()
+    setModalConfirmar({ msg: `Desativar "${u.nome}"?`, onConfirm: async () => { await adminApi.desativarUsuario(u.id); carregar() } })
   }
 
   const enviarAcesso = async (u) => {
@@ -334,6 +334,7 @@ export default function UsuariosPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

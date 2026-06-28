@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
+import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData, ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -68,9 +68,11 @@ export default function DespesasPage() {
   const [salvando, setSalvando]               = useState(false)
   const [erro, setErro]                       = useState('')
   const [filtros, setFiltros]                 = useState({ status: '', tipo: '', data_inicio: '', data_fim: '' })
+  const [busca, setBusca]                       = useState('')
   const [novaCategoria, setNovaCategoria]     = useState('')
   const [salvandoCategoria, setSalvandoCategoria] = useState(false)
   const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [jaEstaPago, setJaEstaPago]           = useState(false)
   const [formPagInline, setFormPagInline]     = useState({ pagamento: '', forma_pagamento: '' })
 
@@ -211,10 +213,7 @@ export default function DespesasPage() {
     } catch { } finally { setSalvando(false) }
   }
 
-  const cancelar = async (d) => {
-    if (!confirm('Cancelar despesa "' + d.descricao + '"?')) return
-    await financeiroApi.editarDespesa(d.id, { status: 'CANCELADO' }); carregar()
-  }
+  const cancelar = (d) => setModalConfirmar({ msg: `Cancelar despesa "${d.descricao}"?`, onConfirm: async () => { await financeiroApi.editarDespesa(d.id, { status: 'CANCELADO' }); carregar() } })
 
   const labelFrequencia = (freq) => FREQUENCIA_OPTS.find(o => o.value === freq)?.label ?? freq
 
@@ -274,8 +273,12 @@ export default function DespesasPage() {
   }
 
   // Agrupar por mes de vencimento (ordem crescente — proximos vencimentos primeiro)
+  const dadosFiltrados = busca.trim()
+    ? dados.filter(item => item.descricao?.toLowerCase().includes(busca.toLowerCase()) || item.fornecedor?.toLowerCase().includes(busca.toLowerCase()))
+    : dados
+
   const porMes = {}
-  dados.forEach(item => {
+  dadosFiltrados.forEach(item => {
     const chave = item.vencimento.slice(0, 7)
     if (!porMes[chave]) porMes[chave] = []
     porMes[chave].push(item)
@@ -316,16 +319,20 @@ export default function DespesasPage() {
             <label style={{ fontSize: 10, color: '#a78bca' }}>até</label>
             <input type="date" style={{ ...inputStyle, width: 150 }} value={filtros.data_fim} onChange={e => setFiltros(f => ({ ...f, data_fim: e.target.value }))} />
           </div>
-          {(filtros.data_inicio || filtros.data_fim || filtros.status || filtros.tipo) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: 10, color: '#a78bca' }}>Busca</label>
+            <input type="text" placeholder="Descrição ou fornecedor..." style={{ ...inputStyle, width: 220 }} value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
+          {(filtros.data_inicio || filtros.data_fim || filtros.status || filtros.tipo || busca) && (
             <button
-              onClick={() => setFiltros({ status: '', tipo: '', data_inicio: '', data_fim: '' })}
+              onClick={() => { setFiltros({ status: '', tipo: '', data_inicio: '', data_fim: '' }); setBusca('') }}
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1px solid rgba(167,139,202,0.3)', color: '#a78bca', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
               Limpar filtros
             </button>
           )}
         </div>
 
-        {carregando ? <Spinner /> : mesesOrdenados.length === 0 ? <Vazio /> : (
+        {carregando ? <Spinner /> : mesesOrdenados.length === 0 ? <Vazio msg={busca ? 'Nenhuma despesa encontrada para essa busca.' : undefined} /> : (
           <div style={{ paddingBottom: 32 }}>
             {mesesOrdenados.map(chave => {
               const itens = porMes[chave]
@@ -641,6 +648,7 @@ export default function DespesasPage() {
           </form>
         </ModalBase>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

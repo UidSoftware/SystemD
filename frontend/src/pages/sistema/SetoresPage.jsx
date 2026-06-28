@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import { adminApi } from '../../services/adminApi'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const formVazio = { nome: '', descricao: '', ativo: true }
 
@@ -9,6 +10,7 @@ const valueStyle = { fontSize: 13, color: '#e2d9f3' }
 
 export default function SetoresPage() {
   const [setores, setSetores] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -58,15 +60,7 @@ export default function SetoresPage() {
     }
   }
 
-  const desativar = async (s) => {
-    if (!confirm(`Desativar o setor "${s.nome}"?`)) return
-    try {
-      await adminApi.desativarSetor(s.id)
-      carregar()
-    } catch (e) {
-      alert(e.response?.data?.erro || 'Erro ao desativar setor.')
-    }
-  }
+  const desativar = (s) => setModalConfirmar({ msg: `Desativar o setor "${s.nome}"?`, onConfirm: async () => { try { await adminApi.desativarSetor(s.id); carregar() } catch (e) { alert(e.response?.data?.erro || 'Erro ao desativar setor.') } } })
 
   const inputStyle = {
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -216,6 +210,7 @@ export default function SetoresPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

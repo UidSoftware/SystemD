@@ -493,8 +493,18 @@ def fluxo_caixa(request):
         total_saidas=Sum('valor', filter=Q(tipo='SAIDA')),
     )
 
-    primeiro_lancamento = qs.order_by('data', 'criado_em').first()
-    saldo_inicial  = primeiro_lancamento.saldo_anterior if primeiro_lancamento else Decimal('0')
+    # Saldo real ao início do mês = último saldo_atual por conta antes do período
+    import calendar as _cal
+    primeiro_dia = date(ano, mes, 1)
+    from django.db.models import Max
+    if conta_id and conta:
+        prev = LivroCaixa.objects.filter(conta=conta, data__lt=primeiro_dia, estornado=False).order_by('data', 'criado_em').last()
+        saldo_inicial = prev.saldo_atual if prev else conta.saldo_inicial
+    else:
+        saldo_inicial = Decimal('0')
+        for _c in Conta.objects.filter(ativo=True):
+            _prev = LivroCaixa.objects.filter(conta=_c, data__lt=primeiro_dia, estornado=False).order_by('data', 'criado_em').last()
+            saldo_inicial += (_prev.saldo_atual if _prev else _c.saldo_inicial)
     total_entradas = agg['total_entradas'] or Decimal('0')
     total_saidas   = agg['total_saidas']   or Decimal('0')
     saldo_final    = saldo_inicial + total_entradas - total_saidas
@@ -689,10 +699,17 @@ def dashboard(request):
         )
         top_clientes = [{'cliente_nome': r['cliente__nome_empresa'], 'total': r['total']} for r in raw_top]
 
+        # Saldo total de todas as contas (último saldo_atual de cada conta)
+        saldo_total = Decimal('0')
+        for _c in Conta.objects.filter(ativo=True):
+            _ult = LivroCaixa.objects.filter(conta=_c, estornado=False).order_by('data', 'criado_em').last()
+            saldo_total += (_ult.saldo_atual if _ult else _c.saldo_inicial)
+
         data.update({
             'receita_mes': receita_mes,
             'despesa_mes': despesa_mes,
             'resultado_mes': receita_mes - despesa_mes,
+            'saldo_total_contas': saldo_total,
             'mrr': mrr,
             'receitas_vencer': receitas_vencer,
             'despesas_vencer': despesas_vencer,

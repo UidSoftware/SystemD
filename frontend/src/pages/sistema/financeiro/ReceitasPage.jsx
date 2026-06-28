@@ -57,9 +57,11 @@ export default function ReceitasPage() {
   const [salvando, setSalvando]           = useState(false)
   const [erro, setErro]                   = useState('')
   const [filtros, setFiltros]             = useState({ status: '', tipo: '', data_inicio: '', data_fim: '' })
+  const [busca, setBusca]                 = useState('')
   const [novaCategoria, setNovaCategoria] = useState('')
   const [salvandoCategoria, setSalvandoCategoria] = useState(false)
   const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false)
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [jaFoiRecebido, setJaFoiRecebido] = useState(false)
   const [recebimentoInline, setRecebimentoInline] = useState('')
 
@@ -168,10 +170,7 @@ export default function ReceitasPage() {
     } catch { } finally { setSalvando(false) }
   }
 
-  const deletar = async (r) => {
-    if (!confirm(`Cancelar lançamento "${r.descricao}"?`)) return
-    await financeiroApi.editarReceita(r.id, { status: 'CANCELADO' }); carregar()
-  }
+  const deletar = (r) => setModalConfirmar({ msg: `Cancelar lançamento "${r.descricao}"?`, onConfirm: async () => { await financeiroApi.editarReceita(r.id, { status: 'CANCELADO' }); carregar() } })
 
   const colunas = [
     {
@@ -210,8 +209,12 @@ export default function ReceitasPage() {
   ]
 
   // Agrupar por mes de vencimento (ordem crescente)
+  const dadosFiltrados = busca.trim()
+    ? dados.filter(item => item.descricao?.toLowerCase().includes(busca.toLowerCase()) || item.cliente_nome?.toLowerCase().includes(busca.toLowerCase()))
+    : dados
+
   const porMes = {}
-  dados.forEach(item => {
+  dadosFiltrados.forEach(item => {
     const chave = item.vencimento.slice(0, 7)
     if (!porMes[chave]) porMes[chave] = []
     porMes[chave].push(item)
@@ -247,16 +250,20 @@ export default function ReceitasPage() {
             <label style={{ fontSize: 10, color: '#a78bca' }}>até</label>
             <input type="date" style={{ ...inputStyle, width: 150 }} value={filtros.data_fim} onChange={e => setFiltros(f => ({ ...f, data_fim: e.target.value }))} />
           </div>
-          {(filtros.data_inicio || filtros.data_fim || filtros.status || filtros.tipo) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <label style={{ fontSize: 10, color: '#a78bca' }}>Busca</label>
+            <input type="text" placeholder="Descrição ou cliente..." style={{ ...inputStyle, width: 220 }} value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
+          {(filtros.data_inicio || filtros.data_fim || filtros.status || filtros.tipo || busca) && (
             <button
-              onClick={() => setFiltros({ status: '', tipo: '', data_inicio: '', data_fim: '' })}
+              onClick={() => { setFiltros({ status: '', tipo: '', data_inicio: '', data_fim: '' }); setBusca('') }}
               style={{ alignSelf: 'flex-end', background: 'transparent', border: '1px solid rgba(167,139,202,0.3)', color: '#a78bca', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
               Limpar filtros
             </button>
           )}
         </div>
 
-        {carregando ? <Spinner /> : mesesOrdenados.length === 0 ? <Vazio /> : (
+        {carregando ? <Spinner /> : mesesOrdenados.length === 0 ? <Vazio msg={busca ? 'Nenhuma receita encontrada para essa busca.' : undefined} /> : (
           <div style={{ paddingBottom: 32 }}>
             {mesesOrdenados.map(chave => {
               const itens = porMes[chave]
@@ -497,6 +504,7 @@ export default function ReceitasPage() {
           </form>
         </ModalBase>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

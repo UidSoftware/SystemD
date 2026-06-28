@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { FinanceiroTable, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda } from '../../../components/sistema/FinanceiroTable'
+import { FinanceiroTable, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 const TIPOS = { CORRENTE: 'Conta Corrente', POUPANCA: 'Poupança', CAIXA: 'Caixa', CARTEIRA: 'Carteira Digital' }
@@ -23,11 +23,24 @@ export default function ContasPage() {
   const [erro, setErro]                 = useState('')
   const [erroTransf, setErroTransf]     = useState('')
   const [sucesso, setSucesso]           = useState('')
+  const [modalConfirmar, setModalConfirmar] = useState(null)
+  const [saldos, setSaldos]             = useState({})
 
   const carregar = useCallback(() => {
     setCarregando(true)
     financeiroApi.listarContas()
-      .then(r => setDados(r.data.results ?? r.data))
+      .then(async r => {
+        const lista = r.data.results ?? r.data
+        setDados(lista)
+        const saldosMap = {}
+        await Promise.all(lista.map(async conta => {
+          try {
+            const res = await financeiroApi.totaisLivroCaixa({ conta: conta.id })
+            saldosMap[conta.id] = res.data.saldo_atual
+          } catch {}
+        }))
+        setSaldos(saldosMap)
+      })
       .catch(() => setDados([]))
       .finally(() => setCarregando(false))
   }, [])
@@ -81,10 +94,7 @@ export default function ContasPage() {
     } finally { setSalvando(false) }
   }
 
-  const deletar = async (c) => {
-    if (!confirm(`Desativar conta "${c.nome}"?`)) return
-    await financeiroApi.deletarConta(c.id); carregar()
-  }
+  const deletar = (c) => setModalConfirmar({ msg: `Desativar conta "${c.nome}"?`, onConfirm: async () => { await financeiroApi.deletarConta(c.id); carregar() } })
 
   const colunas = [
     { key: 'nome', label: 'Nome' },
@@ -115,6 +125,24 @@ export default function ContasPage() {
             ➕ Nova Conta
           </button>
         </div>
+        {!carregando && dados.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+            {dados.map(conta => {
+              const saldo = saldos[conta.id]
+              const corSaldo = saldo != null ? (Number(saldo) >= 0 ? '#10b981' : '#f87171') : '#a78bca'
+              return (
+                <div key={conta.id} style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ fontSize: 11, color: '#a78bca', marginBottom: 6, fontWeight: 600 }}>{conta.nome}</div>
+                  <div style={{ fontSize: 10, color: '#6b6b8a', marginBottom: 8 }}>{TIPOS[conta.tipo] || conta.tipo}{conta.banco ? ` · ${conta.banco}` : ''}</div>
+                  <div style={{ fontSize: 11, color: '#6b6b8a', marginBottom: 2 }}>Saldo atual</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: corSaldo }}>
+                    {saldo != null ? Number(saldo).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
         {carregando ? <Spinner /> : dados.length === 0 ? <Vazio /> : <FinanceiroTable colunas={colunas} dados={dados} />}
       </div>
 
@@ -238,6 +266,7 @@ export default function ContasPage() {
           )}
         </ModalBase>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

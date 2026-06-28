@@ -9,6 +9,7 @@ const ORIGEM_COR = { APORTE: '#063BF8', RECEITA: '#10b981', DESPESA: '#f59e0b', 
 export default function VisaoGeralPage() {
   const [dados, setDados] = useState(null)
   const [contas, setContas] = useState([])
+  const [saldoAtual, setSaldoAtual] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7))
   const [contaId, setContaId] = useState('')
@@ -26,6 +27,7 @@ export default function VisaoGeralPage() {
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => {
     financeiroApi.listarContas().then(r => setContas(r.data.results ?? r.data)).catch(() => {})
+    financeiroApi.totaisLivroCaixa({}).then(r => setSaldoAtual(r.data.saldo_atual)).catch(() => {})
   }, [])
 
   return (
@@ -55,7 +57,8 @@ export default function VisaoGeralPage() {
                 { label: 'Saldo Inicial',    valor: dados.saldo_inicial,   cor: '#a78bca' },
                 { label: 'Total Entradas',   valor: dados.total_entradas,  cor: '#10b981' },
                 { label: 'Total Saídas',     valor: dados.total_saidas,    cor: '#FF0000' },
-                { label: 'Saldo Final',      valor: dados.saldo_final,     cor: Number(dados.saldo_final) >= 0 ? '#063BF8' : '#FF0000' },
+                { label: 'Saldo do Período', valor: dados.saldo_final,     cor: Number(dados.saldo_final) >= 0 ? '#063BF8' : '#FF0000' },
+                { label: 'Saldo Atual',      valor: saldoAtual,            cor: saldoAtual != null ? (Number(saldoAtual) >= 0 ? '#10b981' : '#FF0000') : '#a78bca' },
               ].map(({ label, valor, cor }) => (
                 <div key={label} style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
                   <p style={{ fontSize: 11, color: '#a78bca', marginBottom: 6 }}>{label}</p>

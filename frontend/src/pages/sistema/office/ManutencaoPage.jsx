@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { osApi } from '../../../services/osApi'
+import { ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 
 // ──────────────────────────── helpers ────────────────────────────
 const LABEL = { color: '#6b6b8a', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }
@@ -54,6 +55,7 @@ function statusBadge(item) {
 // ──────────────────────────── componente ─────────────────────────
 export default function ManutencaoPage() {
   const [itens, setItens] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [sistemas, setSistemas] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
@@ -158,15 +160,7 @@ export default function ManutencaoPage() {
     }
   }
 
-  const deletar = async (item) => {
-    if (!window.confirm(`Remover manutenção #${item.id}?`)) return
-    try {
-      await osApi.deletarManutencao(item.id)
-      carregar()
-    } catch {
-      alert('Erro ao remover.')
-    }
-  }
+  const deletar = (item) => setModalConfirmar({ msg: `Remover manutenção #${item.id}?`, onConfirm: async () => { try { await osApi.deletarManutencao(item.id); carregar() } catch { alert('Erro ao remover.') } } })
 
   // ──────── render ────────
   const itensFiltrados = itens.filter(item => {
@@ -487,6 +481,7 @@ export default function ManutencaoPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

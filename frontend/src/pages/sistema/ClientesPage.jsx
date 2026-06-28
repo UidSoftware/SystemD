@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.05)',
@@ -127,6 +128,7 @@ export default function ClientesPage() {
   const isAdmin = usuario?.perfil === 'ADMIN'
 
   const [clientes, setClientes] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [pagina, setPagina] = useState(1)
@@ -214,9 +216,7 @@ export default function ClientesPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Excluir este cliente?')) return
-    await api.delete(`/clientes/${id}/`)
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Excluir este cliente?', onConfirm: async () => { await api.delete(`/clientes/${id}/`); carregar(pagina) } })
   }
 
   const enviarAcesso = async (id) => {
@@ -432,6 +432,7 @@ export default function ClientesPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

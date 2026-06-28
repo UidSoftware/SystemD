@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import { entregasApi } from '../../services/entregasApi'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const formVazio = { nome: '', ativo: true }
 
@@ -17,6 +18,7 @@ const inputStyle = {
 
 export default function UnidadesPage() {
   const [unidades, setUnidades] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -66,15 +68,7 @@ export default function UnidadesPage() {
     }
   }
 
-  const excluir = async (u) => {
-    if (!confirm(`Desativar a unidade "${u.nome}"?`)) return
-    try {
-      await entregasApi.excluirUnidade(u.id)
-      carregar()
-    } catch {
-      alert('Erro ao desativar unidade.')
-    }
-  }
+  const excluir = (u) => setModalConfirmar({ msg: `Desativar a unidade "${u.nome}"?`, onConfirm: async () => { try { await entregasApi.excluirUnidade(u.id); carregar() } catch { alert('Erro ao desativar unidade.') } } })
 
   return (
     <SistemaLayout titulo="Unidades">
@@ -197,6 +191,7 @@ export default function UnidadesPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

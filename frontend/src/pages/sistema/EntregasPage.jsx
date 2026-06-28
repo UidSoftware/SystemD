@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const STATUS_BADGE = {
   PENDENTE:  { bg: 'rgba(234,179,8,0.15)',   color: '#eab308' },
@@ -61,6 +62,7 @@ export default function EntregasPage() {
   const isInterno = !isCliente
 
   const [entregas, setEntregas] = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [total, setTotal] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [pagina, setPagina] = useState(1)
@@ -177,15 +179,7 @@ export default function EntregasPage() {
     }
   }
 
-  const excluir = async (e) => {
-    if (!confirm(`Excluir entrega de "${e.solicitante}" em ${e.data}?`)) return
-    try {
-      await api.delete(`/entregas/${e.id}/`, { headers: authHeader() })
-      carregar(pagina)
-    } catch {
-      alert('Erro ao excluir.')
-    }
-  }
+  const excluir = (e) => setModalConfirmar({ msg: `Excluir entrega de "${e.solicitante}" em ${e.data}?`, onConfirm: async () => { try { await api.delete(`/entregas/${e.id}/`, { headers: authHeader() }); carregar(pagina) } catch { alert('Erro ao excluir.') } } })
 
   const confirmar = async (entrega) => {
     await api.patch(`/entregas/${entrega.id}/confirmar/`, { confirmacao: 'CONFIRMADA' }, { headers: authHeader() })
@@ -240,13 +234,7 @@ export default function EntregasPage() {
     }
   }
 
-  const desativarUnidade = async (u) => {
-    if (!confirm(`Desativar "${u.nome}"?`)) return
-    await api.delete(`/unidades/${u.id}/`, { headers: authHeader() })
-    api.get('/unidades/', { headers: authHeader() })
-      .then(r => setUnidades(r.data.results ?? r.data))
-      .catch(() => {})
-  }
+  const desativarUnidade = (u) => setModalConfirmar({ msg: `Desativar "${u.nome}"?`, onConfirm: async () => { await api.delete(`/unidades/${u.id}/`, { headers: authHeader() }); api.get('/unidades/', { headers: authHeader() }).then(r => setUnidades(r.data.results ?? r.data)).catch(() => {}) } })
 
   const exportar = async (tipo) => {
     const params = new URLSearchParams({ ...filtrosAtivos })
@@ -727,6 +715,7 @@ export default function EntregasPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

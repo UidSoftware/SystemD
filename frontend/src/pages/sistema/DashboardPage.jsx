@@ -225,9 +225,10 @@ export default function DashboardPage() {
             {/* KPIs FINANCEIROS (ADMIN + FINANCEIRO) */}
             {isFin && dados && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 12, marginBottom: 22 }}>
-                <KpiCard label="Receita do Mês" valor={fmt(dados.receita_mes)} sub={`${new Date().toLocaleDateString('pt-BR', { month: 'long' })} atual`} cor="#10b981" icon="M12 19V5M5 12l7-7 7 7" onClick={() => navigate('/sistema/financeiro/livro-caixa')} />
-                <KpiCard label="Despesa do Mês" valor={fmt(dados.despesa_mes)} sub="saídas no período" cor="#f87171" icon="M12 5v14M5 12l7 7 7-7" onClick={() => navigate('/sistema/financeiro/livro-caixa')} />
-                <KpiCard label="Resultado" valor={fmt(dados.resultado_mes)} sub="receita − despesa" cor={resCor(dados.resultado_mes)} icon="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                <KpiCard label="Entradas do Mês" valor={fmt(dados.receita_mes)} sub={`${new Date().toLocaleDateString('pt-BR', { month: 'long' })} atual`} cor="#10b981" icon="M12 19V5M5 12l7-7 7 7" onClick={() => navigate('/sistema/financeiro/livro-caixa')} />
+                <KpiCard label="Saídas do Mês" valor={fmt(dados.despesa_mes)} sub="saídas no período" cor="#f87171" icon="M12 5v14M5 12l7 7 7-7" onClick={() => navigate('/sistema/financeiro/livro-caixa')} />
+                <KpiCard label="Resultado do Mês" valor={fmt(dados.resultado_mes)} sub="entradas − saídas" cor={resCor(dados.resultado_mes)} icon="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                <KpiCard label="Saldo em Caixa" valor={fmt(dados.saldo_total_contas)} sub="todas as contas" cor={resCor(dados.saldo_total_contas)} icon="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" onClick={() => navigate('/sistema/financeiro/contas')} />
                 <KpiCard label="MRR" valor={fmt(dados.mrr)} sub="mensalidades recebidas" cor="#063BF8" icon="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                 {isOps && dados.clientes_ativos != null && (
                   <KpiCard label="Clientes Ativos" valor={dados.clientes_ativos} sub="cadastrados" cor="#38bdf8" icon={['M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2', 'M9 11a4 4 0 100-8 4 4 0 000 8', 'M23 21v-2a4 4 0 00-3-3.87', 'M16 3.13a4 4 0 010 7.75']} onClick={() => navigate('/sistema/clientes')} />

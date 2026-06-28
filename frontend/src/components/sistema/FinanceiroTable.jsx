@@ -145,3 +145,25 @@ export const formatMoeda = (v) =>
 
 export const formatData = (d) =>
   d ? new Date(d.includes('T') ? d : d + 'T00:00:00').toLocaleDateString('pt-BR') : '—'
+
+export function ModalConfirmar({ config, onClose }) {
+  if (!config) return null
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', backgroundColor: 'rgba(0,0,0,0.75)' }}>
+      <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 420, width: '100%' }}>
+        <p style={{ color: '#f1f5f9', fontSize: 15, fontWeight: 600, margin: '0 0 8px' }}>Confirmar ação</p>
+        <p style={{ color: '#a78bca', fontSize: 13, margin: '0 0 24px', lineHeight: 1.5 }}>{config.msg}</p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.07)', color: '#a78bca', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={() => { config.onConfirm(); onClose() }}
+            style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: '#ef444420', color: '#f87171', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            {config.labelConfirmar || 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import api from '../../../services/api'
+import { ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 
 // ── Estilos compartilhados ─────────────────────────────────────────────────
 const IS = {
@@ -86,6 +87,7 @@ const FORM_VAZIO = {
 // ── Página principal ───────────────────────────────────────────────────────
 export default function ArquiteturaTecnicaFormPage() {
   const [lista, setLista]             = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [total, setTotal]             = useState(0)
   const [carregando, setCarregando]   = useState(true)
   const [pagina, setPagina]           = useState(1)
@@ -126,9 +128,7 @@ export default function ArquiteturaTecnicaFormPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Excluir esta arquitetura técnica?')) return
-    await api.delete('/arquitetura-tecnica/' + id + '/')
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Excluir esta arquitetura técnica?', onConfirm: async () => { await api.delete('/arquitetura-tecnica/' + id + '/'); carregar(pagina) } })
   }
 
   const set = (k, v) => setModal(m => ({ ...m, [k]: v }))
@@ -371,6 +371,7 @@ export default function ArquiteturaTecnicaFormPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

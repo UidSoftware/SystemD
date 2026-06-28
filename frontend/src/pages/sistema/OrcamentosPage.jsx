@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
 import api from '../../services/api'
+import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
@@ -43,6 +44,7 @@ const FORM_VAZIO = {
 // ── Modal Catálogo ─────────────────────────────────────────────────────────
 function ModalCatalogo({ onSelecionar, onFechar }) {
   const [lista, setLista]   = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [busca, setBusca]   = useState('')
   const [tipo, setTipo]     = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -188,9 +190,7 @@ export default function OrcamentosPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Excluir este orçamento?')) return
-    await api.delete('/orcamentos/' + id + '/')
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Excluir este orçamento?', onConfirm: async () => { await api.delete('/orcamentos/' + id + '/'); carregar(pagina) } })
   }
 
   const setItem = (idx, field, val) => setModal(m => {
@@ -528,6 +528,7 @@ export default function OrcamentosPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

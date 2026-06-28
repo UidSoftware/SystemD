@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import api from '../../../services/api'
+import { ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 
 // ── Estilos compartilhados ─────────────────────────────────────────────────
 const IS = {
@@ -76,6 +77,7 @@ const FORM_VAZIO = {
 // ── Página principal ───────────────────────────────────────────────────────
 export default function EntrevistaPage() {
   const [lista, setLista]             = useState([])
+  const [modalConfirmar, setModalConfirmar] = useState(null)
   const [total, setTotal]             = useState(0)
   const [carregando, setCarregando]   = useState(true)
   const [pagina, setPagina]           = useState(1)
@@ -128,9 +130,7 @@ export default function EntrevistaPage() {
   }
 
   const excluir = async (id) => {
-    if (!window.confirm('Excluir esta entrevista?')) return
-    await api.delete('/entrevistas/' + id + '/')
-    carregar(pagina)
+    setModalConfirmar({ msg: 'Excluir esta entrevista?', onConfirm: async () => { await api.delete('/entrevistas/' + id + '/'); carregar(pagina) } })
   }
 
   const set = (k, v) => setModal(m => ({ ...m, [k]: v }))
@@ -311,6 +311,7 @@ export default function EntrevistaPage() {
           </div>
         </div>
       )}
+      <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
     </SistemaLayout>
   )
 }

@@ -79,9 +79,11 @@ class MeSerializer(serializers.ModelSerializer):
     email_corporativo = serializers.SerializerMethodField()
     tem_entregas = serializers.SerializerMethodField()
 
+    cliente_id = serializers.SerializerMethodField()
+
     class Meta:
         model = Usuario
-        fields = ['id', 'nome', 'email', 'perfil', 'setor', 'email_corporativo', 'tem_entregas']
+        fields = ['id', 'nome', 'email', 'perfil', 'setor', 'email_corporativo', 'tem_entregas', 'cliente_id']
 
     def get_email_corporativo(self, obj):
         config = getattr(obj, 'email_config', None)
@@ -92,3 +94,9 @@ class MeSerializer(serializers.ModelSerializer):
             cliente = getattr(obj, 'cliente_perfil', None)
             return cliente.tem_entregas if cliente else False
         return False
+
+    def get_cliente_id(self, obj):
+        if obj.perfil == 'CLIENTE':
+            cliente = getattr(obj, 'cliente_perfil', None)
+            return cliente.id if cliente else None
+        return None

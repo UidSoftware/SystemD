@@ -13,7 +13,7 @@ from pathlib import Path
 
 PASTA = '/home/notuidsoftware/Dropbox/01 - Contabilidade/Extratos Onvio/Extratos'
 CONTAINER = 'sytemd-backend-1'
-INTERVALO = 300
+INTERVALO = 86400
 
 logging.basicConfig(
     level=logging.INFO,

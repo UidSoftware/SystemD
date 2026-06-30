@@ -1324,4 +1324,58 @@ para um Fluxo 1 completo.
 
 ---
 
-*Última atualização: 2026-06-20 (EntrevistaPage deployada via CI/CD)*
+---
+
+### [2026-06-27/29] — Conciliação Bancária via Dropbox + Watchdog
+
+**Contexto:**
+8 transações de junho do C6 foram registradas manualmente e conciliadas com as respectivas contas a pagar existentes. Saldo SystemD R$37,66 = Banco R$37,66 ✓
+
+**Módulo implementado:**
+- `backend/financeiro/models.py` — model `ConciliacaoExtrato` (extrato vs LC)
+- `backend/financeiro/parsers.py` — parser de PDF do C6/BTG via `pdfplumber`
+- `backend/financeiro/management/commands/conciliar_extrato.py` — management command
+- `backend/financeiro/views.py` + `urls.py` — endpoints de conciliação
+- `backend/financeiro/migrations/0007_...` — migration
+- `watchdog_conciliacao.py` (raiz do projeto, roda no host VPS) — detecta PDFs novos ou modificados e dispara o command automaticamente
+
+**Como o watchdog funciona:**
+```
+Usuário salva/sobrescreve PDF na pasta do Dropbox
+        ↓
+watchdog (host VPS, processo nohup) verifica a cada 24h
+        ↓
+Compara {caminho: mtime} — detecta arquivo novo OU mtime modificado
+        ↓
+docker exec sytemd-backend-1 python manage.py conciliar_extrato --arquivo <pdf> --conta <C6|BTG>
+        ↓
+Resultado disponível na página de conciliação do sistema
+```
+
+**Pasta monitorada:**
+```
+/home/notuidsoftware/Dropbox/01 - Contabilidade/Extratos Onvio/Extratos
+```
+
+**Inferência de conta pelo nome do arquivo:**
+- Nome contém `C6` → conta C6
+- Nome contém `BTG` → conta BTG
+
+**Como reiniciar o watchdog:**
+```bash
+kill $(ps aux | grep watchdog_conciliacao | grep -v grep | awk '{print $2}')
+nohup python3 /root/SystemD/watchdog_conciliacao.py >> /var/log/watchdog_conciliacao.log 2>&1 &
+tail -f /var/log/watchdog_conciliacao.log
+```
+
+**Intervalo:** 24h (sistema pequeno — ajustar se volume de extratos crescer)
+
+**Dependência:** Dropbox instalado no host VPS sincronizando a pasta acima.
+
+**Commits desta sessão:**
+- `4475ae9` — fix: watchdog detecta modificacao de extrato por mtime
+- `aae737f` — config: watchdog intervalo 5min -> 24h
+
+---
+
+*Última atualização: 2026-06-29 (conciliação bancária + watchdog Dropbox)*

@@ -81,11 +81,9 @@ def sync_to_contratid(orcamento):
         res.raise_for_status()
         result = res.json()
 
-        from .models import Orcamento
-        Orcamento.objects.filter(pk=orcamento.pk).update(
-            contratid_orcamento_id=result.get('id'),
-            contratid_synced_at=timezone.now(),
-        )
+        orcamento.contratid_orcamento_id = result.get('id')
+        orcamento.contratid_synced_at = timezone.now()
+        orcamento.save(update_fields=['contratid_orcamento_id', 'contratid_synced_at'])
         return True, result.get('id')
     except Exception as e:
         return False, str(e)

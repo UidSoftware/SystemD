@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import {
   FinanceiroTable, inputStyle, Spinner, Vazio,
-  ModalBase, BotoesModal,
+  ModalBase, BotoesModal, ModalConfirmar,
 } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 

@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'notificacoes',
     'orcamentos',
     'produtos',
+    'artefatos',
 ]
 
 MIDDLEWARE = [
@@ -98,6 +99,9 @@ CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv())
 USE_X_FORWARDED_HOST = True
+
+# Token de servico usado pelos agents do Claw Empire para registrar artefatos
+ARTEFATOS_API_TOKEN = config('ARTEFATOS_API_TOKEN', default='')
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True

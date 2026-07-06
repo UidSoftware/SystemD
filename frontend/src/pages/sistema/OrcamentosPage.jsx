@@ -138,6 +138,7 @@ export default function OrcamentosPage() {
   const [erro, setErro]                 = useState('')
   const [syncInfo, setSyncInfo]         = useState(null)
   const [showCatalogo, setShowCatalogo] = useState(false)
+  const [modalConfirmar, setModalConfirmar] = useState(null)
 
   const carregar = useCallback(async (pag = 1, status = filtroStatus) => {
     setCarregando(true)

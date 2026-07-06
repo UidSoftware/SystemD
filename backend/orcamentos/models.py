@@ -1,5 +1,6 @@
 from django.db import models
 from decimal import Decimal
+from datetime import date
 
 
 class Orcamento(models.Model):
@@ -15,7 +16,7 @@ class Orcamento(models.Model):
     cliente         = models.ForeignKey('clientes.Cliente', null=True, blank=True, on_delete=models.SET_NULL, related_name='orcamentos')
     prospecto       = models.ForeignKey('prospectos.Prospecto', null=True, blank=True, on_delete=models.SET_NULL, related_name='orcamentos')
     numero          = models.PositiveIntegerField(editable=False)
-    emitido_em      = models.DateField(auto_now_add=True)
+    emitido_em      = models.DateField(default=date.today)
     valido_ate      = models.DateField()
     status          = models.CharField(max_length=20, choices=STATUS, default='rascunho')
     desconto        = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))

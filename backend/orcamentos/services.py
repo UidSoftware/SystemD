@@ -45,6 +45,7 @@ def sync_to_contratid(orcamento):
 
         data = {
             'empresa':          CONTRATID_EMPRESA_ID,
+            'emitido_em':       str(orcamento.emitido_em),
             'valido_ate':       str(orcamento.valido_ate),
             'status':           orcamento.status,
             'cliente_nome':     origem.nome_empresa if origem else '',

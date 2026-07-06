@@ -44,7 +44,7 @@ class OrcamentoSerializer(serializers.ModelSerializer):
         model = Orcamento
         fields = '__all__'
         read_only_fields = [
-            'id', 'numero', 'emitido_em', 'criado_em', 'atualizado_em',
+            'id', 'numero', 'criado_em', 'atualizado_em',
             'subtotal', 'total_geral', 'cliente_nome', 'prospecto_nome',
             'criado_por', 'criado_por_nome', 'contratid_synced', 'contratid_orcamento_id',
             'contratid_synced_at',

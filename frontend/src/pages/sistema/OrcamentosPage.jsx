@@ -35,9 +35,10 @@ function fmt(val) {
 }
 
 const ITEM_VAZIO = { produto: null, ordem: 1, descricao: '', quantidade: '1', unidade: 'UN', valor_unitario: '' }
+const hoje = () => new Date().toISOString().slice(0, 10)
 const FORM_VAZIO = {
   tipoVinculo: 'cliente', cliente: '', prospecto: '',
-  valido_ate: '', status: 'rascunho', desconto: '0',
+  emitido_em: hoje(), valido_ate: '', status: 'rascunho', desconto: '0',
   forma_pagamento: '', observacoes: '', itens: [{ ...ITEM_VAZIO }],
 }
 
@@ -171,6 +172,7 @@ export default function OrcamentosPage() {
       tipoVinculo,
       cliente:         o.cliente    || '',
       prospecto:       o.prospecto  || '',
+      emitido_em:      o.emitido_em || hoje(),
       valido_ate:      o.valido_ate || '',
       status:          o.status,
       desconto:        o.desconto   || '0',
@@ -237,6 +239,7 @@ export default function OrcamentosPage() {
       const payload = {
         cliente:         modal.tipoVinculo === 'cliente'   ? (modal.cliente   || null) : null,
         prospecto:       modal.tipoVinculo === 'prospecto' ? (modal.prospecto || null) : null,
+        emitido_em:      modal.emitido_em,
         valido_ate:      modal.valido_ate,
         status:          modal.status,
         desconto:        modal.desconto,
@@ -406,7 +409,11 @@ export default function OrcamentosPage() {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Emitido em *</label>
+                <input type="date" value={modal.emitido_em} onChange={e => setModal(m => ({ ...m, emitido_em: e.target.value }))} style={inputStyle} />
+              </div>
               <div>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Válido até *</label>
                 <input type="date" value={modal.valido_ate} onChange={e => setModal(m => ({ ...m, valido_ate: e.target.value }))} style={inputStyle} />

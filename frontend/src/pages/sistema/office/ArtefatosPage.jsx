@@ -30,6 +30,10 @@ function MermaidBlock({ code }) {
   )
 }
 
+function extrairDiagramasMermaid(conteudo) {
+  return [...conteudo.matchAll(/```mermaid\n([\s\S]*?)```/g)].map(m => m[1])
+}
+
 function renderizarConteudo(conteudo) {
   const partes = conteudo.split(/```mermaid\n([\s\S]*?)```/g)
   return partes.map((parte, i) => {
@@ -45,6 +49,22 @@ function renderizarConteudo(conteudo) {
       </pre>
     )
   })
+}
+
+function ModalDiagrama({ titulo, diagramas, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, width: '100%', maxWidth: 1100, maxHeight: '90vh', padding: 24, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, margin: 0 }}>{titulo}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#a78bca', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {diagramas.map((codigo, i) => <MermaidBlock key={i} code={codigo} />)}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const inputStyle = {
@@ -109,6 +129,7 @@ export default function ArtefatosPage() {
   const [busca, setBusca]           = useState('')
   const [selecionado, setSelecionado] = useState(null)
   const [modalConfirmar, setModalConfirmar] = useState(null)
+  const [modalDiagrama, setModalDiagrama] = useState(null)
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -195,6 +216,12 @@ export default function ArtefatosPage() {
                     <Badge cor={AGENTE_CORES[selecionado.agente] || '#a78bca'}>{AGENTE_LABELS[selecionado.agente] || selecionado.agente}</Badge>
                     <span style={{ fontSize: 12, color: '#a78bca' }}>{TIPO_LABELS[selecionado.tipo] || selecionado.tipo}</span>
                     {selecionado.status && <Badge cor="#f59e0b">{selecionado.status}</Badge>}
+                    {extrairDiagramasMermaid(selecionado.conteudo || '').length > 0 && (
+                      <button onClick={() => setModalDiagrama({ titulo: selecionado.titulo, diagramas: extrairDiagramasMermaid(selecionado.conteudo) })}
+                        style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 20, padding: '3px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        📊 Diagrama
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -227,6 +254,7 @@ export default function ArtefatosPage() {
         </div>
       </div>
       <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
+      {modalDiagrama && <ModalDiagrama {...modalDiagrama} onClose={() => setModalDiagrama(null)} />}
     </SistemaLayout>
   )
 }

@@ -1378,4 +1378,74 @@ tail -f /var/log/watchdog_conciliacao.log
 
 ---
 
-*Última atualização: 2026-06-29 (conciliação bancária + watchdog Dropbox)*
+### [2026-07-05/07] — Correções em Orçamentos + novo módulo Artefatos (Office)
+
+**Contexto:**
+Sessão iniciada com bugs reportados no módulo de Orçamentos (tela branca ao criar,
+"campo obrigatório" ao salvar, falso alerta de falha de sincronização com o
+ContratID). Evoluiu para a criação de um módulo inteiro: registro formal dos
+artefatos produzidos pelos 11 agents do Claw Empire (Planner, Analista,
+AnalistaUML-skill, Blueprint, Brush, Doc Generator, Forge, Loom, Sentinel, Pilot,
+Hotfix), já que o SystemD nasceu depois desse pipeline existir e nunca teve onde
+registrar o que cada agent entrega.
+
+**Bugs corrigidos em Orçamentos:**
+- `OrcamentosPage.jsx` usava `modalConfirmar`/`ModalConfirmar` sem declarar o
+  estado nem importar o componente em 3 telas (Orçamentos, Contas a Receber,
+  Fornecedores) — `ReferenceError` no render causava tela branca. Padrão a
+  conferir em qualquer tela nova que reaproveite `ModalConfirmar`.
+- `OrcamentoSerializer.criado_por` não era `read_only` — como quem preenche é a
+  view (`perform_create`), a validação sempre falhava com "campo obrigatório"
+  antes de chegar lá.
+- `sync_to_contratid()` atualizava o banco via `.filter().update()`, que não
+  reflete no objeto Python devolvido pela view — o frontend sempre recebia
+  `contratid_synced: false` mesmo quando o sync tinha dado certo.
+- `emitido_em` era `auto_now_add` (sempre = data de criação); virou campo
+  editável com default hoje, igual `valido_ate`. Mesma mudança replicada no
+  ContratID (`backend/apps/orcamentos`).
+
+**Módulo Artefatos (novo):**
+- `backend/artefatos/` — model `Artefato` com `GenericForeignKey` (vincula a
+  Lead, Prospecto, Entrevista, ArquiteturaTecnica, OS ou Manutencao), 17 tipos
+  (levantamento_requisitos, uml_usecase/classes/activity/sequencia/estado/
+  componentes/implantacao, dicionario_dados, regras_negocio, design_system, adr,
+  contrato_servico, especificacao_hotfix, especificacao_ui_hotfix, relatorio_qa,
+  deploy_info, outro) e 11 agentes em choices.
+- Autenticação dupla no endpoint `/api/artefatos/`: JWT normal (tela) OU token de
+  serviço fixo via `ARTEFATOS_API_TOKEN` (agents rodando via Bash na VPS) —
+  `authentication_classes` precisa do `ServiceTokenAuthentication` **antes** do
+  `JWTAuthentication`, senão o JWT rejeita o token e nunca cai no fallback.
+- `frontend/.../office/ArtefatosPage.jsx` — lista com filtro por tipo/agente/
+  busca, viewer lateral com conteúdo em markdown, botão roxo "📊 Diagrama" que
+  abre modal dedicado quando o conteúdo tem bloco ` ```mermaid ` (lib `mermaid`
+  adicionada às dependências). O viewer lateral **não** tenta renderizar o
+  diagrama inline (fica cortado) — só o texto; o diagrama só aparece no modal.
+- **Instrumentação dos agents na VPS** (`/root/.claude/agents/*.md`, 10 dos 11
+  arquivos — `analistaUML.md` é skill de referência sem artefato próprio): cada
+  um ganhou um passo "Registro de Artefato" antes da passagem de bastão, com
+  `curl -X POST "$ARTEFATOS_API_URL"` usando `$ARTEFATOS_API_TOKEN` (ambos
+  configurados no `env` de `/root/.claude/settings.json`). Falha na chamada
+  nunca bloqueia a entrega real do agent — é sempre best-effort.
+- **Documentação retroativa do próprio SystemD**: como o sistema nunca passou
+  pelo pipeline formal, foram gerados e registrados manualmente (via curl) os
+  6 artefatos que ele teria produzido: Levantamento de Requisitos, UML Casos de
+  Uso, UML Classes, Dicionário de Dados, Regras de Negócio e ADR — todos
+  consultáveis em Office > Artefatos.
+
+**Armadilha encontrada:** o service worker antigo (PWA) pode servir uma versão
+cacheada da tela mesmo com deploy novo confirmado no bundle — sempre que uma
+tela "não atualizar" após deploy confirmado, testar `/clear-sw` antes de
+investigar outra causa.
+
+**Commits desta sessão (SystemD):**
+- `09023e7` `074ba01` `065bdca` — fixes em Orçamentos (tela branca, criado_por, sync ContratID)
+- `1f0fa78` — emitido_em editável
+- `eb9ac52` — fix ModalConfirmar em Contas a Receber/Fornecedores
+- `7795581` `ce8c796` `5975878` `3009215` — módulo Artefatos (backend + tela + tipos)
+- `d33264c` `d2dd290` `c3326d4` — renderização Mermaid + botão Diagrama + limpeza do preview
+
+**Deploy:** todos os commits via push em `main` → CI/CD GitHub Actions, confirmado em produção (`uidsoftware.com.br`) a cada etapa.
+
+---
+
+*Última atualização: 2026-07-07 (módulo Artefatos + correções em Orçamentos)*

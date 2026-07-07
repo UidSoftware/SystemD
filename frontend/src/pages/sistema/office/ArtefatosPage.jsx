@@ -1,7 +1,51 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import mermaid from 'mermaid'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 import api from '../../../services/api'
+
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' })
+let mermaidSeq = 0
+
+function MermaidBlock({ code }) {
+  const containerRef = useRef(null)
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    let cancelado = false
+    const id = `mermaid-${++mermaidSeq}`
+    mermaid.render(id, code.trim())
+      .then(({ svg }) => { if (!cancelado && containerRef.current) containerRef.current.innerHTML = svg })
+      .catch(() => { if (!cancelado) setErro('Não foi possível renderizar este diagrama.') })
+    return () => { cancelado = true }
+  }, [code])
+
+  if (erro) {
+    return <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#f87171', margin: 0 }}>{erro}</pre>
+  }
+  return (
+    <div style={{ overflowX: 'auto', background: '#fff', borderRadius: 8, padding: 16 }}>
+      <div ref={containerRef} />
+    </div>
+  )
+}
+
+function renderizarConteudo(conteudo) {
+  const partes = conteudo.split(/```mermaid\n([\s\S]*?)```/g)
+  return partes.map((parte, i) => {
+    if (i % 2 === 1) return <MermaidBlock key={i} code={parte} />
+    if (!parte.trim()) return null
+    return (
+      <pre key={i} style={{
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, monospace',
+        fontSize: 13, color: '#e2e8f0', background: 'rgba(0,0,0,0.2)', borderRadius: 8,
+        padding: 16, margin: 0,
+      }}>
+        {parte}
+      </pre>
+    )
+  })
+}
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
@@ -173,13 +217,11 @@ export default function ArtefatosPage() {
                 </div>
               )}
 
-              <pre style={{
-                whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, monospace',
-                fontSize: 13, color: '#e2e8f0', background: 'rgba(0,0,0,0.2)', borderRadius: 8,
-                padding: 16, maxHeight: 560, overflowY: 'auto', margin: 0,
-              }}>
-                {selecionado.conteudo || '(sem conteúdo)'}
-              </pre>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 560, overflowY: 'auto' }}>
+                {selecionado.conteudo ? renderizarConteudo(selecionado.conteudo) : (
+                  <pre style={{ color: '#e2e8f0', margin: 0 }}>(sem conteúdo)</pre>
+                )}
+              </div>
             </div>
           )}
         </div>

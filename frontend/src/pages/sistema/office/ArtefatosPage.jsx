@@ -37,7 +37,7 @@ function extrairDiagramasMermaid(conteudo) {
 function renderizarConteudo(conteudo) {
   const partes = conteudo.split(/```mermaid\n([\s\S]*?)```/g)
   return partes.map((parte, i) => {
-    if (i % 2 === 1) return <MermaidBlock key={i} code={parte} />
+    if (i % 2 === 1) return null // diagrama Mermaid — ver pelo botão "Diagrama"
     if (!parte.trim()) return null
     return (
       <pre key={i} style={{

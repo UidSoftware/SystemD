@@ -67,6 +67,7 @@ const menuOffice = [
   { label: 'Escritorio',    path: '/sistema/office/escritorio',   emoji: '🖥️' },
   { label: 'Board',         path: '/sistema/office/board',        emoji: '📌' },
   { label: 'Agents',        path: '/sistema/office/agents',       emoji: '🤖' },
+  { label: 'Artefatos',     path: '/sistema/office/artefatos',    emoji: '📦' },
   { label: 'Activity Feed', path: '/sistema/office/activity',     emoji: '📡' },
   { label: 'Manutencoes',   path: '/sistema/office/manutencoes',  emoji: '🔧' },
 ]

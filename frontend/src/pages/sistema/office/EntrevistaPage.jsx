@@ -193,7 +193,12 @@ export default function EntrevistaPage() {
                   onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(6,59,248,0.05)'}
                   onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
                   <td style={{ ...tdS, fontWeight: 600 }}>{e.sistema}</td>
-                  <td style={tdS}>{e.prospecto_nome || '—'}</td>
+                  <td style={tdS}>
+                    {e.prospecto_nome || '—'}
+                    {e.prospecto_cliente_nome && (
+                      <div style={{ fontSize: 11, color: '#6b8fff', marginTop: 2 }}>🔗 {e.prospecto_cliente_nome}</div>
+                    )}
+                  </td>
                   <td style={tdS}>{segLabel(e.segmento)}</td>
                   <td style={tdS}>{orcLabel(e.orcamento_faixa)}</td>
                   <td style={tdS}>{e.prazo_desejado ? new Date(e.prazo_desejado + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
@@ -239,8 +244,33 @@ export default function EntrevistaPage() {
               <Fld label="Prospecto" required>
                 <select style={IS} value={modal.prospecto} onChange={e => set('prospecto', e.target.value)}>
                   <option value="">Selecione...</option>
-                  {prospectos.map(p => <option key={p.id} value={p.id}>{p.nome_empresa}</option>)}
+                  {prospectos.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.cliente_nome ? `🔗 ${p.nome_empresa} (cliente existente)` : `🆕 ${p.nome_empresa} (lead novo)`}
+                    </option>
+                  ))}
                 </select>
+                {(() => {
+                  const p = prospectos.find(pr => String(pr.id) === String(modal.prospecto))
+                  if (!p) return null
+                  return (
+                    <>
+                      {p.cliente_nome && (
+                        <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(6,59,248,0.08)', border: '1px solid rgba(6,59,248,0.2)', borderRadius: 8, fontSize: 12, color: '#6b8fff' }}>
+                          🔗 Este prospecto é um novo ciclo/projeto para o cliente já existente <strong>{p.cliente_nome}</strong>.
+                        </div>
+                      )}
+                      {p.lead_mensagem && (
+                        <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8 }}>
+                          <div style={{ fontSize: 11, color: '#a78bca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+                            Mensagem original do lead {p.lead_nome ? `(${p.lead_nome})` : ''}
+                          </div>
+                          <div style={{ fontSize: 13, color: '#e2d9f3', whiteSpace: 'pre-wrap' }}>{p.lead_mensagem}</div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </Fld>
               <Fld label="Nome do sistema" required>
                 <input style={IS} value={modal.sistema} onChange={e => set('sistema', e.target.value)} maxLength={100} placeholder="ex: Sistema Gestão Salão" />

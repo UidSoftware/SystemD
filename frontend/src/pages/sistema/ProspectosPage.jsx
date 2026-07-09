@@ -39,7 +39,7 @@ const valueStyle = { fontSize: 13, color: '#e2d9f3' }
 const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', principal: false }
 
 const PROSPECTO_VAZIO = {
-  lead: null,
+  lead: null, cliente: null,
   nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
   origem: '', observacoes: '', responsavel: null,
   socios: [{ ...SOCIO_VAZIO, principal: true }],
@@ -133,6 +133,7 @@ export default function ProspectosPage() {
   const [pagina, setPagina] = useState(1)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [usuarios, setUsuarios] = useState([])
+  const [clientes, setClientes] = useState([])
 
   const [filtros, setFiltros] = useState({ segmento: '', cidade: '', responsavel: '', convertido: '' })
   const [filtrosAtivos, setFiltrosAtivos] = useState({})
@@ -166,6 +167,7 @@ export default function ProspectosPage() {
     if (!accessToken) return
     carregar()
     api.get('/auth/usuarios/', { headers: authHeader() }).then(r => setUsuarios(r.data.results || r.data)).catch(() => {})
+    api.get('/clientes/', { params: { page_size: 200, ativo: true }, headers: authHeader() }).then(r => setClientes(r.data.results || r.data)).catch(() => {})
   }, [accessToken])
 
   const filtrar = () => {
@@ -321,6 +323,9 @@ export default function ProspectosPage() {
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{p.nome_empresa}</div>
                   <div style={{ fontSize: 12, color: '#a78bca', marginTop: 2 }}>{p.socio_principal_nome}</div>
+                  {p.cliente_nome && (
+                    <div style={{ fontSize: 11, color: '#6b8fff', marginTop: 2 }}>🔗 {p.cliente_nome}</div>
+                  )}
                 </div>
                 {p.convertido
                   ? <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>Convertido</span>
@@ -373,7 +378,12 @@ export default function ProspectosPage() {
                 <tr key={p.id}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(6,59,248,0.06)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <td style={tdStyle}>{p.nome_empresa}</td>
+                  <td style={tdStyle}>
+                    {p.nome_empresa}
+                    {p.cliente_nome && (
+                      <div style={{ fontSize: 11, color: '#6b8fff', marginTop: 2 }}>🔗 {p.cliente_nome}</div>
+                    )}
+                  </td>
                   <td style={tdStyle}>
                     <div>{p.socio_principal_nome || '—'}</div>
                     {p.socios?.length > 1 && (
@@ -452,6 +462,17 @@ export default function ProspectosPage() {
                   <option value="">Sem responsável</option>
                   {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                 </select>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cliente existente</label>
+                <select value={modal.cliente || ''} onChange={e => setModal(m => ({ ...m, cliente: e.target.value || null }))}
+                  style={inputStyle}>
+                  <option value="">Nenhum — prospecto novo</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome_empresa}</option>)}
+                </select>
+                <p style={{ fontSize: 11, color: '#6b6b8a', marginTop: 4 }}>
+                  Selecione se este prospecto é um novo ciclo/projeto pra um cliente que já existe.
+                </p>
               </div>
               <div>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>

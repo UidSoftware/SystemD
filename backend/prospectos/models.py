@@ -8,6 +8,13 @@ class Prospecto(models.Model):
         on_delete=models.SET_NULL,
         related_name='prospectos',
     )
+    cliente = models.ForeignKey(
+        'clientes.Cliente',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='prospectos',
+        help_text='Cliente já existente para o qual este prospecto representa um novo ciclo/projeto',
+    )
 
     nome_empresa  = models.CharField(max_length=150)
     segmento      = models.CharField(max_length=50, blank=True)

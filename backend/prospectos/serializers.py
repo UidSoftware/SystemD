@@ -13,6 +13,7 @@ class ProspectoSerializer(serializers.ModelSerializer):
     responsavel_nome = serializers.CharField(source='responsavel.nome', read_only=True)
     lead_nome = serializers.CharField(source='lead.nome', read_only=True)
     lead_mensagem = serializers.CharField(source='lead.mensagem', read_only=True)
+    cliente_nome = serializers.CharField(source='cliente.nome_empresa', read_only=True, default='')
     socio_principal_nome = serializers.SerializerMethodField()
 
     def get_socio_principal_nome(self, obj):
@@ -39,4 +40,4 @@ class ProspectoSerializer(serializers.ModelSerializer):
         model = Prospecto
         fields = '__all__'
         read_only_fields = ('id', 'criado_em', 'atualizado_em', 'responsavel_nome',
-                            'lead_nome', 'lead_mensagem', 'socio_principal_nome')
+                            'lead_nome', 'lead_mensagem', 'cliente_nome', 'socio_principal_nome')

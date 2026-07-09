@@ -23,7 +23,7 @@ class ProspectoViewSet(viewsets.ModelViewSet):
         return [IsAdminOrOperacional()]
 
     def get_queryset(self):
-        return Prospecto.objects.filter(ativo=True).select_related('responsavel', 'lead').prefetch_related('socios')
+        return Prospecto.objects.filter(ativo=True).select_related('responsavel', 'lead', 'cliente').prefetch_related('socios')
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

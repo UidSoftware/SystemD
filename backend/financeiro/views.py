@@ -198,6 +198,18 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
         receita.save()
         return Response(ReceitaSerializer(receita).data)
 
+    @action(detail=True, methods=['get'], url_path='recibo', permission_classes=[IsAdminOrFinanceiro])
+    def recibo(self, request, pk=None):
+        """GET /api/financeiro/receitas/{id}/recibo/ — gera PDF do recibo de pagamento"""
+        receita = self.get_object()
+        if receita.status != 'RECEBIDO':
+            return Response(
+                {'detail': 'Recibo disponível apenas para receitas com status RECEBIDO.'},
+                status=400,
+            )
+        from .recibo_pdf import gerar_recibo_pdf
+        return gerar_recibo_pdf(receita)
+
 
 class DespesaViewSet(AuditMixin, ModelViewSet):
     queryset = (

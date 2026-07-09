@@ -39,7 +39,7 @@ const valueStyle = { fontSize: 13, color: '#e2d9f3' }
 const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', principal: false }
 
 const PROSPECTO_VAZIO = {
-  lead: null,
+  lead: null, cliente: null,
   nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
   origem: '', observacoes: '', responsavel: null,
   socios: [{ ...SOCIO_VAZIO, principal: true }],
@@ -197,6 +197,29 @@ export default function ProspectosPage() {
     })
     setModoEdicao(true)
     setErro('')
+  }
+
+  const selecionarClienteNoModal = (clienteId) => {
+    if (!clienteId) {
+      setModal(m => ({ ...m, cliente: null }))
+      return
+    }
+    const c = clientes.find(cl => String(cl.id) === String(clienteId))
+    if (!c) return
+    setModal(m => ({
+      ...m,
+      cliente: clienteId,
+      nome_empresa: c.nome_empresa,
+      segmento: c.segmento || '',
+      cidade: c.cidade || '',
+      estado: c.estado || '',
+      cnpj_cpf: c.cnpj_cpf || '',
+      origem: c.origem || '',
+      observacoes: c.observacoes || '',
+      socios: c.socios?.length
+        ? c.socios.map(s => ({ nome: s.nome, email: s.email, telefone: s.telefone, whatsapp: s.whatsapp, cpf: s.cpf, principal: s.principal }))
+        : m.socios,
+    }))
   }
 
   const salvar = async () => {
@@ -473,6 +496,19 @@ export default function ProspectosPage() {
             {/* Dados da empresa */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#6b8fff', marginBottom: 12 }}>Empresa</div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cliente já existente</label>
+                <select value={modal.cliente || ''} onChange={e => selecionarClienteNoModal(e.target.value)}
+                  style={inputStyle}>
+                  <option value="">Nenhum — prospecto novo</option>
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome_empresa}</option>)}
+                </select>
+                <p style={{ fontSize: 11, color: '#6b6b8a', marginTop: 4 }}>
+                  Se essa empresa já é cliente, seleciona aqui — preenche o resto sozinho.
+                </p>
+              </div>
+
               {camposEmpresa.map(({ label, field }) => (
                 <div key={field} style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>

@@ -40,6 +40,18 @@ class ProspectoViewSet(viewsets.ModelViewSet):
         if prospecto.convertido:
             return Response({'erro': 'Prospecto já foi convertido em Cliente'}, status=status.HTTP_400_BAD_REQUEST)
 
+        cliente_id = request.data.get('cliente_id')
+        if cliente_id:
+            try:
+                cliente = Cliente.objects.get(pk=cliente_id, ativo=True)
+            except Cliente.DoesNotExist:
+                return Response({'erro': 'Cliente informado não encontrado'}, status=status.HTTP_400_BAD_REQUEST)
+            prospecto.cliente = cliente
+            prospecto.convertido = True
+            prospecto.convertido_em = timezone.now()
+            prospecto.save()
+            return Response(ClienteSerializer(cliente).data, status=status.HTTP_200_OK)
+
         dados_cliente = {
             'nome_empresa': request.data.get('nome_empresa', prospecto.nome_empresa),
             'segmento': request.data.get('segmento', prospecto.segmento or ''),
@@ -74,6 +86,7 @@ class ProspectoViewSet(viewsets.ModelViewSet):
                         telefone=s.telefone, whatsapp=s.whatsapp,
                         cpf=s.cpf, principal=s.principal,
                     )
+            prospecto.cliente = cliente
             prospecto.convertido = True
             prospecto.convertido_em = timezone.now()
             prospecto.save()

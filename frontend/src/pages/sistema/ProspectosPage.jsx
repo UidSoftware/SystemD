@@ -39,7 +39,7 @@ const valueStyle = { fontSize: 13, color: '#e2d9f3' }
 const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', principal: false }
 
 const PROSPECTO_VAZIO = {
-  lead: null, cliente: null,
+  lead: null,
   nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
   origem: '', observacoes: '', responsavel: null,
   socios: [{ ...SOCIO_VAZIO, principal: true }],
@@ -223,6 +223,7 @@ export default function ProspectosPage() {
 
   const abrirConverter = (p) => {
     setDadosConverter({
+      cliente_existente: null,
       nome_empresa: p.nome_empresa,
       segmento: p.segmento || '',
       cidade: p.cidade || '',
@@ -236,11 +237,36 @@ export default function ProspectosPage() {
     setModal(null)
   }
 
+  const selecionarClienteExistente = (clienteId) => {
+    if (!clienteId) {
+      abrirConverter(modalConverter)
+      return
+    }
+    const c = clientes.find(cl => String(cl.id) === String(clienteId))
+    if (!c) return
+    setDadosConverter(d => ({
+      ...d,
+      cliente_existente: clienteId,
+      nome_empresa: c.nome_empresa,
+      segmento: c.segmento || '',
+      cidade: c.cidade || '',
+      estado: c.estado || '',
+      cnpj_cpf: c.cnpj_cpf || '',
+      origem: c.origem || '',
+      observacoes: c.observacoes || '',
+      socios: c.socios?.length
+        ? c.socios.map(s => ({ nome: s.nome, email: s.email, telefone: s.telefone, whatsapp: s.whatsapp, cpf: s.cpf, principal: s.principal }))
+        : d.socios,
+    }))
+  }
+
   const confirmarConverter = async () => {
     if (!modalConverter) return
     setSalvando(true)
     try {
-      await api.post(`/prospectos/${modalConverter.id}/converter/`, dadosConverter)
+      const { cliente_existente, ...resto } = dadosConverter
+      const payload = cliente_existente ? { cliente_id: cliente_existente } : resto
+      await api.post(`/prospectos/${modalConverter.id}/converter/`, payload)
       setModalConverter(null)
       carregar(pagina)
     } finally {
@@ -463,17 +489,6 @@ export default function ProspectosPage() {
                   {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                 </select>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cliente existente</label>
-                <select value={modal.cliente || ''} onChange={e => setModal(m => ({ ...m, cliente: e.target.value || null }))}
-                  style={inputStyle}>
-                  <option value="">Nenhum — prospecto novo</option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome_empresa}</option>)}
-                </select>
-                <p style={{ fontSize: 11, color: '#6b6b8a', marginTop: 4 }}>
-                  Selecione se este prospecto é um novo ciclo/projeto pra um cliente que já existe.
-                </p>
-              </div>
               <div>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>
                 <textarea value={modal.observacoes || ''} rows={3}
@@ -518,22 +533,38 @@ export default function ProspectosPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 520, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Converter em Cliente</h2>
-            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>Revise os dados. O Cliente será criado com essas informações.</p>
+            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>
+              {dadosConverter.cliente_existente
+                ? 'Este prospecto será vinculado ao cliente já existente selecionado.'
+                : 'Revise os dados. O Cliente será criado com essas informações.'}
+            </p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cliente já existente</label>
+              <select value={dadosConverter.cliente_existente || ''} onChange={e => selecionarClienteExistente(e.target.value)}
+                style={inputStyle}>
+                <option value="">Nenhum — criar novo cliente</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome_empresa}</option>)}
+              </select>
+              <p style={{ fontSize: 11, color: '#6b6b8a', marginTop: 4 }}>
+                Se essa empresa já é cliente, seleciona aqui — preenche tudo sozinho e só vincula, sem duplicar cadastro.
+              </p>
+            </div>
 
             {camposEmpresa.map(({ label, field }) => (
               <div key={field} style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>
-                <input type="text" value={dadosConverter[field] || ''}
+                <input type="text" value={dadosConverter[field] || ''} disabled={Boolean(dadosConverter.cliente_existente)}
                   onChange={e => setDadosConverter(d => ({ ...d, [field]: e.target.value }))}
-                  style={inputStyle} />
+                  style={{ ...inputStyle, opacity: dadosConverter.cliente_existente ? 0.6 : 1 }} />
               </div>
             ))}
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>
-              <textarea value={dadosConverter.observacoes || ''} rows={3}
+              <textarea value={dadosConverter.observacoes || ''} rows={3} disabled={Boolean(dadosConverter.cliente_existente)}
                 onChange={e => setDadosConverter(d => ({ ...d, observacoes: e.target.value }))}
-                style={{ ...inputStyle, resize: 'vertical' }} />
+                style={{ ...inputStyle, resize: 'vertical', opacity: dadosConverter.cliente_existente ? 0.6 : 1 }} />
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14, marginBottom: 20 }}>
@@ -550,7 +581,9 @@ export default function ProspectosPage() {
               </button>
               <button onClick={confirmarConverter} disabled={salvando}
                 style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Convertendo...' : '✅ Confirmar'}
+                {salvando
+                  ? (dadosConverter.cliente_existente ? 'Vinculando...' : 'Convertendo...')
+                  : (dadosConverter.cliente_existente ? '🔗 Vincular' : '✅ Confirmar')}
               </button>
             </div>
           </div>

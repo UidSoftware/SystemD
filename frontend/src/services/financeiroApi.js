@@ -29,6 +29,7 @@ export const financeiroApi = {
   editarReceita:         (id, d) => patch(`/receitas/${id}/`, d),
   deletarReceita:        (id) => del(`/receitas/${id}/`),
   marcarRecebido:        (id, d) => patch(`/receitas/${id}/receber/`, d),
+  gerarRecibo:           (id) => api.get(`/financeiro/receitas/${id}/recibo/`, { responseType: 'blob' }),
 
   // Despesas
   listarDespesas:        (p) => f('/despesas/', p),

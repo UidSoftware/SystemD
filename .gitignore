@@ -49,3 +49,7 @@ frontend/dist/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Claw Empire — symlink pras skills compartilhadas, criado em todo worktree
+# (nao e codigo do projeto; sem isso o merge falha com "restricted untracked files")
+.claude/skills

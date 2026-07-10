@@ -17,7 +17,7 @@ class ArtefatoViewSet(viewsets.ModelViewSet):
     filterset_fields = ['tipo', 'agente', 'content_type', 'object_id']
     search_fields = ['titulo', 'conteudo']
     ordering = ['-criado_em']
-    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+    http_method_names = ['get', 'post', 'patch', 'put', 'delete', 'head', 'options']
 
     def get_queryset(self):
         return Artefato.objects.filter(ativo=True).select_related('content_type')

@@ -64,7 +64,6 @@ export default function ReceitasPage() {
   const [modalConfirmar, setModalConfirmar] = useState(null)
   const [jaFoiRecebido, setJaFoiRecebido] = useState(false)
   const [recebimentoInline, setRecebimentoInline] = useState('')
-  const [gerandoRecibo, setGerandoRecibo]         = useState(null)
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -173,20 +172,6 @@ export default function ReceitasPage() {
 
   const deletar = (r) => setModalConfirmar({ msg: `Cancelar lançamento "${r.descricao}"?`, onConfirm: async () => { await financeiroApi.editarReceita(r.id, { status: 'CANCELADO' }); carregar() } })
 
-  const handleGerarRecibo = async (item) => {
-    setGerandoRecibo(item.id)
-    try {
-      const res = await financeiroApi.gerarRecibo(item.id)
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 10000)
-    } catch {
-      alert('Erro ao gerar recibo.')
-    } finally {
-      setGerandoRecibo(null)
-    }
-  }
-
   const colunas = [
     {
       key: 'descricao', label: 'Descrição', render: r => (
@@ -212,15 +197,6 @@ export default function ReceitasPage() {
               title="Confirmar recebimento"
               onClick={() => { setModalReceber(r); setFormRec({ recebimento: '', conta: r.conta }) }}>
               $
-            </button>
-          )}
-          {r.status === 'RECEBIDO' && (
-            <button
-              style={{ ...btnAcao('#10b981'), border: '1px solid #10b981' }}
-              title="Gerar recibo PDF"
-              onClick={() => handleGerarRecibo(r)}
-              disabled={gerandoRecibo === r.id}>
-              {gerandoRecibo === r.id ? '...' : '🧾'}
             </button>
           )}
           <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(r)} title="Editar">✏️</button>
@@ -319,15 +295,6 @@ export default function ReceitasPage() {
                             {(item.status === 'PENDENTE' || item.status === 'ATRASADO') && (
                               <button style={{ ...btnAcao('#10b981'), border: '1px solid #10b981' }} title="Confirmar recebimento"
                                 onClick={() => { setModalReceber(item); setFormRec({ recebimento: '', conta: item.conta }) }}>$</button>
-                            )}
-                            {item.status === 'RECEBIDO' && (
-                              <button
-                                style={{ ...btnAcao('#10b981'), border: '1px solid #10b981' }}
-                                title="Gerar recibo PDF"
-                                onClick={() => handleGerarRecibo(item)}
-                                disabled={gerandoRecibo === item.id}>
-                                {gerandoRecibo === item.id ? '...' : '🧾'}
-                              </button>
                             )}
                             <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(item)} title="Editar">✏️</button>
                             {item.status !== 'CANCELADO' && (

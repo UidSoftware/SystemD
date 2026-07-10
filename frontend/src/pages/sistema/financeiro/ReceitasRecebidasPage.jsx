@@ -41,6 +41,7 @@ export default function ReceitasRecebidasPage() {
   const [form, setForm]                   = useState(formVazio)
   const [salvando, setSalvando]           = useState(false)
   const [erro, setErro]                   = useState('')
+  const [gerandoRecibo, setGerandoRecibo] = useState(null)
 
   const carregar = useCallback(() => {
     setCarregando(true)
@@ -113,6 +114,20 @@ export default function ReceitasRecebidasPage() {
     } finally { setSalvando(false) }
   }
 
+  const handleGerarRecibo = async (item) => {
+    setGerandoRecibo(item.id)
+    try {
+      const res = await financeiroApi.gerarRecibo(item.id)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+    } catch {
+      alert('Erro ao gerar recibo.')
+    } finally {
+      setGerandoRecibo(null)
+    }
+  }
+
   const valorLiquidoCalc = (parseFloat(form.valor_bruto) || 0) - (parseFloat(form.desconto) || 0)
 
   return (
@@ -165,7 +180,14 @@ export default function ReceitasRecebidasPage() {
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           <div style={{ color: '#10b981', fontWeight: 600, fontSize: 13 }}>{formatMoeda(item.valor_liquido)}</div>
                           <div style={{ color: '#6b6b8a', fontSize: 11, marginTop: 2 }}>{formatData(item.recebimento)}</div>
-                          <div style={{ marginTop: 6 }}>
+                          <div style={{ marginTop: 6, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button
+                              style={{ ...btnAcao('#10b981'), border: '1px solid #10b981' }}
+                              title="Gerar recibo PDF"
+                              onClick={() => handleGerarRecibo(item)}
+                              disabled={gerandoRecibo === item.id}>
+                              {gerandoRecibo === item.id ? '...' : '🧾'}
+                            </button>
                             <button style={btnAcao('#6b8fff')} onClick={() => abrirEdicao(item)} title="Editar">✏️</button>
                           </div>
                         </div>

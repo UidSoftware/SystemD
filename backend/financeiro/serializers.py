@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, Receita
+from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -192,3 +192,15 @@ class ConciliacaoListSerializer(serializers.ModelSerializer):
             'processado_em', 'status', 'status_label',
             'total_banco', 'total_sistema', 'divergencias',
         ]
+
+
+class PadraoSeguroConciliacaoSerializer(serializers.ModelSerializer):
+    criado_por_nome = serializers.CharField(source='criado_por.nome', read_only=True)
+
+    class Meta:
+        model = PadraoSeguroConciliacao
+        fields = [
+            'id', 'descricao_padrao', 'tipo', 'ativo',
+            'criado_em', 'criado_por', 'criado_por_nome',
+        ]
+        read_only_fields = ['id', 'criado_em', 'criado_por']

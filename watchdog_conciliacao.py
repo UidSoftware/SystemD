@@ -45,6 +45,7 @@ def processar(pdf_path):
         'python', 'manage.py', 'conciliar_extrato',
         '--arquivo', pdf_path,
         '--conta', conta,
+        '--auto',
     ]
     try:
         resultado = subprocess.run(cmd, capture_output=True, text=True, timeout=120)

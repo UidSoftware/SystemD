@@ -348,3 +348,30 @@ class ItemConciliacao(models.Model):
 
     def __str__(self):
         return f'{self.data_banco} {self.get_tipo_display()} R${self.valor} — {self.status}'
+
+
+# ──────────────────────────────────────────────
+# Padrão Seguro para Conciliação Automática
+# ──────────────────────────────────────────────
+
+class PadraoSeguroConciliacao(models.Model):
+    """
+    Lista de padrões de descrição aprovados para criação automática de
+    lançamentos via --auto no conciliar_extrato. Qualquer transação fora
+    desses padrões fica como FALTANDO_SISTEMA aguardando revisão humana.
+    """
+    descricao_padrao = models.CharField(max_length=300)   # substring match case-insensitive
+    tipo             = models.CharField(max_length=10, choices=TipoLancamento.choices)  # ENTRADA ou SAIDA
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    criado_por       = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+
+    class Meta:
+        db_table = 'fin_padrao_seguro_conciliacao'
+        ordering = ['tipo', 'descricao_padrao']
+
+    def __str__(self):
+        return f'[{self.tipo}] {self.descricao_padrao}'

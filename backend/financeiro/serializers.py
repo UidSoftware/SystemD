@@ -144,7 +144,7 @@ class ItemConciliacaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ItemConciliacao
         fields = [
-            'id', 'data_banco', 'descricao_banco', 'valor', 'tipo', 'tipo_label',
+            'id', 'conciliacao', 'data_banco', 'descricao_banco', 'valor', 'tipo', 'tipo_label',
             'status', 'status_label', 'lancamento_lc', 'lancamento_lc_data',
             'lancamento_lc_desc', 'confirmado',
         ]

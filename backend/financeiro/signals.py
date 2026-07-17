@@ -70,6 +70,16 @@ def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, cr
             criado_por=criado_por,
         )
 
+        # _ultimo_saldo() pega o lançamento de maior data já existente, o que só
+        # dá o saldo correto quando os lançamentos entram em ordem cronológica.
+        # Quando vários lançamentos históricos são criados em lote fora de ordem
+        # (ex: conciliar_extrato processando um extrato que lista transações da
+        # mais recente pra mais antiga), o cálculo acima fica errado. Reconstruir
+        # a cadeia inteira aqui garante saldo_anterior/saldo_atual corretos
+        # independente da ordem de inserção, sem depender de nenhum comando
+        # manual depois.
+        _reconstruir_cadeia(conta)
+
 
 @receiver(post_save, sender=Aporte)
 def aporte_para_livro_caixa(sender, instance, created, **kwargs):

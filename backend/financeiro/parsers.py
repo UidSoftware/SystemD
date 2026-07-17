@@ -95,6 +95,12 @@ def parse_btg(texto: str, ano: int | None = None) -> list[dict]:
     """
     Parseia extrato BTG. Formato mais simples — pode não ter transações frequentes.
     Tenta detectar linhas com data + descrição + valor.
+
+    O extrato tem DUAS colunas numéricas por lançamento: "Entradas / Saídas (R$)"
+    (o valor da transação) e "Saldo (R$)" (saldo acumulado após a transação).
+    O regex captura o PRIMEIRO número após a descrição (valor da transação) e
+    absorve um segundo número opcional no fim da linha (saldo), sem capturá-lo —
+    nunca usar o saldo como valor da transação.
     """
     if ano is None:
         ano = datetime.now().year
@@ -103,7 +109,8 @@ def parse_btg(texto: str, ano: int | None = None) -> list[dict]:
     padrao = re.compile(
         r'(\d{2}/\d{2}(?:/\d{2,4})?)\s+'
         r'(.+?)\s+'
-        r'(-?R?\$?\s*[\d.,]+)\s*$'
+        r'(-?R?\$?\s*[\d.,]+)'
+        r'(?:\s+-?R?\$?\s*[\d.,]+)?\s*$'
     )
 
     for linha in texto.splitlines():

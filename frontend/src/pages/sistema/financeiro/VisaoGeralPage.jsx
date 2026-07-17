@@ -73,7 +73,11 @@ export default function VisaoGeralPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                      {['Data', 'Histórico', 'Origem', 'Tipo', 'Valor', 'Saldo'].map(h => (
+                      {[
+                        'Data', 'Histórico',
+                        ...(!contaId ? ['Conta'] : []),
+                        'Origem', 'Tipo', 'Valor', 'Saldo',
+                      ].map(h => (
                         <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#a78bca' }}>{h}</th>
                       ))}
                     </tr>
@@ -83,6 +87,9 @@ export default function VisaoGeralPage() {
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', opacity: l.estornado ? 0.45 : 1 }}>
                         <td style={{ padding: '10px 12px', fontSize: 13, color: '#a78bca' }}>{l.data}</td>
                         <td style={{ padding: '10px 12px', fontSize: 13, color: '#f1f5f9' }}>{l.descricao}</td>
+                        {!contaId && (
+                          <td style={{ padding: '10px 12px', fontSize: 13, color: '#6b8fff' }}>{l.conta_nome}</td>
+                        )}
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{ fontSize: 11, background: (ORIGEM_COR[l.origem] || '#6b7280') + '22', color: ORIGEM_COR[l.origem] || '#6b7280', borderRadius: 6, padding: '2px 7px' }}>
                             {l.origem}

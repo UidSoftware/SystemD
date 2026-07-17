@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from usuarios.models import Usuario
-from financeiro.models import Categoria, Conta, ConciliacaoExtrato, ItemConciliacao, PadraoSeguroConciliacao, Receita, Despesa, LivroCaixa
+from financeiro.models import Aporte, Categoria, Conta, ConciliacaoExtrato, ItemConciliacao, PadraoSeguroConciliacao, Receita, Despesa, LivroCaixa
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -563,3 +563,92 @@ class ConciliacaoPendentesTest(APITestCase):
         res = self.client.get(self.url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, [])
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# parse_btg — regressão: coluna Saldo não pode ser lida como valor da transação
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ParseBtgTest(APITestCase):
+
+    def test_captura_valor_da_transacao_nao_o_saldo(self):
+        """
+        Extrato real do BTG tem duas colunas numéricas por lançamento:
+        Entradas/Saídas (valor da transação) e Saldo (acumulado). O parser
+        precisa capturar a primeira, nunca a segunda.
+        """
+        from financeiro.parsers import parse_btg
+
+        texto = (
+            ' 09/07/2026                       Valor de Rendimento Remunera+                                                   0,01                                       204,23\n'
+            ' 03/07/2026                       Valor de Rendimento Remunera+                                                   0,01                                       204,22\n'
+        )
+        resultado = parse_btg(texto, ano=2026)
+
+        self.assertEqual(len(resultado), 2)
+        for item in resultado:
+            self.assertEqual(item['valor'], Decimal('0.01'))
+            self.assertEqual(item['tipo'], 'ENTRADA')
+
+    def test_linha_de_saida_com_duas_colunas(self):
+        from financeiro.parsers import parse_btg
+
+        texto = ' 10/06/2026                       Debito Conta Corrente - Aplicacao                                                -200,00                                     4,09\n'
+        resultado = parse_btg(texto, ano=2026)
+
+        self.assertEqual(len(resultado), 1)
+        self.assertEqual(resultado[0]['valor'], Decimal('200.00'))
+        self.assertEqual(resultado[0]['tipo'], 'SAIDA')
+
+    def test_linha_com_apenas_uma_coluna_numerica(self):
+        """Formato antigo/alternativo sem coluna de saldo continua funcionando."""
+        from financeiro.parsers import parse_btg
+
+        texto = ' 15/06/2026                       Transferencia Enviada                                                            -50,00\n'
+        resultado = parse_btg(texto, ano=2026)
+
+        self.assertEqual(len(resultado), 1)
+        self.assertEqual(resultado[0]['valor'], Decimal('50.00'))
+        self.assertEqual(resultado[0]['tipo'], 'SAIDA')
+
+    def test_linhas_de_saldo_sao_ignoradas(self):
+        from financeiro.parsers import parse_btg
+
+        texto = (
+            ' 14/07/2026                       Saldo de fechamento                                                                                                        204,23\n'
+            ' 01/07/2026                       Saldo de abertura                                                                                                          204,21\n'
+        )
+        resultado = parse_btg(texto, ano=2026)
+        self.assertEqual(resultado, [])
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LivroCaixa — regressão: cadeia de saldo correta mesmo com inserção fora de ordem
+# ──────────────────────────────────────────────────────────────────────────────
+
+class LivroCaixaOrdemCronologicaTest(APITestCase):
+
+    def test_aportes_criados_fora_de_ordem_geram_cadeia_cronologica_correta(self):
+        """
+        _ultimo_saldo() usa o lançamento de maior data já existente. Se vários
+        lançamentos históricos forem criados em lote fora de ordem cronológica
+        (ex: conciliar_extrato processando um extrato do mais recente pro mais
+        antigo), a cadeia de saldo_anterior/saldo_atual não pode se corromper.
+        """
+        conta = make_conta(saldo_inicial=Decimal('100.00'))
+
+        # Cria em ordem DECRESCENTE de data (o cenário que corrompia a cadeia)
+        Aporte.objects.create(conta=conta, tipo='CAPITAL_SOCIAL', descricao='dia 29', valor=Decimal('10.00'), data=date(2026, 6, 29))
+        Aporte.objects.create(conta=conta, tipo='CAPITAL_SOCIAL', descricao='dia 23', valor=Decimal('20.00'), data=date(2026, 6, 23))
+        Aporte.objects.create(conta=conta, tipo='CAPITAL_SOCIAL', descricao='dia 17', valor=Decimal('30.00'), data=date(2026, 6, 17))
+
+        lancamentos = list(LivroCaixa.objects.filter(conta=conta).order_by('data', 'criado_em'))
+        self.assertEqual(len(lancamentos), 3)
+
+        saldo = Decimal('100.00')
+        for lc in lancamentos:
+            self.assertEqual(lc.saldo_anterior, saldo)
+            saldo += lc.valor
+            self.assertEqual(lc.saldo_atual, saldo)
+
+        self.assertEqual(saldo, Decimal('160.00'))

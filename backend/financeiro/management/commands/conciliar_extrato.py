@@ -1,6 +1,6 @@
 """Management command: conciliar_extrato."""
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -9,9 +9,16 @@ from django.db import transaction
 
 from financeiro.models import (
     Aporte, Categoria, Conta, ConciliacaoExtrato, Despesa, ItemConciliacao,
-    LivroCaixa, TipoLancamento,
+    LivroCaixa, Receita, TipoLancamento,
 )
 from financeiro.parsers import extrair_texto_pdf, inferir_categoria_descricao, parse_btg, parse_c6
+
+TOLERANCIA_DIAS_PENDENTE = 3
+
+# Descrições de transação que podem ser criadas do zero automaticamente
+# (--auto) sem revisão humana, por serem recorrentes e não passíveis de
+# pré-cadastro como conta a pagar/receber (ex: rendimento de conta bancária).
+PADROES_SEGUROS_CRIACAO = ['rendimento remunera']
 
 
 class Command(BaseCommand):
@@ -21,7 +28,8 @@ class Command(BaseCommand):
         parser.add_argument('--arquivo', required=True, help='Caminho para o PDF do extrato')
         parser.add_argument('--conta',   required=True, help='Nome da conta (C6 ou BTG)')
         parser.add_argument('--mes',     default=None,  help='Período YYYY-MM (inferido do nome do arquivo se omitido)')
-        parser.add_argument('--criar',   action='store_true', help='Criar lançamentos faltantes no sistema')
+        parser.add_argument('--criar',   action='store_true', help='Criar lançamentos faltantes no sistema (sem restrição)')
+        parser.add_argument('--auto',    action='store_true', help='Assenta pendentes que baterem e cria só padrões seguros conhecidos; resto fica pendente para revisão')
         parser.add_argument('--senha',   default='609393', help='Senha do PDF (padrão: 609393)')
 
     def handle(self, *args, **options):
@@ -29,6 +37,7 @@ class Command(BaseCommand):
         nome_conta = options['conta'].upper()
         mes_str  = options['mes']
         criar    = options['criar']
+        auto     = options['auto']
         senha    = options['senha']
 
         # Resolve conta
@@ -74,6 +83,14 @@ class Command(BaseCommand):
         ]
 
         self.stdout.write(f'   Transações no extrato: {len(transacoes_banco)}')
+
+        # Antes de comparar com o LivroCaixa: assenta Despesas/Receitas
+        # pendentes que baterem com uma transação do extrato (mesma conta,
+        # valor exato, vencimento dentro da tolerância). Isso evita criar
+        # lançamentos duplicados quando a conta a pagar/receber já existia
+        # cadastrada como pendente.
+        if criar or auto:
+            self._assentar_pendentes(transacoes_banco, conta)
 
         # Busca lançamentos no sistema para o período
         primeiro_dia = periodo
@@ -174,6 +191,13 @@ class Command(BaseCommand):
 
             if criar:
                 self._criar_lancamentos(faltando_sistema, conta, conc)
+            elif auto:
+                seguros = [f for f in faltando_sistema if self._padrao_seguro(f['descricao_banco'])]
+                if seguros:
+                    self._criar_lancamentos(seguros, conta, conc)
+                ignorados = len(faltando_sistema) - len(seguros)
+                if ignorados:
+                    self.stdout.write(f'\n⏸️  {ignorados} item(ns) sem padrão seguro conhecido — deixados pendentes para revisão manual.')
 
         # Relatório
         self.stdout.write(f'✅ Conciliados      : {len(conciliados)}')
@@ -196,6 +220,42 @@ class Command(BaseCommand):
                 self.stdout.write(f"  {item['data_banco'].strftime('%d/%m')}  {sinal}R${item['valor']:,.2f}  {item['descricao_banco'][:60]}")
 
         self.stdout.write(f'\n🆔 Conciliação ID: {conc.id}\n')
+
+    def _padrao_seguro(self, descricao):
+        desc = descricao.lower()
+        return any(p in desc for p in PADROES_SEGUROS_CRIACAO)
+
+    def _assentar_pendentes(self, transacoes_banco, conta):
+        for t in transacoes_banco:
+            inicio = t['data'] - timedelta(days=TOLERANCIA_DIAS_PENDENTE)
+            fim = t['data'] + timedelta(days=TOLERANCIA_DIAS_PENDENTE)
+
+            if t['tipo'] == 'SAIDA':
+                pendente = Despesa.objects.filter(
+                    conta=conta, status__in=['PENDENTE', 'ATRASADO'],
+                    valor_liquido=t['valor'], vencimento__gte=inicio, vencimento__lte=fim,
+                ).order_by('vencimento').first()
+                if pendente:
+                    pendente.status = 'PAGO'
+                    pendente.pagamento = t['data']
+                    pendente.save(update_fields=['status', 'pagamento'])
+                    self.stdout.write(
+                        f"  🔗 Despesa pendente assentada: {pendente.descricao[:50]} "
+                        f"(venc. {pendente.vencimento.strftime('%d/%m')} → pago {t['data'].strftime('%d/%m')})"
+                    )
+            else:
+                pendente = Receita.objects.filter(
+                    conta=conta, status__in=['PENDENTE', 'ATRASADO'],
+                    valor_liquido=t['valor'], vencimento__gte=inicio, vencimento__lte=fim,
+                ).order_by('vencimento').first()
+                if pendente:
+                    pendente.status = 'RECEBIDO'
+                    pendente.recebimento = t['data']
+                    pendente.save(update_fields=['status', 'recebimento'])
+                    self.stdout.write(
+                        f"  🔗 Receita pendente assentada: {pendente.descricao[:50]} "
+                        f"(venc. {pendente.vencimento.strftime('%d/%m')} → recebido {t['data'].strftime('%d/%m')})"
+                    )
 
     def _criar_lancamentos(self, faltando, conta, conc):
         for item in faltando:

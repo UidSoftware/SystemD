@@ -11,9 +11,9 @@ import subprocess
 import time
 from pathlib import Path
 
-PASTA = '/home/notuidsoftware/Dropbox/01 - Contabilidade/Extratos Onvio/Extratos'
+PASTA = '/mnt/dropbox/01 - Contabilidade/Extratos Onvio/Extratos'
 CONTAINER = 'sytemd-backend-1'
-INTERVALO = 86400
+INTERVALO = 300
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +45,7 @@ def processar(pdf_path):
         'python', 'manage.py', 'conciliar_extrato',
         '--arquivo', pdf_path,
         '--conta', conta,
+        '--auto',
     ]
     try:
         resultado = subprocess.run(cmd, capture_output=True, text=True, timeout=120)

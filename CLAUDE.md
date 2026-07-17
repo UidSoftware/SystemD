@@ -797,7 +797,26 @@ Office  (logo após Dashboard — somente ADMIN)
     └── Arquitetura Técnica → form → salva em ordens_arquiteturatecnica
 ```
 
-**Fluxo de aquisição:** Lead → Prospecto → Entrevista → Arquitetura Técnica → pipeline agents
+**Fluxo de aquisição completo (fonte de verdade: PlannerSKILL.md / AnalistaSKILL.md em /opt/claw-empire/.claude/skills/):**
+
+```
+Lead → Prospecto → Entrevista → Arquitetura Técnica (salva em ordens_arquiteturatecnica)
+    ↓
+Planner lê Lead + Entrevista + ArquiteturaTecnica via MCP — só lê e delega, nunca implementa
+    ↓
+Planner delega ANALISTA (nunca pula, mesmo com spec pronta)
+    → entrega Levantamento_Requisitos.md + usecase.md + classes.md + activity.md
+    ↓
+DOC-GENERATOR → gera os 8 documentos do projeto
+    ↓
+Planner delega em paralelo: BLUEPRINT (planta técnica + ADRs) + BRUSH (design system)
+    ↓
+Planner delega Forge (backend) + Loom (frontend) em paralelo
+    ↓
+Sentinel valida → aprovado, Planner delega Pilot (deploy, obrigatório)
+```
+
+Analista e Blueprint rodam **entre** a Arquitetura Técnica e o Forge/Loom — não aparecem no diagrama simplificado acima do menu porque foram adicionados depois; a esteira real sempre passa por eles.
 
 **Perfis por menu:**
 - ADMIN: sem Leads e Prospectos no menu principal — acessam via Office → Novo Projeto
@@ -814,7 +833,7 @@ Novo model para o formulário de Arquitetura Técnica do pipeline:
 
 Endpoint: GET/POST /api/arquitetura-tecnica/ — permissão: IsAdminOrOperacional
 Tabela: ordens_arquiteturatecnica
-O Planner lê esta tabela via MCP após o formulário ser salvo.
+O Planner lê esta tabela via MCP após o formulário ser salvo e delega para Analista → Blueprint antes de Forge/Loom (ver seção Menu Office acima).
 
 ---
 

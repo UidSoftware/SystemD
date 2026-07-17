@@ -11,3 +11,4 @@ reportlab==4.2.5
 openpyxl>=3.1
 requests>=2.31.0
 PyJWT>=2.8.0
+pikepdf>=9.0

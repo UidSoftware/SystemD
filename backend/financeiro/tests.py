@@ -652,3 +652,106 @@ class LivroCaixaOrdemCronologicaTest(APITestCase):
             self.assertEqual(lc.saldo_atual, saldo)
 
         self.assertEqual(saldo, Decimal('160.00'))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# conciliar_extrato --auto — Aporte vs Receita Financeira
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ConciliarExtratoClassificacaoTest(APITestCase):
+    """
+    Rendimento de conta remunerada é receita financeira, não aporte de sócio.
+    Um vira Patrimônio Líquido (nunca entra no DRE), o outro é receita de
+    verdade (entra no DRE, separado da receita operacional). Confundir os
+    dois distorce o resultado do negócio no relatório.
+    """
+
+    def test_padrao_receita_financeira_cria_receita_nao_aporte(self):
+        from financeiro.management.commands.conciliar_extrato import Command
+
+        conta = make_conta(nome='BTG')
+        PadraoSeguroConciliacao.objects.create(
+            descricao_padrao='rendimento remunera', tipo='ENTRADA',
+            natureza='RECEITA_FINANCEIRA', ativo=True,
+        )
+        conc = ConciliacaoExtrato.objects.create(
+            conta=conta, arquivo='x.pdf', periodo=date(2026, 8, 1), status='PENDENTE',
+        )
+        item = {
+            'data_banco': date(2026, 8, 5),
+            'descricao_banco': 'Valor de Rendimento Remunera+',
+            'valor': Decimal('0.01'),
+            'tipo': 'ENTRADA',
+        }
+        ItemConciliacao.objects.create(
+            conciliacao=conc, data_banco=item['data_banco'],
+            descricao_banco=item['descricao_banco'], valor=item['valor'],
+            tipo=item['tipo'], status='FALTANDO_SISTEMA',
+        )
+
+        Command()._auto_processar([item], conta, conc)
+
+        self.assertFalse(Aporte.objects.filter(descricao__icontains='Rendimento').exists())
+        receita = Receita.objects.get(descricao__icontains='Rendimento')
+        self.assertEqual(receita.tipo, 'RECEITA_FINANCEIRA')
+        self.assertEqual(receita.status, 'RECEBIDO')
+        self.assertEqual(receita.valor_bruto, Decimal('0.01'))
+
+    def test_padrao_aporte_continua_criando_aporte(self):
+        from financeiro.management.commands.conciliar_extrato import Command
+
+        conta = make_conta(nome='BTG')
+        PadraoSeguroConciliacao.objects.create(
+            descricao_padrao='aporte teste padrao', tipo='ENTRADA',
+            natureza='APORTE', ativo=True,
+        )
+        conc = ConciliacaoExtrato.objects.create(
+            conta=conta, arquivo='x.pdf', periodo=date(2026, 8, 1), status='PENDENTE',
+        )
+        item = {
+            'data_banco': date(2026, 8, 5),
+            'descricao_banco': 'Aporte Teste Padrao Recebido',
+            'valor': Decimal('50.00'),
+            'tipo': 'ENTRADA',
+        }
+        ItemConciliacao.objects.create(
+            conciliacao=conc, data_banco=item['data_banco'],
+            descricao_banco=item['descricao_banco'], valor=item['valor'],
+            tipo=item['tipo'], status='FALTANDO_SISTEMA',
+        )
+
+        Command()._auto_processar([item], conta, conc)
+
+        self.assertTrue(Aporte.objects.filter(descricao__icontains='Aporte Teste Padrao').exists())
+        self.assertFalse(Receita.objects.filter(descricao__icontains='Aporte Teste Padrao').exists())
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DRE — Receita Operacional separada de Receita Financeira
+# ──────────────────────────────────────────────────────────────────────────────
+
+class DreReceitaFinanceiraTest(APITestCase):
+
+    def test_receita_financeira_nao_entra_em_receita_operacional(self):
+        admin = make_user('admin@uid.com', 'ADMIN')
+        conta = make_conta()
+
+        Receita.objects.create(
+            descricao='Mensalidade cliente', tipo='MENSALIDADE', status='RECEBIDO',
+            conta=conta, valor_bruto=Decimal('300.00'),
+            vencimento=date(2026, 8, 5), recebimento=date(2026, 8, 5),
+        )
+        Receita.objects.create(
+            descricao='Rendimento aplicacao', tipo='RECEITA_FINANCEIRA', status='RECEBIDO',
+            conta=conta, valor_bruto=Decimal('0.05'),
+            vencimento=date(2026, 8, 10), recebimento=date(2026, 8, 10),
+        )
+
+        self.client.force_authenticate(admin)
+        res = self.client.get(reverse('dre'), {'ano': 2026})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        mes_ago = res.data['meses'][7]  # agosto = index 7
+        self.assertEqual(Decimal(str(mes_ago['receita_operacional'])), Decimal('300.00'))
+        self.assertEqual(Decimal(str(mes_ago['receita_financeira'])), Decimal('0.05'))
+        self.assertEqual(Decimal(str(mes_ago['receita_bruta'])), Decimal('300.05'))

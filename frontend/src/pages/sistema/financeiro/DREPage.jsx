@@ -60,7 +60,8 @@ export default function DREPage() {
               </thead>
               <tbody>
                 {[
-                  { key: 'receita_bruta',       label: 'Receita Bruta',       cor: '#10b981', bold: false },
+                  { key: 'receita_operacional', label: 'Receita Operacional', cor: '#10b981', bold: false },
+                  { key: 'receita_financeira',  label: 'Receita Financeira',  cor: '#6b8fff', bold: false },
                   { key: 'descontos',            label: '(−) Descontos',       cor: '#f59e0b', bold: false },
                   { key: 'receita_liquida',      label: 'Receita Líquida',     cor: '#10b981', bold: true },
                   { key: null },

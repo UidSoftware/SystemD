@@ -200,7 +200,7 @@ class PadraoSeguroConciliacaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PadraoSeguroConciliacao
         fields = [
-            'id', 'descricao_padrao', 'tipo', 'ativo',
+            'id', 'descricao_padrao', 'tipo', 'natureza', 'ativo',
             'criado_em', 'criado_por', 'criado_por_nome',
         ]
         read_only_fields = ['id', 'criado_em', 'criado_por']

@@ -77,10 +77,11 @@ class Aporte(BaseFinanceiro):
 # ──────────────────────────────────────────────
 
 class TipoReceita(models.TextChoices):
-    ENTRADA_CONTRATO = 'ENTRADA_CONTRATO', 'Entrada de Contrato'
-    MENSALIDADE      = 'MENSALIDADE',      'Mensalidade'
-    CONSULTORIA      = 'CONSULTORIA',      'Consultoria Avulsa'
-    OUTRO            = 'OUTRO',            'Outro'
+    ENTRADA_CONTRATO   = 'ENTRADA_CONTRATO',   'Entrada de Contrato'
+    MENSALIDADE        = 'MENSALIDADE',        'Mensalidade'
+    CONSULTORIA        = 'CONSULTORIA',        'Consultoria Avulsa'
+    RECEITA_FINANCEIRA = 'RECEITA_FINANCEIRA', 'Receita Financeira'
+    OUTRO              = 'OUTRO',              'Outro'
 
 
 class StatusReceita(models.TextChoices):
@@ -354,6 +355,11 @@ class ItemConciliacao(models.Model):
 # Padrão Seguro para Conciliação Automática
 # ──────────────────────────────────────────────
 
+class NaturezaPadraoConciliacao(models.TextChoices):
+    APORTE             = 'APORTE',             'Aporte (capital social)'
+    RECEITA_FINANCEIRA = 'RECEITA_FINANCEIRA', 'Receita Financeira (rendimento)'
+
+
 class PadraoSeguroConciliacao(models.Model):
     """
     Lista de padrões de descrição aprovados para criação automática de
@@ -362,6 +368,13 @@ class PadraoSeguroConciliacao(models.Model):
     """
     descricao_padrao = models.CharField(max_length=300)   # substring match case-insensitive
     tipo             = models.CharField(max_length=10, choices=TipoLancamento.choices)  # ENTRADA ou SAIDA
+    natureza         = models.CharField(
+        max_length=20, choices=NaturezaPadraoConciliacao.choices,
+        default=NaturezaPadraoConciliacao.APORTE,
+        help_text='Só relevante para tipo=ENTRADA — Aporte vira Patrimônio Líquido '
+                   '(nunca entra no DRE); Receita Financeira entra no DRE como '
+                   'rendimento, separado da receita operacional.',
+    )
     ativo            = models.BooleanField(default=True)
     criado_em        = models.DateTimeField(auto_now_add=True)
     criado_por       = models.ForeignKey(

@@ -545,6 +545,7 @@ def dre(request):
 
     meses = []
     totais = {
+        'receita_operacional': Decimal('0'), 'receita_financeira': Decimal('0'),
         'receita_bruta': Decimal('0'), 'descontos': Decimal('0'),
         'receita_liquida': Decimal('0'), 'despesas_fixas': Decimal('0'),
         'despesas_variaveis': Decimal('0'), 'prolabore': Decimal('0'),
@@ -560,7 +561,13 @@ def dre(request):
             pagamento__year=ano, pagamento__month=mes, status='PAGO', ativo=True, estornado=False,
         )
 
-        receita_bruta  = rec_qs.aggregate(v=Sum('valor_bruto'))['v'] or Decimal('0')
+        # Receita financeira (rendimento de aplicação/conta remunerada) é
+        # separada da receita operacional — não é o negócio vendendo pro
+        # cliente, é juro que o banco pagou. Misturar as duas infla a
+        # "Receita Bruta" e distorce o tamanho real da operação.
+        receita_operacional = rec_qs.exclude(tipo='RECEITA_FINANCEIRA').aggregate(v=Sum('valor_bruto'))['v'] or Decimal('0')
+        receita_financeira  = rec_qs.filter(tipo='RECEITA_FINANCEIRA').aggregate(v=Sum('valor_bruto'))['v'] or Decimal('0')
+        receita_bruta  = receita_operacional + receita_financeira
         descontos      = rec_qs.aggregate(v=Sum('desconto'))['v'] or Decimal('0')
         receita_liq    = receita_bruta - descontos
 
@@ -574,6 +581,8 @@ def dre(request):
 
         dados_mes = {
             'mes': f'{mes:02d}/{ano}',
+            'receita_operacional': receita_operacional,
+            'receita_financeira': receita_financeira,
             'receita_bruta':    receita_bruta,
             'descontos':        descontos,
             'receita_liquida':  receita_liq,

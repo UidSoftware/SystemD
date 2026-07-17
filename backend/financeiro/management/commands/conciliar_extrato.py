@@ -202,11 +202,37 @@ class Command(BaseCommand):
 
         self.stdout.write(f'\n🆔 Conciliação ID: {conc.id}\n')
 
+    def _padrao_entrada_financeira(self, descricao):
+        """
+        True se a descrição bater com um PadraoSeguroConciliacao de ENTRADA
+        marcado como natureza=RECEITA_FINANCEIRA (ex: rendimento de conta
+        remunerada) — nesse caso o lançamento deve virar Receita, não Aporte.
+        Aporte é capital (Patrimônio Líquido); rendimento é receita financeira
+        (entra no DRE). Confundir os dois distorce o resultado do negócio.
+        """
+        desc_lower = descricao.lower()
+        padroes_financeiros = PadraoSeguroConciliacao.objects.filter(
+            tipo='ENTRADA', natureza='RECEITA_FINANCEIRA', ativo=True,
+        ).values_list('descricao_padrao', flat=True)
+        return any(p.lower() in desc_lower for p in padroes_financeiros)
+
     def _criar_lancamentos(self, faltando, conta, conc):
         """Modo --criar: cria lançamentos para TUDO faltando. Use com cuidado."""
+        categoria_investimento = Categoria.objects.filter(nome__iexact='Investimento', tipo='ENTRADA').first()
         for item in faltando:
             try:
-                if item['tipo'] == 'ENTRADA':
+                if item['tipo'] == 'ENTRADA' and self._padrao_entrada_financeira(item['descricao_banco']):
+                    Receita.objects.create(
+                        conta=conta,
+                        descricao=item['descricao_banco'][:255],
+                        tipo='RECEITA_FINANCEIRA',
+                        categoria=categoria_investimento,
+                        valor_bruto=item['valor'],
+                        vencimento=item['data_banco'],
+                        recebimento=item['data_banco'],
+                        status='RECEBIDO',
+                    )
+                elif item['tipo'] == 'ENTRADA':
                     Aporte.objects.create(
                         conta=conta,
                         descricao=item['descricao_banco'][:255],
@@ -360,26 +386,46 @@ class Command(BaseCommand):
 
         padroes_entrada = list(
             PadraoSeguroConciliacao.objects.filter(tipo='ENTRADA', ativo=True)
-            .values_list('descricao_padrao', flat=True)
+            .values_list('descricao_padrao', 'natureza')
         )
         padroes_saida = list(
             PadraoSeguroConciliacao.objects.filter(tipo='SAIDA', ativo=True)
             .values_list('descricao_padrao', flat=True)
         )
+        categoria_investimento = Categoria.objects.filter(nome__iexact='Investimento', tipo='ENTRADA').first()
 
         for item in pendentes_restantes:
             descricao_lower = item['descricao_banco'].lower()
             tipo = item['tipo']
 
-            padroes = padroes_entrada if tipo == 'ENTRADA' else padroes_saida
-            padrao_match = next(
-                (p for p in padroes if p.lower() in descricao_lower),
-                None,
-            )
+            natureza_match = None
+            if tipo == 'ENTRADA':
+                match = next(
+                    ((desc, nat) for desc, nat in padroes_entrada if desc.lower() in descricao_lower),
+                    None,
+                )
+                padrao_match = match[0] if match else None
+                natureza_match = match[1] if match else None
+            else:
+                padrao_match = next(
+                    (p for p in padroes_saida if p.lower() in descricao_lower),
+                    None,
+                )
 
             if padrao_match:
                 try:
-                    if tipo == 'ENTRADA':
+                    if tipo == 'ENTRADA' and natureza_match == 'RECEITA_FINANCEIRA':
+                        lancamento_obj = Receita.objects.create(
+                            conta=conta,
+                            descricao=item['descricao_banco'][:255],
+                            tipo='RECEITA_FINANCEIRA',
+                            categoria=categoria_investimento,
+                            valor_bruto=item['valor'],
+                            vencimento=item['data_banco'],
+                            recebimento=item['data_banco'],
+                            status='RECEBIDO',
+                        )
+                    elif tipo == 'ENTRADA':
                         lancamento_obj = Aporte.objects.create(
                             conta=conta,
                             descricao=item['descricao_banco'][:255],

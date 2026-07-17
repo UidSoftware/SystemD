@@ -51,10 +51,16 @@ export const financeiroApi = {
   estornar:              (id, d) => post(`/livro-caixa/${id}/estornar/`, d),
 
   // Conciliação Bancária
-  listarConciliacoes:    (p) => f('/conciliacoes/', p),
-  detalharConciliacao:   (id) => f(`/conciliacoes/${id}/`),
-  processarConciliacao:  (d) => post('/conciliacoes/processar/', d),
-  confirmarConciliacao:  (id, d) => post(`/conciliacoes/${id}/confirmar/`, d),
+  listarConciliacoes:          (p) => f('/conciliacoes/', p),
+  detalharConciliacao:         (id) => f(`/conciliacoes/${id}/`),
+  processarConciliacao:        (d) => post('/conciliacoes/processar/', d),
+  confirmarConciliacao:        (id, d) => post(`/conciliacoes/${id}/confirmar/`, d),
+  listarConciliacoesPendentes: () => f('/conciliacoes/pendentes/'),
+
+  // Padrões seguros de conciliação
+  listarPadroesSeguros:  (p) => f('/padroes-seguros-conciliacao/', p),
+  criarPadraoSeguro:     (d) => post('/padroes-seguros-conciliacao/', d),
+  deletarPadraoSeguro:   (id) => del(`/padroes-seguros-conciliacao/${id}/`),
 
   // Helpers para selects em formularios financeiros
   listarClientesOpts:    (p) => api.get('/clientes/', { params: p }),

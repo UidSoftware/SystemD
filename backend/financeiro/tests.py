@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from usuarios.models import Usuario
-from financeiro.models import Categoria, Conta, Receita, Despesa, LivroCaixa
+from financeiro.models import Categoria, Conta, ConciliacaoExtrato, ItemConciliacao, PadraoSeguroConciliacao, Receita, Despesa, LivroCaixa
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -400,3 +400,166 @@ class LivroCaixaImutavelTest(APITestCase):
         url = reverse('livro-caixa-list')
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PadraoSeguroConciliacao — CRUD
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PadraoSeguroConciliacaoTest(APITestCase):
+
+    def setUp(self):
+        self.admin = make_user('admin@uid.com', 'ADMIN')
+        self.fin   = make_user('fin@uid.com',   'FINANCEIRO')
+        self.op    = make_user('op@uid.com',    'OPERACIONAL')
+        self.url   = reverse('padroes-seguros-conciliacao-list')
+
+    def test_padrao_seguro_create(self):
+        """POST /api/financeiro/padroes-seguros-conciliacao/ cria padrão."""
+        self.client.force_authenticate(self.admin)
+        payload = {'descricao_padrao': 'PIX RECEBIDO CLIENTE', 'tipo': 'ENTRADA'}
+        res = self.client.post(self.url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            PadraoSeguroConciliacao.objects.filter(
+                descricao_padrao='PIX RECEBIDO CLIENTE', tipo='ENTRADA',
+            ).exists()
+        )
+        # criado_por deve ser preenchido automaticamente
+        padrao = PadraoSeguroConciliacao.objects.get(descricao_padrao='PIX RECEBIDO CLIENTE')
+        self.assertEqual(padrao.criado_por, self.admin)
+
+    def test_padrao_seguro_create_financeiro(self):
+        """Perfil FINANCEIRO também pode criar padrões."""
+        self.client.force_authenticate(self.fin)
+        payload = {'descricao_padrao': 'PAGAMENTO FORNECEDOR', 'tipo': 'SAIDA'}
+        res = self.client.post(self.url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_padrao_seguro_create_operacional_bloqueado(self):
+        """Perfil OPERACIONAL não pode criar padrões."""
+        self.client.force_authenticate(self.op)
+        payload = {'descricao_padrao': 'ALGUM PADRAO', 'tipo': 'ENTRADA'}
+        res = self.client.post(self.url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_padrao_seguro_list(self):
+        """GET /api/financeiro/padroes-seguros-conciliacao/ lista padrões ativos."""
+        PadraoSeguroConciliacao.objects.create(
+            descricao_padrao='PIX ENTRADA',
+            tipo='ENTRADA',
+            ativo=True,
+            criado_por=self.admin,
+        )
+        PadraoSeguroConciliacao.objects.create(
+            descricao_padrao='PIX SAIDA INATIVO',
+            tipo='SAIDA',
+            ativo=False,
+            criado_por=self.admin,
+        )
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        descricoes = [p['descricao_padrao'] for p in res.data['results']]
+        self.assertIn('PIX ENTRADA', descricoes)
+        # Padrão inativo não deve aparecer (queryset filtra ativo=True)
+        self.assertNotIn('PIX SAIDA INATIVO', descricoes)
+
+    def test_padrao_seguro_delete_soft(self):
+        """DELETE seta ativo=False (soft delete) em vez de destruir o registro."""
+        padrao = PadraoSeguroConciliacao.objects.create(
+            descricao_padrao='BOLETO PAGAMENTO',
+            tipo='SAIDA',
+            ativo=True,
+            criado_por=self.admin,
+        )
+        self.client.force_authenticate(self.admin)
+        url_detail = reverse('padroes-seguros-conciliacao-detail', args=[padrao.id])
+        res = self.client.delete(url_detail)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        # Registro ainda existe no banco
+        padrao.refresh_from_db()
+        self.assertFalse(padrao.ativo)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ConciliacaoViewSet — endpoint /pendentes/
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ConciliacaoPendentesTest(APITestCase):
+
+    def setUp(self):
+        self.admin = make_user('admin@uid.com', 'ADMIN')
+        self.conta = make_conta()
+        self.url   = reverse('conciliacoes-pendentes')
+
+    def _criar_conciliacao_com_item(self, descricao, tipo, valor, status_item, confirmado=False):
+        conc = ConciliacaoExtrato.objects.create(
+            conta=self.conta,
+            arquivo='/tmp/extrato.pdf',
+            periodo=date.today().replace(day=1),
+            status='COM_DIVERGENCIAS',
+            total_banco=valor,
+            total_sistema=Decimal('0'),
+            divergencias=1,
+            criado_por=self.admin,
+        )
+        item = ItemConciliacao.objects.create(
+            conciliacao=conc,
+            data_banco=date.today(),
+            descricao_banco=descricao,
+            valor=valor,
+            tipo=tipo,
+            status=status_item,
+            confirmado=confirmado,
+        )
+        return conc, item
+
+    def test_conciliacao_pendentes_endpoint_retorna_estrutura_correta(self):
+        """GET /api/financeiro/conciliacoes/pendentes/ retorna grupos com estrutura correta."""
+        self._criar_conciliacao_com_item(
+            'PIX RECEBIDO XPTO', 'ENTRADA', Decimal('150.00'), 'FALTANDO_SISTEMA',
+        )
+        self._criar_conciliacao_com_item(
+            'PIX RECEBIDO XPTO', 'ENTRADA', Decimal('150.00'), 'FALTANDO_SISTEMA',
+        )
+        self._criar_conciliacao_com_item(
+            'PAGAMENTO BOLETO ABC', 'SAIDA', Decimal('89.90'), 'FALTANDO_SISTEMA',
+        )
+        # Item já confirmado não deve aparecer
+        self._criar_conciliacao_com_item(
+            'CONCILIADO OK', 'ENTRADA', Decimal('50.00'), 'FALTANDO_SISTEMA', confirmado=True,
+        )
+
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Deve retornar lista (não paginada)
+        self.assertIsInstance(res.data, list)
+
+        # 2 grupos: PIX RECEBIDO XPTO e PAGAMENTO BOLETO ABC
+        descricoes = [g['descricao'] for g in res.data]
+        self.assertIn('PIX RECEBIDO XPTO', descricoes)
+        self.assertIn('PAGAMENTO BOLETO ABC', descricoes)
+        self.assertNotIn('CONCILIADO OK', descricoes)
+
+        # Verifica estrutura do grupo
+        grupo_pix = next(g for g in res.data if g['descricao'] == 'PIX RECEBIDO XPTO')
+        self.assertIn('tipo', grupo_pix)
+        self.assertIn('total_ocorrencias', grupo_pix)
+        self.assertIn('valor_total', grupo_pix)
+        self.assertIn('itens', grupo_pix)
+        self.assertEqual(grupo_pix['total_ocorrencias'], 2)
+        self.assertEqual(Decimal(str(grupo_pix['valor_total'])), Decimal('300.00'))
+        self.assertEqual(len(grupo_pix['itens']), 2)
+
+    def test_conciliacao_pendentes_sem_auth_retorna_401(self):
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_conciliacao_pendentes_vazio_retorna_lista_vazia(self):
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, [])

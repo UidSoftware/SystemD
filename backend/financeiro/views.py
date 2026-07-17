@@ -13,10 +13,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrOperacionalOrFinanceiro
 
-from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, Receita
+from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
 from .serializers import (
     AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
-    FornecedorSerializer, ItemConciliacaoSerializer, LivroCaixaSerializer, ReceitaSerializer,
+    FornecedorSerializer, ItemConciliacaoSerializer, LivroCaixaSerializer, PadraoSeguroConciliacaoSerializer, ReceitaSerializer,
 )
 
 
@@ -925,6 +925,35 @@ class ConciliacaoViewSet(ModelViewSet):
 
         return Response(ConciliacaoExtratoSerializer(conc).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['get'], url_path='pendentes')
+    def pendentes(self, request):
+        """
+        GET /api/financeiro/conciliacoes/pendentes/
+        Lista itens FALTANDO_SISTEMA não confirmados, agrupados por descricao_banco exata.
+        """
+        qs = ItemConciliacao.objects.filter(
+            status='FALTANDO_SISTEMA',
+            confirmado=False,
+        ).order_by('descricao_banco', 'data_banco')
+
+        grupos = {}
+        for item in qs:
+            chave = (item.descricao_banco, item.tipo)
+            if chave not in grupos:
+                grupos[chave] = {
+                    'descricao': item.descricao_banco,
+                    'tipo': item.tipo,
+                    'total_ocorrencias': 0,
+                    'valor_total': Decimal('0'),
+                    'itens': [],
+                }
+            grupos[chave]['total_ocorrencias'] += 1
+            grupos[chave]['valor_total'] += item.valor
+            grupos[chave]['itens'].append(ItemConciliacaoSerializer(item).data)
+
+        resultado = sorted(grupos.values(), key=lambda g: g['descricao'])
+        return Response(resultado)
+
     @action(detail=True, methods=['post'], url_path='confirmar')
     def confirmar(self, request, pk=None):
         conc = self.get_object()
@@ -986,3 +1015,31 @@ class ConciliacaoViewSet(ModelViewSet):
             'erros':   erros,
             'conciliacao': ConciliacaoExtratoSerializer(conc).data,
         })
+
+
+class PadraoSeguroConciliacaoViewSet(ModelViewSet):
+    """
+    ViewSet para gerenciar padrões seguros de conciliação automática.
+    Transações cujas descrições não batem com nenhum padrão ativo ficam
+    como FALTANDO_SISTEMA aguardando revisão humana explícita.
+    """
+    serializer_class   = PadraoSeguroConciliacaoSerializer
+    permission_classes = [IsAdminOrFinanceiro]
+    filter_backends    = [DjangoFilterBackend]
+    filterset_fields   = ['tipo', 'ativo']
+
+    def get_queryset(self):
+        return PadraoSeguroConciliacao.objects.filter(ativo=True).order_by('tipo', 'descricao_padrao')
+
+    def perform_create(self, serializer):
+        serializer.save(criado_por=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft delete — seta ativo=False em vez de deletar do banco."""
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save(update_fields=['ativo'])
+        return Response(status=status.HTTP_204_NO_CONTENT)

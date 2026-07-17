@@ -4,6 +4,7 @@ disparadas após a task ser criada no Claw Empire.
 Idempotente — usado pelo script de automação em /opt/uid-automation.
 """
 import json
+import re
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -55,9 +56,23 @@ class Command(BaseCommand):
                     'projeto': arquitetura.projeto,
                     'entrevista_sistema': arquitetura.entrevista.sistema,
                     'prospecto_nome': arquitetura.entrevista.prospecto.nome_empresa,
+                    'core_goal': resumir_descricao(arquitetura.entrevista.descricao),
                 })
 
             self.stdout.write(json.dumps(itens))
             return
 
         self.stdout.write(self.style.ERROR('Use --list ou --mark-done <id>.'))
+
+
+def resumir_descricao(descricao, limite=300):
+    """Extrai um resumo curto (1 paragrafo) da descricao livre da Entrevista para
+    usar como core_goal do projeto no Claw Empire."""
+    if not descricao:
+        return ''
+    texto = descricao.strip()
+    texto = re.sub(r'^VIS[ÃA]O GERAL\s*\n+', '', texto, flags=re.IGNORECASE)
+    paragrafo = texto.split(chr(10) + chr(10))[0].replace(chr(10), ' ').strip()
+    if len(paragrafo) > limite:
+        paragrafo = paragrafo[:limite].rsplit(' ', 1)[0] + '...'
+    return paragrafo

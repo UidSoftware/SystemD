@@ -15,8 +15,6 @@ def criar_arquitetura(**kwargs):
     )
     prospecto = Prospecto.objects.create(
         nome_empresa='Empresa Teste',
-        nome_contato='Contato',
-        email='contato@empresa.com',
         origem='manual',
         responsavel=usuario,
     )

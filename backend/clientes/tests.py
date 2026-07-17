@@ -30,8 +30,7 @@ class ClienteTemEntregasTest(TestCase):
 
     def test_admin_ativa_tem_entregas(self):
         cliente = Cliente.objects.create(
-            nome_empresa='Studio', nome_contato='Ana', email='ana@studio.com',
-            telefone='34999990000', segmento='pilates', origem='indicacao',
+            nome_empresa='Studio', segmento='pilates', origem='indicacao',
         )
         self.client.force_authenticate(self.admin)
         url = reverse('cliente-detail', args=[cliente.id])
@@ -42,8 +41,7 @@ class ClienteTemEntregasTest(TestCase):
 
     def test_me_retorna_tem_entregas_true_para_cliente_com_flag(self):
         cliente = Cliente.objects.create(
-            nome_empresa='Studio', nome_contato='Ana', email='ana@studio.com',
-            telefone='34999990000', segmento='pilates', origem='indicacao',
+            nome_empresa='Studio', segmento='pilates', origem='indicacao',
             tem_entregas=True,
         )
         usuario_cliente = Usuario.objects.create_user(

@@ -8,10 +8,11 @@ from clientes.models import Cliente
 
 
 def criar_prospecto(**kwargs):
+    kwargs.pop('nome_contato', None)
+    kwargs.pop('email', None)
+    kwargs.pop('telefone', None)
     defaults = {
         'nome_empresa': 'Empresa Teste',
-        'nome_contato': 'Contato',
-        'email': 'contato@empresa.com',
         'origem': 'manual',
     }
     defaults.update(kwargs)

@@ -8,11 +8,11 @@ from clientes.models import Cliente
 
 
 def criar_cliente(**kwargs):
+    kwargs.pop('nome_contato', None)
+    kwargs.pop('email', None)
+    kwargs.pop('telefone', None)
     defaults = {
         'nome_empresa': 'Empresa A',
-        'nome_contato': 'Contato A',
-        'email': 'a@empresa.com',
-        'telefone': '34999990001',
         'segmento': 'comercio',
         'origem': 'indicacao',
     }

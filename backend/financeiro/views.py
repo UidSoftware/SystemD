@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Count, F, Sum, Q
 from rest_framework import status
 from rest_framework.decorators import action, api_view, permission_classes
@@ -13,6 +13,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrOperacionalOrFinanceiro
 
+from .signals import _reconstruir_cadeia
 from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
 from .serializers import (
     AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
@@ -406,18 +407,10 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 
         motivo = request.data.get('motivo', '')
         with transaction.atomic():
-            ultimo = (
-                LivroCaixa.objects.select_for_update()
-                .filter(conta=lancamento.conta)
-                .order_by('-data', '-criado_em')
-                .first()
-            )
-            saldo_anterior = ultimo.saldo_atual if ultimo else lancamento.conta.saldo_inicial
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT pg_advisory_xact_lock(%s)', [lancamento.conta_id])
+
             tipo_estorno = 'ENTRADA' if lancamento.tipo == 'SAIDA' else 'SAIDA'
-            if tipo_estorno == 'ENTRADA':
-                saldo_atual = saldo_anterior + lancamento.valor
-            else:
-                saldo_atual = saldo_anterior - lancamento.valor
 
             estorno = LivroCaixa.objects.create(
                 conta=lancamento.conta,
@@ -426,13 +419,19 @@ class LivroCaixaViewSet(ReadCreateViewSet):
                 descricao=f'Estorno: {lancamento.descricao}' + (f' — {motivo}' if motivo else ''),
                 valor=lancamento.valor,
                 data=date.today(),
-                saldo_anterior=saldo_anterior,
-                saldo_atual=saldo_atual,
+                saldo_anterior=Decimal('0'),
+                saldo_atual=Decimal('0'),
                 criado_por=request.user,
                 estorno_de=lancamento,
             )
             lancamento.estornado = True
             lancamento.save(update_fields=['estornado'])
+
+            # saldo_anterior/saldo_atual acima são placeholders — a cadeia inteira
+            # da conta é recalculada aqui, igual ao que _gerar_lancamento() já faz,
+            # pra nunca deixar saldo_atual dessincronizado da soma real da conta.
+            _reconstruir_cadeia(lancamento.conta)
+            estorno.refresh_from_db()
 
         return Response(LivroCaixaSerializer(estorno).data, status=201)
 
@@ -450,19 +449,22 @@ class LivroCaixaViewSet(ReadCreateViewSet):
         total_entradas = agg['total_entradas'] or Decimal('0')
         total_saidas   = agg['total_saidas']   or Decimal('0')
 
-        # Saldo real = último saldo_atual da cadeia por conta (inclui saldo_inicial)
+        # Saldo real = saldo_inicial + soma de entradas - soma de saídas dos
+        # lançamentos não estornados. NUNCA ler ultimo.saldo_atual: o "último
+        # lançamento por data" não é garantidamente o último elo da cadeia
+        # quando há estornos/correções retroativas com data diferente da
+        # data de criação — usar a soma evita saldo corrompido nesses casos.
         if conta_id:
             try:
                 conta = Conta.objects.get(id=conta_id)
-                ultimo = LivroCaixa.objects.filter(conta=conta).order_by('data', 'criado_em').last()
-                saldo_atual = ultimo.saldo_atual if ultimo else conta.saldo_inicial
+                saldo_atual = conta.saldo_inicial + total_entradas - total_saidas
             except Conta.DoesNotExist:
                 saldo_atual = total_entradas - total_saidas
         else:
-            saldo_atual = Decimal('0')
-            for conta in Conta.objects.filter(ativo=True):
-                ultimo = LivroCaixa.objects.filter(conta=conta).order_by('data', 'criado_em').last()
-                saldo_atual += (ultimo.saldo_atual if ultimo else conta.saldo_inicial)
+            saldo_inicial_total = Conta.objects.filter(ativo=True).aggregate(
+                v=Sum('saldo_inicial')
+            )['v'] or Decimal('0')
+            saldo_atual = saldo_inicial_total + total_entradas - total_saidas
 
         return Response({
             'total_entradas': total_entradas,
@@ -505,18 +507,27 @@ def fluxo_caixa(request):
         total_saidas=Sum('valor', filter=Q(tipo='SAIDA')),
     )
 
-    # Saldo real ao início do mês = último saldo_atual por conta antes do período
-    import calendar as _cal
+    # Saldo real ao início do mês = saldo_inicial da conta + soma de entradas -
+    # soma de saídas dos lançamentos não estornados anteriores ao período.
+    # NUNCA ler ultimo.saldo_atual por data — não é garantidamente o último elo
+    # da cadeia quando há estornos/correções retroativas.
     primeiro_dia = date(ano, mes, 1)
-    from django.db.models import Max
+
+    def _saldo_antes(conta_obj):
+        agg_prev = LivroCaixa.objects.filter(
+            conta=conta_obj, data__lt=primeiro_dia, estornado=False,
+        ).aggregate(
+            e=Sum('valor', filter=Q(tipo='ENTRADA')),
+            s=Sum('valor', filter=Q(tipo='SAIDA')),
+        )
+        return conta_obj.saldo_inicial + (agg_prev['e'] or Decimal('0')) - (agg_prev['s'] or Decimal('0'))
+
     if conta_id and conta:
-        prev = LivroCaixa.objects.filter(conta=conta, data__lt=primeiro_dia, estornado=False).order_by('data', 'criado_em').last()
-        saldo_inicial = prev.saldo_atual if prev else conta.saldo_inicial
+        saldo_inicial = _saldo_antes(conta)
     else:
         saldo_inicial = Decimal('0')
         for _c in Conta.objects.filter(ativo=True):
-            _prev = LivroCaixa.objects.filter(conta=_c, data__lt=primeiro_dia, estornado=False).order_by('data', 'criado_em').last()
-            saldo_inicial += (_prev.saldo_atual if _prev else _c.saldo_inicial)
+            saldo_inicial += _saldo_antes(_c)
     total_entradas = agg['total_entradas'] or Decimal('0')
     total_saidas   = agg['total_saidas']   or Decimal('0')
     saldo_final    = saldo_inicial + total_entradas - total_saidas
@@ -720,11 +731,21 @@ def dashboard(request):
         )
         top_clientes = [{'cliente_nome': r['cliente__nome_empresa'], 'total': r['total']} for r in raw_top]
 
-        # Saldo total de todas as contas (último saldo_atual de cada conta)
-        saldo_total = Decimal('0')
-        for _c in Conta.objects.filter(ativo=True):
-            _ult = LivroCaixa.objects.filter(conta=_c, estornado=False).order_by('data', 'criado_em').last()
-            saldo_total += (_ult.saldo_atual if _ult else _c.saldo_inicial)
+        # Saldo total de todas as contas = saldo_inicial + soma de entradas -
+        # soma de saídas dos lançamentos não estornados. NUNCA ler
+        # ultimo.saldo_atual — não é garantidamente o último elo da cadeia
+        # quando há estornos/correções retroativas com data diferente da
+        # data de criação.
+        saldo_total = Conta.objects.filter(ativo=True).aggregate(
+            v=Sum('saldo_inicial')
+        )['v'] or Decimal('0')
+        agg_saldo = LivroCaixa.objects.filter(
+            conta__ativo=True, estornado=False,
+        ).aggregate(
+            e=Sum('valor', filter=Q(tipo='ENTRADA')),
+            s=Sum('valor', filter=Q(tipo='SAIDA')),
+        )
+        saldo_total += (agg_saldo['e'] or Decimal('0')) - (agg_saldo['s'] or Decimal('0'))
 
         data.update({
             'receita_mes': receita_mes,

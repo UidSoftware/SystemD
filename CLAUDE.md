@@ -1470,4 +1470,33 @@ investigar outra causa.
 
 ---
 
-*Última atualização: 2026-07-07 (módulo Artefatos + correções em Orçamentos)*
+### [2026-07-18] — Fix no disparo automático de Manutenções (Fluxo 2)
+
+**Contexto:**
+Manutenção #5 (UidCore — Etapa 2, dar conteúdo real aos módulos stub do
+template) criada em 18/07 não foi disparada pelo `disparar_hotfix.py` (cron a
+cada 4h, roda em `/opt/uid-automation` — fora do repo SystemD). O script
+resolvia o projeto no Claw Empire a partir do `caminho` da manutenção via um
+dicionário `CAMINHO_PARA_PROJETO` hardcoded, e `/var/www/uidcore` não estava
+cadastrado nele — mesmo o projeto UidCore já existindo no Empire. Log
+confirmava o skip: `[SKIP] manutencao #5 — caminho desconhecido`.
+
+**Correção:**
+- Dicionário fixo removido; `disparar_hotfix.py` agora resolve o projeto
+  dinamicamente via `GET /api/projects` no Claw Empire, casando por
+  `project_path` — qualquer projeto novo saído do Fluxo 1 já fica coberto
+  assim que o Pilot faz o primeiro deploy, sem precisar editar o script de
+  novo.
+- Mantido um `ALIAS_CAMINHO` só pro único caso divergente conhecido: as
+  manutenções do próprio SystemD salvam `caminho='/root/SystemD'`, mas o
+  projeto está cadastrado no Empire com `project_path='/home/app/projects/SytemD'`.
+- Manutenção #5 disparada manualmente pra destravar (task `5a4bcf91`),
+  confirmada em `review`, `disparada_em` gravado no banco.
+
+**Arquivo alterado:** `/opt/uid-automation/disparar_hotfix.py` — automação da
+VPS, fora do repo SystemD, não versionada em `main`. Backups em
+`disparar_hotfix.py.bak-*` no mesmo diretório.
+
+---
+
+*Última atualização: 2026-07-18 (fix disparo automático de Manutenções — lookup dinâmico via Empire API)*

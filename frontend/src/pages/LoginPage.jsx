@@ -17,8 +17,14 @@ export default function LoginPage() {
     try {
       const perfil = await login(email, senha)
       redirecionarPosLogin(perfil, navigate)
-    } catch {
-      setErro('E-mail ou senha incorretos')
+    } catch (err) {
+      if (!err.response) {
+        setErro('Não foi possível conectar ao servidor. Verifique sua internet e tente de novo.')
+      } else if (err.response.status === 401) {
+        setErro('E-mail ou senha incorretos')
+      } else {
+        setErro(`Erro ao entrar (${err.response.status}). Tente novamente em instantes.`)
+      }
     } finally {
       setCarregando(false)
     }

@@ -3,6 +3,7 @@ Lista manutencoes pendentes de disparo para o Empire Hotfix.
 --list: JSON com manutencoes pendentes (feito=False, disparada_em=None, ativo=True)
 --mark-dispatched <id>: marca disparada_em=now()
 --concluir <id>: marca feito=True
+--liberar <id>: reseta disparada_em=None (task falhou/sumiu, permite novo disparo)
 Idempotente — usado pelo script de automacao em /opt/uid-automation.
 """
 import json
@@ -20,6 +21,7 @@ class Command(BaseCommand):
         parser.add_argument('--list', action='store_true', help='JSON das manutencoes pendentes.')
         parser.add_argument('--mark-dispatched', type=int, metavar='ID', help='Marca manutencao como disparada.')
         parser.add_argument('--concluir', type=int, metavar='ID', help='Marca manutencao como concluida.')
+        parser.add_argument('--liberar', type=int, metavar='ID', help='Reseta disparada_em (task falhou/sumiu).')
 
     def handle(self, *args, **options):
         if options.get('mark_dispatched'):
@@ -40,6 +42,16 @@ class Command(BaseCommand):
             m.feito = True
             m.save(update_fields=['feito', 'atualizado_em'])
             self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} marcada como concluida.'))
+            return
+
+        if options.get('liberar'):
+            m = Manutencao.objects.filter(id=options['liberar'], ativo=True).first()
+            if not m:
+                self.stdout.write(self.style.ERROR('Manutencao nao encontrada.'))
+                return
+            m.disparada_em = None
+            m.save(update_fields=['disparada_em', 'atualizado_em'])
+            self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} liberada para novo disparo.'))
             return
 
         if options.get('list'):
@@ -64,4 +76,4 @@ class Command(BaseCommand):
             self.stdout.write(json.dumps(itens))
             return
 
-        self.stdout.write(self.style.ERROR('Use --list, --mark-dispatched <id> ou --concluir <id>.'))
+        self.stdout.write(self.style.ERROR('Use --list, --mark-dispatched <id>, --concluir <id> ou --liberar <id>.'))

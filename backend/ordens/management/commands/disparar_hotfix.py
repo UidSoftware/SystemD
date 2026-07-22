@@ -4,6 +4,7 @@ Lista manutencoes pendentes de disparo para o Empire Hotfix.
 --mark-dispatched <id>: marca disparada_em=now()
 --concluir <id>: marca feito=True
 --liberar <id>: reseta disparada_em=None (task falhou/sumiu, permite novo disparo)
+--status <id>: JSON {feito, disparada_em, ativo} de uma manutencao especifica
 Idempotente — usado pelo script de automacao em /opt/uid-automation.
 """
 import json
@@ -22,6 +23,7 @@ class Command(BaseCommand):
         parser.add_argument('--mark-dispatched', type=int, metavar='ID', help='Marca manutencao como disparada.')
         parser.add_argument('--concluir', type=int, metavar='ID', help='Marca manutencao como concluida.')
         parser.add_argument('--liberar', type=int, metavar='ID', help='Reseta disparada_em (task falhou/sumiu).')
+        parser.add_argument('--status', type=int, metavar='ID', help='JSON de status de uma manutencao.')
 
     def handle(self, *args, **options):
         if options.get('mark_dispatched'):
@@ -52,6 +54,19 @@ class Command(BaseCommand):
             m.disparada_em = None
             m.save(update_fields=['disparada_em', 'atualizado_em'])
             self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} liberada para novo disparo.'))
+            return
+
+        if options.get('status'):
+            m = Manutencao.objects.filter(id=options['status']).first()
+            if not m:
+                self.stdout.write(json.dumps({'encontrada': False}))
+                return
+            self.stdout.write(json.dumps({
+                'encontrada': True,
+                'feito': m.feito,
+                'ativo': m.ativo,
+                'disparada_em': m.disparada_em.isoformat() if m.disparada_em else None,
+            }))
             return
 
         if options.get('list'):

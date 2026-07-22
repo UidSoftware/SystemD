@@ -19,6 +19,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--list', action='store_true', help='Imprime JSON dos pendentes.')
         parser.add_argument('--mark-done', type=int, help='ID da notificação a marcar como resolvida.')
+        parser.add_argument('--status', type=int, metavar='ID', help='JSON de status de uma notificacao.')
 
     def handle(self, *args, **options):
         if options.get('mark_done'):
@@ -33,6 +34,19 @@ class Command(BaseCommand):
             notificacao.resolvida_em = timezone.now()
             notificacao.save()
             self.stdout.write(self.style.SUCCESS(f'Notificação {notificacao.id} marcada como resolvida.'))
+            return
+
+        if options.get('status'):
+            notificacao = Notificacao.objects.filter(
+                id=options['status'], tipo=TipoNotificacao.PRONTO_PARA_PLANNER,
+            ).first()
+            if not notificacao:
+                self.stdout.write(json.dumps({'encontrada': False}))
+                return
+            self.stdout.write(json.dumps({
+                'encontrada': True,
+                'resolvida': notificacao.resolvida,
+            }))
             return
 
         if options.get('list'):

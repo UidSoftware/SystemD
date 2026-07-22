@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import SistemaLayout from '../../components/sistema/SistemaLayout'
+import TerminalModal from '../../components/sistema/TerminalModal'
 import api from '../../services/api'
 
 function Chip({ label, active, onClick }) {
@@ -50,6 +51,7 @@ export default function NotificacoesPage() {
   const [filtro, setFiltro] = useState('pendentes')
   const [resolvendo, setResolvendo] = useState(null)
   const [liberando, setLiberando] = useState(null)
+  const [terminalAberto, setTerminalAberto] = useState(null)
 
   const carregar = useCallback(async (pag = 1, filtroAtual = 'pendentes') => {
     setCarregando(true)
@@ -161,8 +163,15 @@ export default function NotificacoesPage() {
                     </Link>
                   )}
                   {podeLiberar && (
+                    <button onClick={() => setTerminalAberto({ id: n.id, manutencaoId: n.referencia.split(':')[1] })}
+                      title="Abre um terminal ao vivo (PTY real) rodando o Planner interativamente — você acompanha e responde os prompts. É o único caminho que passa do bloqueio do classificador de segurança do Claude Code pra delegações encadeadas."
+                      style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
+                      🖥️ Rodar no terminal
+                    </button>
+                  )}
+                  {podeLiberar && (
                     <button onClick={() => liberar(n.id)} disabled={liberando === n.id}
-                      title="Reseta a manutenção para pendente — o cron dispara a delegação de novo automaticamente no próximo ciclo."
+                      title="Reseta a manutenção para pendente — o cron dispara a delegação de novo automaticamente no próximo ciclo (repete o mesmo bloqueio se for o classificador)."
                       style={{ background: 'rgba(6,59,248,0.12)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', opacity: liberando === n.id ? 0.6 : 1 }}>
                       {liberando === n.id ? 'Liberando...' : '🔓 Liberar (automático)'}
                     </button>
@@ -192,6 +201,14 @@ export default function NotificacoesPage() {
           )}
         </div>
       </div>
+
+      {terminalAberto && (
+        <TerminalModal
+          notificacaoId={terminalAberto.id}
+          manutencaoLabel={terminalAberto.manutencaoId}
+          onClose={() => setTerminalAberto(null)}
+        />
+      )}
     </SistemaLayout>
   )
 }

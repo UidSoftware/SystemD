@@ -1,3 +1,5 @@
+import re
+
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets
@@ -5,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from usuarios.permissions import IsAdminOrOperacional
+from ordens.models import Manutencao
 from .models import Notificacao
 from .serializers import NotificacaoSerializer
 
@@ -37,6 +40,33 @@ class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def resolver(self, request, pk=None):
         notificacao = self.get_object()
+        notificacao.resolvida = True
+        notificacao.resolvida_por = request.user
+        notificacao.resolvida_em = timezone.now()
+        notificacao.save()
+        return Response(NotificacaoSerializer(notificacao).data)
+
+    @action(detail=True, methods=['post'])
+    def liberar(self, request, pk=None):
+        """Libera a manutencao referenciada para novo disparo automatico
+        (reseta disparada_em) e marca a notificacao como resolvida.
+        Alternativa ao fluxo manual: em vez do humano rodar a tarefa via
+        SSH, o proximo ciclo do cron do disparar_hotfix pega a manutencao
+        como pendente de novo e tenta a delegacao inteira do zero."""
+        notificacao = self.get_object()
+        match = re.match(r'^manutencao:(\d+)$', notificacao.referencia or '')
+        if not match:
+            return Response(
+                {'erro': 'Notificacao sem referencia de manutencao valida para liberar.'},
+                status=400,
+            )
+        manutencao = Manutencao.objects.filter(id=int(match.group(1)), ativo=True).first()
+        if not manutencao:
+            return Response({'erro': 'Manutencao nao encontrada.'}, status=404)
+
+        manutencao.disparada_em = None
+        manutencao.save(update_fields=['disparada_em', 'atualizado_em'])
+
         notificacao.resolvida = True
         notificacao.resolvida_por = request.user
         notificacao.resolvida_em = timezone.now()

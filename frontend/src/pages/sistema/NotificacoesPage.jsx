@@ -49,6 +49,7 @@ export default function NotificacoesPage() {
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [filtro, setFiltro] = useState('pendentes')
   const [resolvendo, setResolvendo] = useState(null)
+  const [liberando, setLiberando] = useState(null)
 
   const carregar = useCallback(async (pag = 1, filtroAtual = 'pendentes') => {
     setCarregando(true)
@@ -80,6 +81,16 @@ export default function NotificacoesPage() {
     }
   }
 
+  const liberar = async (id) => {
+    setLiberando(id)
+    try {
+      await api.post(`/notificacoes/${id}/liberar/`)
+      carregar(pagina, filtro)
+    } finally {
+      setLiberando(null)
+    }
+  }
+
   return (
     <SistemaLayout titulo="Notificações">
       <div style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
@@ -101,7 +112,9 @@ export default function NotificacoesPage() {
             <div style={{ ...cardStyle, textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</div>
           ) : notificacoes.length === 0 ? (
             <div style={{ ...cardStyle, textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhuma notificação encontrada</div>
-          ) : notificacoes.map(n => (
+          ) : notificacoes.map(n => {
+            const podeLiberar = !n.resolvida && /^manutencao:\d+$/.test(n.referencia || '')
+            return (
             <div key={n.id} style={{ ...cardStyle, padding: 16, opacity: n.resolvida ? 0.6 : 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -147,16 +160,25 @@ export default function NotificacoesPage() {
                       🔗 Abrir
                     </Link>
                   )}
+                  {podeLiberar && (
+                    <button onClick={() => liberar(n.id)} disabled={liberando === n.id}
+                      title="Reseta a manutenção para pendente — o cron dispara a delegação de novo automaticamente no próximo ciclo."
+                      style={{ background: 'rgba(6,59,248,0.12)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', opacity: liberando === n.id ? 0.6 : 1 }}>
+                      {liberando === n.id ? 'Liberando...' : '🔓 Liberar (automático)'}
+                    </button>
+                  )}
                   {!n.resolvida && (
                     <button onClick={() => resolver(n.id)} disabled={resolvendo === n.id}
+                      title="Marca como resolvida sem reiniciar a delegação — use quando você mesmo já concluiu a tarefa manualmente."
                       style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', opacity: resolvendo === n.id ? 0.6 : 1 }}>
-                      {resolvendo === n.id ? 'Resolvendo...' : '✅ Marcar como resolvida'}
+                      {resolvendo === n.id ? 'Resolvendo...' : '✅ Marcar como resolvida (manual)'}
                     </button>
                   )}
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
 
           {totalPaginas > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 8 }}>

@@ -143,6 +143,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | `parse_btg` — coluna Entradas/Saídas vs Saldo | O extrato BTG tem duas colunas numéricas por lançamento na mesma linha (Entradas/Saídas e Saldo acumulado). O regex de `financeiro/parsers.py::parse_btg` **sempre** captura o primeiro número após a descrição (valor da transação) e absorve um segundo número final sem capturá-lo (saldo) — nunca inverter isso, senão o valor lançado vira o saldo da conta em vez do valor real da transação (bug real já corrido em produção: "Rendimento Remunerado" de R$0,01 virou ~R$204). |
 | `PadraoSeguroConciliacao.natureza` — Aporte vs Receita Financeira | Ao criar um padrão seguro de ENTRADA para o `--auto`/`--criar` do `conciliar_extrato`, definir `natureza` corretamente: `APORTE` só para capital social/investidor de verdade; `RECEITA_FINANCEIRA` para qualquer rendimento/juro de conta remunerada ou aplicação automática do banco. Default é `APORTE` — esquecer de setar `RECEITA_FINANCEIRA` faz o sistema tratar rendimento de banco como se o sócio tivesse aportado capital. |
 | Migration escrita à mão sem `makemigrations` na VPS | Quando for necessário gerar uma migration diretamente na VPS (proibido rodar `makemigrations` lá), escrever o arquivo à mão no formato padrão do Django e conferir com `python manage.py makemigrations --check --dry-run <app>` antes de aplicar — se retornar "No changes detected", a migration escrita à mão está equivalente à que o Django geraria. |
+| Cartão de crédito — Conta própria, não lançamento direto no banco | Compras do cartão viram Despesa numa Conta tipo CARTEIRA dedicada (ex: "Credito Multiplo - 6943"), categoria real (Ferramentas/Impostos etc.) — nunca direto em BTG/C6. O pagamento da fatura no banco real é o MESMO gasto "por fora": a despesa genérica antiga tipo "Fatura Cartão"/"Cartão Crédito" lançada direto no banco precisa virar ativo=False (mesmo padrão de transferência entre bolsos) — regra completa e o porquê em /home/notuidsoftware/.claude/CLAUDE.md (seção Módulo Financeiro, aplica a qualquer projeto Uid com livro caixa, não só o SystemD). |
 | `ConciliacaoViewSet.confirmar()` (botão Criar na Conciliação) — ingênuo | Não reconhece transferência entre bolsos (conta corrente ↔ aplicação remunerada) — clicar Criar numa linha tipo Resgate/Aplicação/Débito Conta Corrente sem tratar a contrapartida cria uma Despesa/SAIDA fantasma que nunca existiu de fato (saldo cai errado). Também cria Aporte pra ENTRADA sem preencher tipo/responsavel (badge vazio na tela). Checar a descrição da linha antes de clicar Criar; casos de transferência interna precisam do par ativo=False (Despesa+Receita) manual, não do botão. |
 
 ---
@@ -1572,3 +1573,46 @@ selecionada.
 - Confirmado via timestamp do build servido pelo nginx: `2026-07-28 02:22:51`,
   mesmo horário da recriação do container backend
 - Status: ✅ Em produção
+
+---
+
+### [2026-07-28] — Cartão de crédito: modelo de Conta própria + reconciliação real de 7 faturas + parser corrigido
+
+**Contexto:** usuário queria cadastrar gastos do cartão (assinatura Anthropic,
+IOF de compra internacional, gasolina) sem quebrar a conciliação bancária do
+C6, já que a fatura do cartão bate como uma linha só no extrato (soma de
+várias compras diferentes).
+
+**Modelo adotado** (ver regra completa em
+`/home/notuidsoftware/.claude/CLAUDE.md`, seção Módulo Financeiro): Conta
+própria tipo Carteira Digital ("Credito Multiplo - 6943") — compras entram
+categorizadas nela (Ferramentas, Impostos), nunca direto no C6/BTG. A
+despesa genérica que representa o pagamento da fatura no banco real fica
+`ativo=False` (mesmo padrão de transferência entre bolsos) pra não contar
+duas vezes no DRE.
+
+**Bug de parser corrigido:** `parse_c6` só reconhecia linhas "Entrada"/
+"Saída" — linhas "Pagamento" (fatura de cartão) e "Outros" (aplicação CDB)
+eram ignoradas silenciosamente pela conciliação. Regex ampliado.
+
+**Reconciliação real feita:** usuário baixou as 7 faturas do cartão
+(jan-jul/2026) e comparamos com o que estava lançado:
+- 3 despesas antigas genéricas ("Cartao Crédito C6" `#43` R$120,37,
+  `#46` R$268,64, "Fatura Cartão C6" `#55` R$100,00) já batiam certinho com
+  eventos reais de "Inclusão de Pagamento" na fatura — mantidas no Livro
+  Caixa, marcadas `ativo=False` pra não duplicar
+- 18 parcelas futuras estimadas (recorrência fixa 12x pro Claude Code + IOF,
+  criadas antes desse ajuste) desativadas — gasto em dólar varia de fatura
+  pra fatura, recorrência fixa não serve
+- 6 lançamentos reais criados na Conta do cartão com valor e data exatos da
+  fatura: 15/04 Anthropic créditos extra API R$259,56 + IOF R$9,08
+  (confirmado pelo usuário: compra real de créditos, não erro), 23/05
+  Claude.ai Subscription R$115,62 + IOF R$4,05, 20/06 Anthropic Claude Sub
+  R$115,75 + IOF R$4,05
+- Despesa `#83` (IOF de julho, já paga) recategorizada de vazio pra
+  `Impostos`
+
+**Pendente pra quando a fatura de agosto chegar:** a cobrança de ~20/07
+(R$120,24, aparecia como "Saldo obrigações futuras" na fatura de julho)
+ainda não tem lançamento real — repetir o mesmo padrão quando a fatura
+confirmar o valor exato.

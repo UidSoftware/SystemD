@@ -61,6 +61,7 @@ export default function DespesasPagasPage() {
 
   const dadosFiltrados = todasDespesas.filter(d => {
     if (!d.pagamento) return false
+    if (d.estornado) return false
     if (filtros.data_inicio && d.pagamento < filtros.data_inicio) return false
     if (filtros.data_fim   && d.pagamento > filtros.data_fim)     return false
     return true

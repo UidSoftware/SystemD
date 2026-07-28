@@ -143,6 +143,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | `parse_btg` — coluna Entradas/Saídas vs Saldo | O extrato BTG tem duas colunas numéricas por lançamento na mesma linha (Entradas/Saídas e Saldo acumulado). O regex de `financeiro/parsers.py::parse_btg` **sempre** captura o primeiro número após a descrição (valor da transação) e absorve um segundo número final sem capturá-lo (saldo) — nunca inverter isso, senão o valor lançado vira o saldo da conta em vez do valor real da transação (bug real já corrido em produção: "Rendimento Remunerado" de R$0,01 virou ~R$204). |
 | `PadraoSeguroConciliacao.natureza` — Aporte vs Receita Financeira | Ao criar um padrão seguro de ENTRADA para o `--auto`/`--criar` do `conciliar_extrato`, definir `natureza` corretamente: `APORTE` só para capital social/investidor de verdade; `RECEITA_FINANCEIRA` para qualquer rendimento/juro de conta remunerada ou aplicação automática do banco. Default é `APORTE` — esquecer de setar `RECEITA_FINANCEIRA` faz o sistema tratar rendimento de banco como se o sócio tivesse aportado capital. |
 | Migration escrita à mão sem `makemigrations` na VPS | Quando for necessário gerar uma migration diretamente na VPS (proibido rodar `makemigrations` lá), escrever o arquivo à mão no formato padrão do Django e conferir com `python manage.py makemigrations --check --dry-run <app>` antes de aplicar — se retornar "No changes detected", a migration escrita à mão está equivalente à que o Django geraria. |
+| `ConciliacaoViewSet.confirmar()` (botão Criar na Conciliação) — ingênuo | Não reconhece transferência entre bolsos (conta corrente ↔ aplicação remunerada) — clicar Criar numa linha tipo Resgate/Aplicação/Débito Conta Corrente sem tratar a contrapartida cria uma Despesa/SAIDA fantasma que nunca existiu de fato (saldo cai errado). Também cria Aporte pra ENTRADA sem preencher tipo/responsavel (badge vazio na tela). Checar a descrição da linha antes de clicar Criar; casos de transferência interna precisam do par ativo=False (Despesa+Receita) manual, não do botão. |
 
 ---
 
@@ -1529,3 +1530,45 @@ restart já documentado abaixo, garantindo o redirecionamento.
 processa itens com `confirmado=False`, marca `True` na criação; clique
 repetido no mesmo item não gera duplicata (verificado no banco, zero
 Aporte/Despesa/LivroCaixa duplicado após clique duplo real).
+
+---
+
+### [2026-07-28] — Saldo BTG negativo era transferência interna mal classificada + card Saldo Atual corrigido
+
+**Contexto:** usuário reportou saldo do BTG em -R$203,75 sem explicação
+aparente (saldo inicial R$204,21, quase sem entradas, R$408 de saída).
+
+**Causa raiz:** extrato de 24/07 tinha 3 linhas — `Crédito na Conta
+Corrente` +R$204 e `Resgate Conta Remunerada` -R$204 (mesmo evento: dinheiro
+voltando da aplicação remunerada pra conta corrente, transferência interna
+ao próprio banco, mesma regra do caso de abril já documentado acima) e
+`Pix enviado para Uid Software` -R$204 (transferência real pro C6, válida).
+Alguém clicou "Criar" só na linha do Resgate — `ConciliacaoViewSet.
+confirmar()` criou uma Despesa de verdade sem saber que era só metade de
+uma transferência interna. A linha do Crédito nunca foi tratada, sobrando
+R$204 de saída fantasma.
+
+**Fix (dados):** Despesa do Resgate marcada `ativo=False` (some do DRE,
+mantém no Livro Caixa) + criada a Receita espelho "Crédito na Conta
+Corrente" (`ativo=False`) fechando o par em zero. Saldo real do BTG
+corrigido para R$0,25. Ver linha nova na tabela de Regras críticas acima
+sobre a limitação do botão "Criar".
+
+**Bug de código corrigido nessa mesma investigação:** `VisaoGeralPage.jsx`
+buscava o card "Saldo Atual" via `totaisLivroCaixa({})` sem filtro de
+conta, num `useEffect` de dependência vazia — nunca reagia à troca do
+seletor Conta, sempre somando BTG+C6 juntos independente da conta
+selecionada.
+
+**Arquivo alterado:**
+- `frontend/src/pages/sistema/financeiro/VisaoGeralPage.jsx`
+
+**Commits:**
+- `15b42bb` — fix(financeiro): Saldo Atual na Visao Geral respeita o filtro de conta
+- `4d18ef1` — docs: registra achados de conciliacao bancaria e estado da esteira
+
+**Deploy:**
+- Push disparou o CI/CD normal (GitHub Actions), sem intervenção manual
+- Confirmado via timestamp do build servido pelo nginx: `2026-07-28 02:22:51`,
+  mesmo horário da recriação do container backend
+- Status: ✅ Em produção

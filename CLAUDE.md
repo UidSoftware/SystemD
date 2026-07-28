@@ -1500,3 +1500,32 @@ VPS, fora do repo SystemD, não versionada em `main`. Backups em
 ---
 
 *Última atualização: 2026-07-18 (fix disparo automático de Manutenções — lookup dinâmico via Empire API)*
+
+---
+
+### [2026-07-27] — Watchdog de conciliação "cego": stdout preso em socket morto
+
+Achado ao investigar por que 2 extratos novos (C6/BTG julho) pareciam não
+conciliados: na verdade **tinham sido processados normalmente** (dentro
+dos 5 min de polling, status `COM_DIVERGENCIAS` no `ConciliacaoExtrato` —
+pendência de revisão, não falha). O processo estava saudável e monitorando
+o caminho certo; só o `stdout`/`stderr` estavam presos num socket morto em
+vez do arquivo de log (reiniciado numa sessão anterior sem o
+redirecionamento `>> logfile 2>&1` documentado abaixo) — o log parou de
+registrar em 29/06 mesmo com o watchdog funcionando perfeitamente depois
+disso.
+
+**Diagnóstico correto quando o log do watchdog parecer parado:** não
+concluir que ele parou só pelo log estar velho — checar
+`ConciliacaoExtrato.objects.order_by('-criado_em')` no banco (tem
+registro recente = está funcionando) e `ls -la /proc/<pid>/fd/1` (mostra
+se o stdout ainda aponta pro arquivo de log ou não).
+
+**Fix aplicado:** matar o processo antigo e resubir com o comando de
+restart já documentado abaixo, garantindo o redirecionamento.
+
+**Também confirmado:** o botão "Criar" em Conciliação
+(`ConciliacaoViewSet.confirmar`) é seguro contra duplo clique — só
+processa itens com `confirmado=False`, marca `True` na criação; clique
+repetido no mesmo item não gera duplicata (verificado no banco, zero
+Aporte/Despesa/LivroCaixa duplicado após clique duplo real).

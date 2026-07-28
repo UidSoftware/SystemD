@@ -1616,3 +1616,41 @@ eram ignoradas silenciosamente pela conciliação. Regex ampliado.
 (R$120,24, aparecia como "Saldo obrigações futuras" na fatura de julho)
 ainda não tem lançamento real — repetir o mesmo padrão quando a fatura
 confirmar o valor exato.
+
+---
+
+### [2026-07-28] — CDB/garantia do cartão: cadeia de 3 contas (C6 → CDB → Cartão)
+
+**Contexto:** a Despesa `#10` ("Investimento CDB C6 LIM.GARANT.", R$330,00,
+23/03) já tinha sido marcada `ativo=False` mais cedo hoje, mas isso só
+resolvia o DRE — o dinheiro aplicado como garantia do limite do cartão
+"sumia" do sistema, sem conta pra rastrear quanto está garantindo o
+limite. Usuário pediu pra fazer certo desde já porque outros clientes vão
+usar esse mesmo padrão com valores altos.
+
+**Modelo final:** 3 contas encadeadas, cada perna via "Transferir entre
+contas" (nunca Despesa) — regra completa em
+`/home/notuidsoftware/.claude/CLAUDE.md` (Módulo Financeiro):
+- **C6** (Conta Corrente, banco real)
+- **CDB Garantia C6** (Conta Poupança, nova — id 6) — dinheiro aplicado
+  como garantia, ainda patrimônio do usuário
+- **Credito Multiplo - 6943** (Conta Carteira Digital — id 5, já existia)
+  — dívida do cartão
+
+**Migração feita:**
+1. Despesa `#10` reativada temporariamente (o queryset do ViewSet só
+   enxerga `ativo=True`), estornada via `/despesas/10/estornar/`
+   (`data_estorno=2026-03-23`, motivo registrado), desativada de novo —
+   fica com `ativo=False` E `estornado=True`
+2. Transferência C6 → CDB, R$330,00, 23/03/2026
+3. Transferência CDB → Cartão, R$119,63, 01/05/2026 (o "Pagamento CDB"
+   real achado na fatura de junho, quitando parte da cobrança de abril)
+4. `python manage.py reconstruir_saldo_livro_caixa` — obrigatório depois
+   de qualquer Transferir/Estornar com data retroativa, porque esses dois
+   endpoints calculam saldo lendo o último lançamento por data (não
+   recalculam por soma) — ver alerta na tabela de Regras críticas.
+
+**Saldos finais confirmados:** CDB R$210,37 (330,00 − 119,63), Cartão
+-R$508,72 (dívida acumulada real), C6 R$93,03 (sem mudança líquida — o
+estorno e a transferência de 23/03 se cancelam), BTG R$0,25 (sem
+mudança).

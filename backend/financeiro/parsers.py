@@ -49,9 +49,14 @@ def parse_c6(texto: str, ano: int | None = None) -> list[dict]:
 
     resultados = []
     # Padrão: DD/MM  DD/MM  Tipo...  -?R$ 1.234,56
+    # Tipo pode ser Entrada/Saída, mas o C6 também rotula linhas reais como
+    # "Pagamento" (ex: PGTO FAT CARTAO) e "Outros" (ex: aplicação CDB) —
+    # sem reconhecer essas palavras a linha inteira era ignorada e a
+    # transação nunca aparecia na conciliação, mesmo sendo dinheiro real
+    # saindo da conta.
     padrao = re.compile(
         r'(\d{2}/\d{2})\s+\d{2}/\d{2}\s+'
-        r'(Entrada|Sa[ií]da)\s+\S+'           # tipo + primeira palavra da desc
+        r'(Entrada|Sa[ií]da|Pagamento|Outros)\s+\S+'  # tipo + primeira palavra da desc
         r'(.+?)'                               # resto da descrição (lazy)
         r'\s+(-?R\$\s*[\d.,]+)',              # valor
         re.IGNORECASE,

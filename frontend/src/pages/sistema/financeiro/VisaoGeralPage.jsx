@@ -27,8 +27,11 @@ export default function VisaoGeralPage() {
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => {
     financeiroApi.listarContas().then(r => setContas(r.data.results ?? r.data)).catch(() => {})
-    financeiroApi.totaisLivroCaixa({}).then(r => setSaldoAtual(r.data.saldo_atual)).catch(() => {})
   }, [])
+  useEffect(() => {
+    const params = contaId ? { conta: contaId } : {}
+    financeiroApi.totaisLivroCaixa(params).then(r => setSaldoAtual(r.data.saldo_atual)).catch(() => {})
+  }, [contaId])
 
   return (
     <SistemaLayout>

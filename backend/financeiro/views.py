@@ -669,14 +669,20 @@ def dashboard(request):
             else date(hoje.year, hoje.month + 1, 1) - timedelta(days=1)
         )
 
-        agg_mes = LivroCaixa.objects.filter(
-            estornado=False, data__gte=primeiro_dia, data__lte=ultimo_dia,
-        ).aggregate(
-            rec=Sum('valor', filter=Q(tipo='ENTRADA')),
-            des=Sum('valor', filter=Q(tipo='SAIDA')),
-        )
-        receita_mes = agg_mes['rec'] or Decimal('0')
-        despesa_mes = agg_mes['des'] or Decimal('0')
+        # Receita/despesa do mes = resultado operacional (DRE), NUNCA soma
+        # direta de LivroCaixa — LivroCaixa inclui transferencias entre
+        # contas proprias (origem=TRANSFER) e lancamentos ativo=False
+        # (ex: aplicacao/resgate CDB, transferencia entre bolsos), que sao
+        # movimentacao de caixa real mas nao devem contar como resultado.
+        # Mesmo padrao ja usado em dre() abaixo.
+        receita_mes = Receita.objects.filter(
+            ativo=True, status='RECEBIDO',
+            recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
+        ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
+        despesa_mes = Despesa.objects.filter(
+            ativo=True, estornado=False, status='PAGO',
+            pagamento__gte=primeiro_dia, pagamento__lte=ultimo_dia,
+        ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
         mrr = Receita.objects.filter(
             ativo=True, tipo='MENSALIDADE', status='RECEBIDO',
@@ -716,12 +722,14 @@ def dashboard(request):
                 y -= 1
             p = date(y, m, 1)
             u = date(y + 1, 1, 1) - timedelta(days=1) if m == 12 else date(y, m + 1, 1) - timedelta(days=1)
-            agg = LivroCaixa.objects.filter(estornado=False, data__gte=p, data__lte=u).aggregate(
-                rec=Sum('valor', filter=Q(tipo='ENTRADA')),
-                des=Sum('valor', filter=Q(tipo='SAIDA')),
-            )
-            rec = agg['rec'] or Decimal('0')
-            des = agg['des'] or Decimal('0')
+            # Mesmo motivo do bloco receita_mes/despesa_mes acima — resultado
+            # operacional, nao soma direta de LivroCaixa.
+            rec = Receita.objects.filter(
+                ativo=True, status='RECEBIDO', recebimento__gte=p, recebimento__lte=u,
+            ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
+            des = Despesa.objects.filter(
+                ativo=True, estornado=False, status='PAGO', pagamento__gte=p, pagamento__lte=u,
+            ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
             grafico.append({'mes': f'{y}-{m:02d}', 'label': MESES_PT[m - 1], 'receita': rec, 'despesa': des, 'resultado': rec - des})
 
         raw_top = list(

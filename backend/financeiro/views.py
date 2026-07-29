@@ -395,6 +395,13 @@ class LivroCaixaViewSet(ReadCreateViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['conta', 'tipo', 'origem', 'estornado']
     ordering_fields = ['data', 'valor']
+    # Sem paginacao (mesmo padrao de DespesaViewSet/ReceitaViewSet) — o
+    # frontend (LivroCaixaPage, FluxoCaixaPage) busca tudo de uma vez e
+    # filtra/agrupa por mes no cliente. Com paginacao padrao (20 por
+    # pagina, mais recente primeiro), qualquer conta com mais de 20
+    # lancamentos historicos ficava com meses antigos invisiveis — so a
+    # primeira pagina (mes mais recente) chegava no frontend.
+    pagination_class = None
 
     def perform_create(self, serializer):
         serializer.save(criado_por=self.request.user)

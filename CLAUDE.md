@@ -1654,3 +1654,39 @@ contas" (nunca Despesa) — regra completa em
 -R$508,72 (dívida acumulada real), C6 R$93,03 (sem mudança líquida — o
 estorno e a transferência de 23/03 se cancelam), BTG R$0,25 (sem
 mudança).
+
+---
+
+### [2026-07-29] — Cadeia C6→CDB→Cartão fechada de vez: pagamentos históricos migrados + rendimento real do CDB
+
+**Contexto:** usuário perguntou por que a conta Cartão mostrava -R$508,72
+de dívida sendo que só R$330 tinham sido aplicados como garantia. Achado:
+os 4 pagamentos históricos de fatura (`#43` R$120,37, `#46` R$268,64, `#55`
+R$100,00, `#91` R$139,47) tinham sido lançados como Despesa genérica
+direto no C6 — reduziam o banco corretamente, mas nunca creditavam a conta
+Cartão (que não existia quando 3 deles foram criados). O saldo do cartão
+só via o lado da compra, nunca o do pagamento.
+
+**Fix:** mesma migração já usada pro CDB — estornar as 4 Despesas
+(reverte a saída duplicada do C6) + criar 4 Transferências C6→Cartão nas
+mesmas datas/valores + `reconstruir_saldo_livro_caixa`. Saldo do Cartão
+corrigido de -R$508,72 para **+R$119,76** (pagou um pouco mais do que
+gastou até agora — plausível, fatura de julho já veio com desconto de
+adiantamento de R$100 feito antes).
+
+**Confirmado contra o banco real:**
+- C6 em 24/07: sistema calcula R$93,03, extrato real mostra
+  `Saldo do dia 24/07/26: R$93,03` — bate exato.
+- CDB Garantia C6: sistema tinha R$210,37 (só principal), app do C6
+  mostrou saldo bruto real R$222,40 (rendeu R$12,03 que nunca foi
+  lançado) — registrada Receita Financeira de R$12,03 na conta CDB,
+  saldo bate exato agora.
+
+**Regra nova extraída** (agora em `/home/notuidsoftware/.claude/CLAUDE.md`,
+Módulo Financeiro): pagamento de fatura de cartão sempre vira Transferência
+banco→cartão, nunca Despesa genérica marcada `ativo=False` sozinha — isso
+corrige o DRE mas deixa a conta do cartão sem saber que foi paga. CDB/
+aplicação rende sozinho, precisa conferência periódica contra o app do
+banco. E a distinção formal: Fluxo de Caixa/Livro Caixa/Contas Bancárias
+sempre batem com o banco; Resultado do mês/DRE nunca inclui aporte ou
+transferência interna; DFC não precisa bater linha a linha (analítico).

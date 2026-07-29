@@ -19,6 +19,7 @@ services:
     command: gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3
     volumes:
       - static_volume:/app/staticfiles
+      - media_volume:/app/media
       - "/mnt/dropbox/01 - Contabilidade/Extratos Onvio/Extratos:/mnt/dropbox/01 - Contabilidade/Extratos Onvio/Extratos:ro"
     env_file:
       - .env.prod
@@ -52,3 +53,4 @@ volumes:
   pgdata:
   static_volume:
   frontend_build:
+  media_volume:

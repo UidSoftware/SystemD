@@ -54,6 +54,9 @@ export const financeiroApi = {
   listarConciliacoes:          (p) => f('/conciliacoes/', p),
   detalharConciliacao:         (id) => f(`/conciliacoes/${id}/`),
   processarConciliacao:        (d) => post('/conciliacoes/processar/', d),
+  uploadConciliacao:           (formData) => api.post('/financeiro/conciliacoes/upload/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
   confirmarConciliacao:        (id, d) => post(`/conciliacoes/${id}/confirmar/`, d),
   listarConciliacoesPendentes: () => f('/conciliacoes/pendentes/'),
 

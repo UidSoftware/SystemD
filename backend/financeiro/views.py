@@ -6,6 +6,7 @@ from django.db.models import Count, F, Sum, Q
 from rest_framework import status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
@@ -838,6 +839,18 @@ class ConciliacaoViewSet(ModelViewSet):
             return ConciliacaoListSerializer
         return ConciliacaoExtratoSerializer
 
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [IsAdmin()]
+        return super().get_permissions()
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft delete — nunca objeto.delete() (regra global do CLAUDE.md)."""
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save(update_fields=['ativo'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=False, methods=['post'], url_path='processar')
     def processar(self, request):
         arquivo  = request.data.get('arquivo')
@@ -848,6 +861,52 @@ class ConciliacaoViewSet(ModelViewSet):
         if not arquivo or not nome_conta:
             return Response({'erro': 'arquivo e conta são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        return self._processar_arquivo(arquivo, nome_conta, mes_str, senha)
+
+    @action(detail=False, methods=['post'], url_path='upload', parser_classes=[MultiPartParser, FormParser])
+    def upload(self, request):
+        """
+        POST /api/financeiro/conciliacoes/upload/ (multipart/form-data)
+        Recebe o PDF do extrato direto do navegador — segunda forma de
+        entrada além do PDF cair na pasta do Dropbox monitorada pelo
+        watchdog. Salva no volume de uploads da VPS e processa na hora,
+        reaproveitando o mesmo fluxo do 'processar'.
+        """
+        arquivo_upload = request.FILES.get('arquivo')
+        nome_conta = request.data.get('conta', '').upper()
+        mes_str  = request.data.get('mes')
+        senha    = request.data.get('senha', '609393')
+
+        if not arquivo_upload or not nome_conta:
+            return Response({'erro': 'arquivo e conta são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        nome_original = arquivo_upload.name or ''
+        if not nome_original.lower().endswith('.pdf'):
+            return Response({'erro': 'Apenas arquivos PDF são aceitos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        limite_bytes = 20 * 1024 * 1024
+        if arquivo_upload.size > limite_bytes:
+            return Response({'erro': 'Arquivo excede o limite de 20MB.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from pathlib import Path
+        from django.conf import settings as django_settings
+        from django.utils import timezone
+
+        pasta_upload = Path(django_settings.MEDIA_ROOT) / 'extratos_upload'
+        pasta_upload.mkdir(parents=True, exist_ok=True)
+
+        # basename() descarta qualquer path embutido no nome enviado (evita path traversal)
+        nome_seguro = Path(nome_original).name
+        timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
+        destino = pasta_upload / f'{nome_conta}-{timestamp}-{nome_seguro}'
+
+        with open(destino, 'wb') as f_destino:
+            for chunk in arquivo_upload.chunks():
+                f_destino.write(chunk)
+
+        return self._processar_arquivo(str(destino), nome_conta, mes_str, senha)
+
+    def _processar_arquivo(self, arquivo, nome_conta, mes_str, senha):
         try:
             conta = Conta.objects.get(nome__iexact=nome_conta, ativo=True)
         except Conta.DoesNotExist:

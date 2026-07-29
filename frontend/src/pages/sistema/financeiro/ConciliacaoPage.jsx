@@ -69,7 +69,7 @@ export default function ConciliacaoPage() {
   // modal nova conciliação
   const [modalAberto, setModalAberto]   = useState(false)
   const [processando, setProcessando]   = useState(false)
-  const [form, setForm]                 = useState({ arquivo: '', conta: '', mes: '', senha: '609393' })
+  const [form, setForm]                 = useState({ arquivo: null, conta: '', mes: '', senha: '609393' })
   const [erro, setErro]                 = useState('')
 
   // mini-modal padrão seguro
@@ -137,7 +137,13 @@ export default function ConciliacaoPage() {
     setProcessando(true)
     setErro('')
     try {
-      const r = await financeiroApi.processarConciliacao(form)
+      const dadosUpload = new FormData()
+      dadosUpload.append('arquivo', form.arquivo)
+      dadosUpload.append('conta', form.conta)
+      if (form.mes) dadosUpload.append('mes', form.mes)
+      dadosUpload.append('senha', form.senha)
+
+      const r = await financeiroApi.uploadConciliacao(dadosUpload)
       carregar()
       setModalAberto(false)
       setAba('historico')
@@ -558,7 +564,7 @@ export default function ConciliacaoPage() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             {msg && <span style={{ fontSize: 12, color: '#10b981' }}>{msg}</span>}
             <button
-              onClick={() => { setModalAberto(true); setErro(''); setForm({ arquivo: '', conta: '', mes: '', senha: '609393' }) }}
+              onClick={() => { setModalAberto(true); setErro(''); setForm({ arquivo: null, conta: '', mes: '', senha: '609393' }) }}
               style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               + Nova Conciliação
             </button>
@@ -589,15 +595,16 @@ export default function ConciliacaoPage() {
               {contas.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
             </select>
 
-            <label style={{ display: 'block', fontSize: 12, color: '#a78bca', marginBottom: 4 }}>Caminho do arquivo PDF *</label>
+            <label style={{ display: 'block', fontSize: 12, color: '#a78bca', marginBottom: 4 }}>Arquivo PDF do extrato *</label>
             <input
+              type="file"
+              accept="application/pdf"
               style={{ ...inputStyle, width: '100%', marginBottom: 4, boxSizing: 'border-box' }}
-              placeholder="/home/notuidsoftware/Dropbox/.../C6-2026-06-extrato.pdf"
-              value={form.arquivo}
-              onChange={e => setForm(f => ({ ...f, arquivo: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, arquivo: e.target.files?.[0] || null }))}
             />
             <p style={{ fontSize: 11, color: '#6b6b8a', marginBottom: 14 }}>
-              Caminho no servidor onde o PDF está acessível (ex: pasta Dropbox sincronizada).
+              Envie o PDF direto do computador — ele é salvo na VPS e processado na hora
+              (segunda forma de entrada, além do PDF cair na pasta do Dropbox monitorada automaticamente).
             </p>
 
             <label style={{ display: 'block', fontSize: 12, color: '#a78bca', marginBottom: 4 }}>Período (opcional — inferido do nome)</label>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { FinanceiroTable, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
@@ -19,9 +19,11 @@ export default function LivroCaixaPage() {
   const [modalEstorno, setModalEstorno] = useState(null)
   const [motivo, setMotivo] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const requestIdRef = useRef(0)
 
   const carregar = useCallback(() => {
     setCarregando(true)
+    const requestId = ++requestIdRef.current
     const params = {}
     if (filtros.conta)   params.conta   = filtros.conta
     if (filtros.tipo)    params.tipo    = filtros.tipo
@@ -30,9 +32,15 @@ export default function LivroCaixaPage() {
       financeiroApi.listarLivroCaixa(params),
       financeiroApi.totaisLivroCaixa(params),
     ]).then(([r, t]) => {
+      // Ignora resposta de um pedido antigo que chegou depois de um mais
+      // novo (ex: troca rapida de filtro) — senao o resultado desatualizado
+      // sobrescreve o filtro atual selecionado na tela.
+      if (requestId !== requestIdRef.current) return
       setLancamentos(r.data.results ?? r.data)
       setTotais(t.data)
-    }).catch(() => {}).finally(() => setCarregando(false))
+    }).catch(() => {}).finally(() => {
+      if (requestId === requestIdRef.current) setCarregando(false)
+    })
   }, [filtros])
 
   useEffect(() => { carregar() }, [carregar])

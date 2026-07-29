@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { inputStyle, Spinner, formatMoeda } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
@@ -13,15 +13,25 @@ export default function VisaoGeralPage() {
   const [carregando, setCarregando] = useState(true)
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7))
   const [contaId, setContaId] = useState('')
+  const requestIdRef = useRef(0)
+  const saldoRequestIdRef = useRef(0)
 
   const carregar = useCallback(() => {
     setCarregando(true)
+    const requestId = ++requestIdRef.current
     const params = { mes }
     if (contaId) params.conta = contaId
     financeiroApi.fluxoCaixa(params)
-      .then(r => setDados(r.data))
+      .then(r => {
+        // Ignora resposta de um pedido antigo (ex: troca rapida de mes/conta)
+        // que chegou depois de um mais novo.
+        if (requestId !== requestIdRef.current) return
+        setDados(r.data)
+      })
       .catch(() => {})
-      .finally(() => setCarregando(false))
+      .finally(() => {
+        if (requestId === requestIdRef.current) setCarregando(false)
+      })
   }, [mes, contaId])
 
   useEffect(() => { carregar() }, [carregar])
@@ -29,8 +39,12 @@ export default function VisaoGeralPage() {
     financeiroApi.listarContas().then(r => setContas(r.data.results ?? r.data)).catch(() => {})
   }, [])
   useEffect(() => {
+    const requestId = ++saldoRequestIdRef.current
     const params = contaId ? { conta: contaId } : {}
-    financeiroApi.totaisLivroCaixa(params).then(r => setSaldoAtual(r.data.saldo_atual)).catch(() => {})
+    financeiroApi.totaisLivroCaixa(params).then(r => {
+      if (requestId !== saldoRequestIdRef.current) return
+      setSaldoAtual(r.data.saldo_atual)
+    }).catch(() => {})
   }, [contaId])
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { inputStyle, Spinner, Vazio, formatMoeda } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
@@ -19,18 +19,26 @@ export default function FluxoCaixaPage() {
   const [carregando, setCarregando]   = useState(true)
   const [filtros, setFiltros]         = useState({ conta: '', ano: String(anoAtual) })
   const [expandido, setExpandido]     = useState(null)
+  const requestIdRef = useRef(0)
 
   const carregar = useCallback(() => {
     setCarregando(true)
+    const requestId = ++requestIdRef.current
     const params = {}
     if (filtros.conta) params.conta = filtros.conta
     Promise.all([
       financeiroApi.listarLivroCaixa(params),
       financeiroApi.listarContas(),
     ]).then(([r, c]) => {
+      // Ignora resposta de um pedido antigo que chegou depois de um mais
+      // novo (ex: troca rapida de conta no filtro) — senao o resultado
+      // desatualizado sobrescreve o filtro atual selecionado na tela.
+      if (requestId !== requestIdRef.current) return
       setLancamentos(r.data.results ?? r.data)
       setContas(c.data.results ?? c.data)
-    }).catch(() => {}).finally(() => setCarregando(false))
+    }).catch(() => {}).finally(() => {
+      if (requestId === requestIdRef.current) setCarregando(false)
+    })
   }, [filtros.conta])
 
   useEffect(() => { carregar() }, [carregar])

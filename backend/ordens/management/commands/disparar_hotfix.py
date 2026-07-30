@@ -13,6 +13,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from ordens.models import Manutencao
+from notificacoes.models import Notificacao
 
 
 class Command(BaseCommand):
@@ -43,6 +44,22 @@ class Command(BaseCommand):
                 return
             m.feito = True
             m.save(update_fields=['feito', 'atualizado_em'])
+
+            # Fecha o loop com Notificacoes: '--concluir' e o sinal canonico de
+            # que a manutencao terminou de verdade (Sentinel validou, Pilot
+            # deployou). Ate 30/07/2026 nada resolvia a Notificacao
+            # IMPEDIMENTO_ESTEIRA criada quando a delegacao inicial travou —
+            # ela ficava pendente pra sempre mesmo com a manutencao concluida
+            # com sucesso (achado real: Manutencao #9, UidCore, deploy
+            # confirmado em CI/CD e a notificacao ainda 'Pendente').
+            resolvidas = Notificacao.objects.filter(
+                referencia=f'manutencao:{m.id}', resolvida=False,
+            ).update(resolvida=True, resolvida_em=timezone.now())
+            if resolvidas:
+                self.stdout.write(self.style.SUCCESS(
+                    f'{resolvidas} notificacao(oes) IMPEDIMENTO_ESTEIRA resolvida(s) para manutencao:{m.id}.'
+                ))
+
             self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} marcada como concluida.'))
             return
 

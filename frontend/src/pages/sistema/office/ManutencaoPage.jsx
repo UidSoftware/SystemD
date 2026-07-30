@@ -162,6 +162,15 @@ export default function ManutencaoPage() {
 
   const deletar = (item) => setModalConfirmar({ msg: `Remover manutenção #${item.id}?`, onConfirm: async () => { try { await osApi.deletarManutencao(item.id); carregar() } catch { alert('Erro ao remover.') } } })
 
+  const notificar = async (item) => {
+    try {
+      const res = await osApi.notificarManutencao(item.id)
+      alert(res.data.criada ? 'Notificação criada — já aparece em Notificações pra rodar no terminal.' : 'Já existe uma notificação pendente pra essa manutenção.')
+    } catch {
+      alert('Erro ao criar notificação.')
+    }
+  }
+
   // ──────── render ────────
   const itensFiltrados = itens.filter(item => {
     if (filtroStatus === 'pendente')   return !item.feito && !item.disparada_em
@@ -266,6 +275,15 @@ export default function ManutencaoPage() {
                 >
                   {item.feito ? '↩ Reabrir' : '✓ Concluir'}
                 </button>
+                {!item.feito && (
+                  <button
+                    onClick={() => notificar(item)}
+                    title="Criar notificação agora, sem esperar o cron"
+                    style={{ ...BTN_GHOST, flex: 1, fontSize: 12 }}
+                  >
+                    🔔 Notificar
+                  </button>
+                )}
                 <button
                   onClick={() => abrirEditar(item)}
                   style={{ ...BTN_GHOST, flex: 1, fontSize: 12 }}
@@ -351,6 +369,15 @@ export default function ManutencaoPage() {
                         >
                           {item.feito ? '↩' : '✓'}
                         </button>
+                        {!item.feito && (
+                          <button
+                            onClick={() => notificar(item)}
+                            title="Notificar agora (sem esperar o cron)"
+                            style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#f59e0b', fontSize: 12, cursor: 'pointer' }}
+                          >
+                            🔔
+                          </button>
+                        )}
                         <button
                           onClick={() => abrirEditar(item)}
                           title="Editar"

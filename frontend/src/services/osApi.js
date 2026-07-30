@@ -32,6 +32,7 @@ export const osApi = {
   criarManutencao:      (data)   => api.post('/manutencoes/', data),
   editarManutencao:     (id, d)  => api.patch(`/manutencoes/${id}/`, d),
   deletarManutencao:    (id)     => api.delete(`/manutencoes/${id}/`),
+  notificarManutencao:  (id)     => api.post(`/manutencoes/${id}/notificar/`),
 
   // Sistemas para combobox de manutenção
   listarSistemasManutencao: () => api.get('/sistemas-manutencao/'),

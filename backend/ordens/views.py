@@ -11,6 +11,8 @@ from .serializers import (
 )
 from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import IsAdmin, IsAdminOrOperacional
+from notificacoes.models import Notificacao, TipoNotificacao, PrioridadeNotificacao
+from notificacoes.terminal_ticket import montar_briefing
 
 
 class OSViewSet(viewsets.ModelViewSet):
@@ -263,6 +265,37 @@ class ManutencaoViewSet(viewsets.ModelViewSet):
         instance.ativo = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def notificar(self, request, pk=None):
+        """
+        Cria a notificacao IMPEDIMENTO_ESTEIRA na hora, sem esperar o cron
+        (disparar_hotfix.py) tentar e falhar primeiro. Disparo manual — o
+        cron continua rodando normalmente em paralelo, como fallback
+        automatico; nao mexe em disparada_em de proposito, pra nao tirar a
+        manutencao da fila de tentativa automatica.
+        """
+        manutencao = self.get_object()
+        if manutencao.feito:
+            return Response({'detail': 'Manutenção já concluída.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        referencia = f'manutencao:{manutencao.id}'
+        if Notificacao.objects.filter(referencia=referencia, resolvida=False).exists():
+            return Response({'detail': 'Já existe notificação pendente para esta manutenção.', 'criada': False})
+
+        Notificacao.objects.create(
+            tipo=TipoNotificacao.IMPEDIMENTO_ESTEIRA,
+            titulo=f'Disparo manual — Manutenção #{manutencao.id} ({manutencao.os.titulo})',
+            descricao=(
+                'Disparo manual pelo usuário (botão "Notificar" em Manutenções) — '
+                'sem esperar o cron tentar e falhar primeiro.\n\n'
+                + montar_briefing(manutencao)
+            ),
+            prioridade=PrioridadeNotificacao.ALTA,
+            perfil_destino='ADMIN',
+            referencia=referencia,
+        )
+        return Response({'detail': 'Notificação criada.', 'criada': True})
 
 
 class SistemasParaManutencaoViewSet(viewsets.ReadOnlyModelViewSet):

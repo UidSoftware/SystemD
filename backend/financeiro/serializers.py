@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
+from .models import AcionistaFornecedor, Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -95,14 +95,24 @@ class DespesaSerializer(serializers.ModelSerializer):
         return data
 
 
+class AcionistaFornecedorSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='pk', read_only=True)
+
+    class Meta:
+        model = AcionistaFornecedor
+        fields = ['id', 'nome', 'email', 'telefone', 'whatsapp', 'cpf', 'principal']
+
+
 class FornecedorSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk', read_only=True)
+    acionistas = AcionistaFornecedorSerializer(many=True, required=False)
 
     class Meta:
         model = Fornecedor
         fields = [
             'id', 'forn_nome', 'forn_cnpj', 'forn_email',
             'forn_telefone', 'forn_observacoes', 'forn_ativo',
+            'tipo_pessoa', 'documento', 'cpf', 'cnpj', 'acionistas',
             'is_active', 'created_at',
         ]
         read_only_fields = ['created_at']
@@ -112,6 +122,28 @@ class FornecedorSerializer(serializers.ModelSerializer):
         if value == '':
             return None
         return value
+
+    def validate_documento(self, value):
+        # Mesma regra: unique+null+blank -> '' viola constraint; converter para None
+        if value == '':
+            return None
+        return value
+
+    def create(self, validated_data):
+        acionistas_data = validated_data.pop('acionistas', [])
+        fornecedor = super().create(validated_data)
+        for a in acionistas_data:
+            AcionistaFornecedor.objects.create(fornecedor=fornecedor, **a)
+        return fornecedor
+
+    def update(self, instance, validated_data):
+        acionistas_data = validated_data.pop('acionistas', None)
+        instance = super().update(instance, validated_data)
+        if acionistas_data is not None:
+            instance.acionistas.all().delete()
+            for a in acionistas_data:
+                AcionistaFornecedor.objects.create(fornecedor=instance, **a)
+        return instance
 
 
 class LivroCaixaSerializer(serializers.ModelSerializer):

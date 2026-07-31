@@ -25,6 +25,12 @@ class ClienteSerializer(serializers.ModelSerializer):
         s = obj.socios.filter(principal=True).first() or obj.socios.first()
         return s.nome if s else ''
 
+    def validate_documento(self, value):
+        # Regra CLAUDE.md: unique+null+blank -> '' viola constraint; converter para None
+        if value == '':
+            return None
+        return value
+
     def create(self, validated_data):
         socios_data = validated_data.pop('socios', [])
         cliente = super().create(validated_data)

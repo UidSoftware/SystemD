@@ -13,6 +13,8 @@ const formVazio = {
   forn_telefone: '',
   forn_observacoes: '',
   forn_ativo: true,
+  tipo_pessoa: 'PJ',
+  documento: '',
 }
 
 const btnAcao = (cor) => ({
@@ -59,6 +61,8 @@ export default function FornecedoresPage() {
       forn_telefone:    d.forn_telefone || '',
       forn_observacoes: d.forn_observacoes || '',
       forn_ativo:       d.forn_ativo,
+      tipo_pessoa:      d.tipo_pessoa || 'PJ',
+      documento:        d.documento || '',
     })
     setErro('')
     setModal(true)
@@ -252,6 +256,32 @@ export default function FornecedoresPage() {
                 onChange={e => setForm(f => ({ ...f, forn_cnpj: e.target.value }))}
                 placeholder="00.000.000/0001-00"
               />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>
+                  Tipo de pessoa
+                </label>
+                <select
+                  style={inputStyle}
+                  value={form.tipo_pessoa}
+                  onChange={e => setForm(f => ({ ...f, tipo_pessoa: e.target.value }))}
+                >
+                  <option value="PJ">Pessoa Jurídica</option>
+                  <option value="PF">Pessoa Física</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>
+                  CPF/CNPJ validado (opcional)
+                </label>
+                <input
+                  style={inputStyle}
+                  value={form.documento}
+                  onChange={e => setForm(f => ({ ...f, documento: e.target.value }))}
+                  placeholder="Apenas dígitos"
+                />
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>

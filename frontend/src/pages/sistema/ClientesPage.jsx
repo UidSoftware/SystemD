@@ -45,6 +45,7 @@ const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', 
 const CLIENTE_VAZIO = {
   nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
   dominio_email: '', origem: '', observacoes: '',
+  tipo_pessoa: 'PJ', documento: '',
   socios: [{ ...SOCIO_VAZIO, principal: true }],
 }
 
@@ -389,6 +390,23 @@ export default function ClientesPage() {
                     style={inputStyle} />
                 </div>
               ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Tipo de pessoa</label>
+                  <select value={modal.tipo_pessoa || 'PJ'}
+                    onChange={e => setModal(m => ({ ...m, tipo_pessoa: e.target.value }))}
+                    style={inputStyle}>
+                    <option value="PJ">Pessoa Jurídica</option>
+                    <option value="PF">Pessoa Física</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>CPF/CNPJ validado (opcional)</label>
+                  <input type="text" placeholder="Apenas dígitos" value={modal.documento || ''}
+                    onChange={e => setModal(m => ({ ...m, documento: e.target.value }))}
+                    style={inputStyle} />
+                </div>
+              </div>
               <div>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>
                 <textarea value={modal.observacoes || ''} rows={3}

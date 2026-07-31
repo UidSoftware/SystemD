@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 
-from common.models import BaseModel
+from common.models import BaseModel, PessoaBase
 
 
 # ──────────────────────────────────────────────
@@ -239,7 +239,7 @@ class Categoria(BaseModel):
 # Fornecedor
 # ──────────────────────────────────────────────
 
-class Fornecedor(BaseModel):
+class Fornecedor(BaseModel, PessoaBase):
     forn_nome        = models.CharField(max_length=200)
     forn_cnpj        = models.CharField(max_length=18, unique=True, null=True, blank=True)
     forn_email       = models.EmailField(blank=True)
@@ -257,6 +257,25 @@ class Fornecedor(BaseModel):
 
     def __str__(self):
         return self.forn_nome
+
+
+class AcionistaFornecedor(models.Model):
+    fornecedor = models.ForeignKey(Fornecedor, on_delete=models.CASCADE, related_name='acionistas')
+    nome       = models.CharField(max_length=150)
+    email      = models.EmailField(blank=True)
+    telefone   = models.CharField(max_length=20, blank=True)
+    whatsapp   = models.CharField(max_length=20, blank=True)
+    cpf        = models.CharField(max_length=20, blank=True)
+    principal  = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'fin_acionista_fornecedor'
+        ordering = ['-principal', 'nome']
+        verbose_name = 'Acionista do Fornecedor'
+        verbose_name_plural = 'Acionistas do Fornecedor'
+
+    def __str__(self):
+        return f'{self.nome} — {self.fornecedor.forn_nome}'
 
 
 # ──────────────────────────────────────────────

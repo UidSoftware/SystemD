@@ -1,8 +1,11 @@
 from django.db import models
 from django.conf import settings
 
+from common.models import PessoaBase
 
-class Cliente(models.Model):
+
+
+class Cliente(PessoaBase):
     nome_empresa  = models.CharField(max_length=150)
     dominio_email = models.CharField(max_length=100, blank=True, help_text='Ex: empresacliente.com.br')
     usuario       = models.OneToOneField(

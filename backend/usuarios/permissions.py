@@ -24,3 +24,11 @@ class IsAdminOrOperacionalOrFinanceiro(BasePermission):
 class IsAdminOperacionalOrCliente(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'OPERACIONAL', 'CLIENTE'])
+
+
+class IsAdminOrFinanceiroOrContabilidade(BasePermission):
+    """So pra endpoints de RELATORIO (leitura). Nunca usar em ViewSet que
+    tambem aceita POST/PATCH/DELETE sem checar o metodo -- Contabilidade
+    nunca lanca Despesa/Receita/Conta/Aporte, so consulta relatorio."""
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'FINANCEIRO', 'CONTABILIDADE'])

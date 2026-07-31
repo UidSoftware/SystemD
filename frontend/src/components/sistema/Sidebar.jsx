@@ -40,6 +40,17 @@ const menuRelatorios = [
   { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
 ]
 
+// So relatorio (leitura) -- mesmas telas do menuRelatorios + Livro Caixa,
+// nada de lancamento/edicao (Receitas, Despesas, Contas, Aportes ficam de fora).
+const menuContabilidade = [
+  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa', emoji: '📈' },
+  { label: 'DRE',            path: '/sistema/financeiro/dre',         emoji: '📉' },
+  { label: 'Livro Caixa',    path: '/sistema/financeiro/livro-caixa', emoji: '📒' },
+  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente', emoji: '👥' },
+  { label: 'Receitas',       path: '/sistema/relatorios/receitas',    emoji: '💵' },
+  { label: 'Despesas',       path: '/sistema/relatorios/despesas',    emoji: '💸' },
+]
+
 const menuFinanceiro = [
   { label: 'Visao Geral',         path: '/sistema/financeiro/visao-geral',        emoji: '📊' },
   { label: 'Contas a Receber',    path: '/sistema/financeiro/receitas',            emoji: '📥' },
@@ -112,6 +123,10 @@ const menuPorPerfil = {
     { label: 'Entregas',       path: '/sistema/entregas',        emoji: '🚚' },
     { label: 'Suporte',        path: '/sistema/suporte',         emoji: '💬' },
     { label: 'Minhas Faturas', path: '/sistema/minhas-faturas',  emoji: '🧾' },
+  ],
+  CONTABILIDADE: [
+    { label: 'Dashboard',      path: '/sistema/',  emoji: '🏠' },
+    { label: 'Relatorios',     path: '/sistema/financeiro/dre', emoji: '📊', submenu: menuContabilidade },
   ],
 }
 
@@ -387,10 +402,11 @@ export default function Sidebar({ onClose }) {
     : usuario?.email?.[0]?.toUpperCase() || '?'
 
   const perfilCor = {
-    ADMIN:       '#FF0000',
-    OPERACIONAL: '#063BF8',
-    FINANCEIRO:  '#10b981',
-    CLIENTE:     '#3d0361',
+    ADMIN:         '#FF0000',
+    OPERACIONAL:   '#063BF8',
+    FINANCEIRO:    '#10b981',
+    CLIENTE:       '#3d0361',
+    CONTABILIDADE: '#d97706',
   }[perfil] || '#a78bca'
 
   return (

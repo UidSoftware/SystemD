@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
-from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrOperacionalOrFinanceiro
+from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinanceiroOrContabilidade, IsAdminOrOperacionalOrFinanceiro
 
 from .signals import _reconstruir_cadeia
 from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
@@ -392,10 +392,17 @@ class LivroCaixaViewSet(ReadCreateViewSet):
         .order_by('-data', '-created_at')
     )
     serializer_class = LivroCaixaSerializer
-    permission_classes = [IsAdminOrFinanceiro]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['conta', 'tipo', 'origem', 'estornado']
     ordering_fields = ['data', 'valor']
+
+    def get_permissions(self):
+        # list/retrieve (leitura) libera pra Contabilidade tambem; create
+        # (lancamento manual) continua exclusivo de ADMIN/FINANCEIRO -- ver
+        # IsAdminOrFinanceiroOrContabilidade, nunca usar em action de escrita.
+        if self.action in ('list', 'retrieve'):
+            return [IsAdminOrFinanceiroOrContabilidade()]
+        return [IsAdminOrFinanceiro()]
     # Sem paginacao (mesmo padrao de DespesaViewSet/ReceitaViewSet) — o
     # frontend (LivroCaixaPage, FluxoCaixaPage) busca tudo de uma vez e
     # filtra/agrupa por mes no cliente. Com paginacao padrao (20 por
@@ -444,7 +451,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 
         return Response(LivroCaixaSerializer(estorno).data, status=201)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAdminOrFinanceiro])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminOrFinanceiroOrContabilidade])
     def totais(self, request):
         from .models import Conta
         conta_id = request.query_params.get('conta')
@@ -485,7 +492,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 # ─── Views calculadas ────────────────────────────────────────
 
 @api_view(['GET'])
-@permission_classes([IsAdminOrFinanceiro])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
 def fluxo_caixa(request):
     """GET /api/financeiro/fluxo-caixa/?mes=2026-05&conta=1"""
     mes_str  = request.query_params.get('mes')
@@ -555,7 +562,7 @@ def fluxo_caixa(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminOrFinanceiro])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
 def dre(request):
     """GET /api/financeiro/dre/?ano=2026"""
     try:
@@ -623,7 +630,7 @@ def dre(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminOrFinanceiro])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
 def receita_por_cliente(request):
     """GET /api/financeiro/receita-por-cliente/?ano=2026"""
     try:

@@ -52,6 +52,10 @@ import ReceitasRelatorioPage from './pages/sistema/relatorios/ReceitasRelatorioP
 import DespesasRelatorioPage from './pages/sistema/relatorios/DespesasRelatorioPage'
 
 const FIN = ['ADMIN', 'FINANCEIRO']
+// So pras telas de RELATORIO (leitura) -- Contabilidade nunca entra no FIN
+// normal, que tambem cobre telas de lancamento/edicao (Receitas, Despesas,
+// Contas, Aportes, Conciliacao, Fornecedores).
+const FIN_LEITURA = ['ADMIN', 'FINANCEIRO', 'CONTABILIDADE']
 
 export default function App() {
   return (
@@ -93,14 +97,14 @@ export default function App() {
           <Route path="/sistema/financeiro/fornecedores" element={<PrivateRoute perfisPermitidos={FIN}><FornecedoresPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/aportes" element={<PrivateRoute perfisPermitidos={['ADMIN']}><AportesPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/contas" element={<PrivateRoute perfisPermitidos={FIN}><ContasPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/livro-caixa" element={<PrivateRoute perfisPermitidos={FIN}><LivroCaixaPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/livro-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><LivroCaixaPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/conciliacao" element={<PrivateRoute perfisPermitidos={FIN}><ConciliacaoPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN}><FluxoCaixaPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN}><DREPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN}><PorClientePage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FluxoCaixaPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DREPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><PorClientePage /></PrivateRoute>} />
           {/* Relatorios */}
-          <Route path="/sistema/relatorios/receitas" element={<PrivateRoute perfisPermitidos={FIN}><ReceitasRelatorioPage /></PrivateRoute>} />
-          <Route path="/sistema/relatorios/despesas" element={<PrivateRoute perfisPermitidos={FIN}><DespesasRelatorioPage /></PrivateRoute>} />
+          <Route path="/sistema/relatorios/receitas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><ReceitasRelatorioPage /></PrivateRoute>} />
+          <Route path="/sistema/relatorios/despesas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DespesasRelatorioPage /></PrivateRoute>} />
 
           {/* Office */}
           <Route path="/sistema/office/escritorio" element={<PrivateRoute perfisPermitidos={['ADMIN']}><EscritorioPage /></PrivateRoute>} />

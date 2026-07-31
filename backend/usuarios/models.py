@@ -19,10 +19,11 @@ class Setor(models.Model):
 
 
 class Perfil(models.TextChoices):
-    ADMIN       = 'ADMIN',       'Administrador'
-    FINANCEIRO  = 'FINANCEIRO',  'Financeiro'
-    OPERACIONAL = 'OPERACIONAL', 'Operacional'
-    CLIENTE     = 'CLIENTE',     'Cliente'
+    ADMIN         = 'ADMIN',         'Administrador'
+    FINANCEIRO    = 'FINANCEIRO',    'Financeiro'
+    OPERACIONAL   = 'OPERACIONAL',   'Operacional'
+    CLIENTE       = 'CLIENTE',       'Cliente'
+    CONTABILIDADE = 'CONTABILIDADE', 'Contabilidade'
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):

@@ -274,6 +274,7 @@ Credenciais em `UsuarioEmailConfig` — jamais em código ou commits.
 | OPERACIONAL | `#063BF8` | Leads, Prospectos, Clientes, OS, Entregas, Email |
 | FINANCEIRO | `#10b981` | Financeiro, Email |
 | CLIENTE | `#3d0361` | Portal (MeusProjetos, Suporte, MinhasFaturas) + Entregas se `tem_entregas=True` |
+| CONTABILIDADE | `#d97706` | Só leitura: DRE, Fluxo de Caixa, Livro Caixa, Por Cliente (sem criar/editar Despesa/Receita/Conta/Aporte, sem ver Clientes/OS) — pensado pro contador externo (Fase 3, SystemD 2.0.0) |
 
 **Permissões DRF** (`usuarios/permissions.py`):
 - `IsAdmin` — só ADMIN
@@ -281,6 +282,7 @@ Credenciais em `UsuarioEmailConfig` — jamais em código ou commits.
 - `IsAdminOrFinanceiro` — Financeiro
 - `IsAdminOrOperacionalOrFinanceiro` — Email
 - `IsAdminOperacionalOrCliente` — Entregas (CLIENTE vê só as próprias)
+- `IsAdminOrFinanceiroOrContabilidade` — relatórios financeiros (DRE, Fluxo de Caixa, Livro Caixa, Por Cliente): GET liberado pra ADMIN/FINANCEIRO/CONTABILIDADE, escrita só ADMIN/FINANCEIRO
 
 **Redirecionamento pós-login** (via `redirecionarPosLogin` no `AuthContext`):
 - `CLIENTE` com `tem_entregas=True` → `/sistema/entregas`
@@ -296,7 +298,7 @@ Credenciais em `UsuarioEmailConfig` — jamais em código ou commits.
 ### Usuario + Setor (`usuarios/models.py`)
 ```python
 class Perfil(models.TextChoices):
-    ADMIN = 'ADMIN' | FINANCEIRO = 'FINANCEIRO' | OPERACIONAL = 'OPERACIONAL' | CLIENTE = 'CLIENTE'
+    ADMIN = 'ADMIN' | FINANCEIRO = 'FINANCEIRO' | OPERACIONAL = 'OPERACIONAL' | CLIENTE = 'CLIENTE' | CONTABILIDADE = 'CONTABILIDADE'
 
 class Setor(models.Model):
     nome, descricao, ativo, criado_em
@@ -319,18 +321,27 @@ class UsuarioEmailConfig(models.Model):
 
 ### Cliente + SocioCliente (`clientes/models.py`)
 ```python
-class Cliente(models.Model):
+class Cliente(common.models.PessoaBase):
+    # PessoaBase (Fase 4, SystemD 2.0.0): tipo_pessoa(PF/PJ), documento
+    # (CPF/CNPJ com dígito verificador validado, unique/null/blank — mesmo
+    # algoritmo do UidCore em common/validators.py), cpf, cnpj (dígitos puros)
     nome_empresa, dominio_email
     usuario      = OneToOneField(Usuario, null=True, related_name='cliente_perfil')
-    # + segmento, cidade, estado, cnpj_cpf, origem, observacoes
+    # + segmento, cidade, estado, cnpj_cpf (texto livre, LEGADO — mantido
+    #   intocado de propósito: usado por sync real com ContratID em
+    #   orcamentos/services.py e emissão de recibo em financeiro/recibo_pdf.py),
+    #   origem, observacoes
     tem_entregas = BooleanField(default=False)
     ativo        = BooleanField(default=True)
+    # Nota: Cliente NÃO usa common.models.BaseModel (ativo/criado_em/
+    # atualizado_em são campos próprios, não is_active/created_at/updated_at)
+    # — PessoaBase por isso não herda de BaseModel, é combinável nos dois casos.
 
 class SocioCliente(models.Model):
     cliente   = ForeignKey(Cliente, CASCADE, related_name='socios')
     nome, email, telefone, whatsapp, cpf
     principal = BooleanField(default=False)
-    # Padrão idêntico ao SocioProspecto
+    # Padrão idêntico ao SocioProspecto e ao novo AcionistaFornecedor
 ```
 
 ### Lead (`vitrine/models.py`)
@@ -420,44 +431,59 @@ class MensagemChamado(models.Model):  # imutável — histórico preservado
     chamado, autor, mensagem, criado_em
 ```
 
-### Financeiro (`financeiro/models.py`) — herdam de `BaseFinanceiro`
-```python
-class BaseFinanceiro(models.Model):  # abstract
-    criado_em, atualizado_em, criado_por(FK Usuario), ativo(BooleanField)
+### Financeiro (`financeiro/models.py`) — herdam de `common.models.BaseModel`
 
-class Conta(BaseFinanceiro):     # db_table='fin_conta'
+> **SystemD 2.0.0 (Fase 1):** `BaseFinanceiro` foi substituído por
+> `common.models.BaseModel` (`is_active`/`created_at`/`updated_at`, mesmo
+> padrão do UidCore) em todos os models abaixo. Todos os serializers do
+> app têm `id = serializers.IntegerField(source='pk', read_only=True)`
+> como primeiro campo (padrão UidCore, 33 lugares lá — replicado aqui).
+
+```python
+class Conta(BaseModel):     # db_table='fin_conta'
     nome, tipo(CORRENTE/POUPANCA/CAIXA/CARTEIRA), banco, agencia, numero, saldo_inicial
 
-class Aporte(BaseFinanceiro):    # db_table='fin_aporte'
+class Aporte(BaseModel):    # db_table='fin_aporte'
     tipo(CAPITAL_SOCIAL/SOCIO/INVESTIDOR/EMPRESTIMO), descricao, valor
     conta(FK), data, responsavel, observacoes
 
-class Receita(BaseFinanceiro):   # db_table='fin_receita'
+class Receita(BaseModel):   # db_table='fin_receita'
     tipo(ENTRADA_CONTRATO/MENSALIDADE/CONSULTORIA/OUTRO)
     status(PENDENTE/RECEBIDO/CANCELADO/ATRASADO)
     descricao, cliente(FK nullable), os(FK nullable)
-    categoria(FK Categoria nullable, limit_choices_to tipo=ENTRADA)
+    categoria(FK Categoria nullable, limit_choices_to is_active=True)
     valor_bruto, desconto, valor_liquido (calc em save())
     conta(FK), vencimento, recebimento, referencia_mes, observacoes
 
-class Despesa(BaseFinanceiro):   # db_table='fin_despesa'
+class Despesa(BaseModel):   # db_table='fin_despesa'
     tipo(FIXA/VARIAVEL/PROLABORE/IMPOSTO/OUTRO)
     status(PENDENTE/PAGO/CANCELADO/ATRASADO)
     descricao, fornecedor, valor_bruto, desconto, valor_liquido (calc em save())
-    categoria(FK Categoria nullable, limit_choices_to tipo=SAIDA)
+    categoria(FK Categoria nullable, limit_choices_to is_active=True)
     conta(FK), vencimento, pagamento, comprovante(FileField), observacoes
     estornado(bool), data_estorno(DateField nullable), motivo_estorno(TextField)
 
-class Categoria(models.Model):   # db_table='fin_categoria'
-    nome, tipo(ENTRADA/SAIDA), ativo, criado_em
+class Categoria(BaseModel):   # db_table='fin_categoria'
+    nome, tipo(ENTRADA/SAIDA)
     unique_together: [['nome', 'tipo']]
     # Fixture: 4 ENTRADA (Sistema SaaS, Consultoria, Projeto Avulso, Reembolso)
     #          6 SAIDA   (Infraestrutura, Ferramentas, Marketing, Impostos, Pessoal, Outros)
 
+class Fornecedor(BaseModel, common.models.PessoaBase):  # db_table='fin_fornecedor'
+    forn_nome, forn_cnpj (texto livre, LEGADO — mantido intocado), forn_email,
+    forn_telefone, forn_observacoes, forn_ativo, created_by
+    # PessoaBase (Fase 4): tipo_pessoa, documento (validado), cpf, cnpj
+
+class AcionistaFornecedor(models.Model):  # db_table='fin_acionista_fornecedor' — Fase 4
+    fornecedor = ForeignKey(Fornecedor, CASCADE, related_name='acionistas')
+    nome, email, telefone, whatsapp, cpf
+    principal = BooleanField(default=False)
+    # Espelha SocioCliente — Fornecedor não tinha equivalente antes da Fase 4
+
 class LivroCaixa(models.Model):  # db_table='fin_livro_caixa' — IMUTÁVEL
     conta(FK), tipo(ENTRADA/SAIDA), origem(APORTE/RECEITA/DESPESA/MANUAL/TRANSFER/ESTORNO)
     origem_id, descricao, valor, data, saldo_anterior, saldo_atual
-    criado_em, criado_por, estornado(bool), estorno_de(self FK)
+    created_at, estornado(bool), estorno_de(self FK)
 ```
 
 
@@ -509,6 +535,39 @@ class Orcamento(models.Model):
 class ItemOrcamento(models.Model):
     orcamento      = ForeignKey(Orcamento, CASCADE, related_name='itens')
     ordem, descricao, quantidade (Decimal,3), valor_unitario (Decimal,2)
+    # Propriedade: subtotal = quantidade * valor_unitario
+```
+
+### Produto + ConversaoUnidade + EntradaEstoque (`produtos/models.py`) — SystemD 2.0.0 Fase 2
+```python
+class Produto(models.Model):
+    nome, tipo(PRODUTO/SERVICO), categoria, descricao, codigo_barras, unidade
+    quantidade_estoque, estoque_minimo  # controle de estoque real (padrão UidCore)
+    # só faz sentido pra tipo=PRODUTO; fica 0/sem uso pra tipo=SERVICO
+    preco_padrao, preco_minimo, ativo, criado_por, criado_em, atualizado_em
+
+class ConversaoUnidade(models.Model):
+    # Ex: 1 CX = 30 UN -> produto(FK), unidade, quantidade_por_base
+
+class EntradaEstoque(models.Model):
+    produto(FK), quantidade, unidade, quantidade_base (calc no save(), via ConversaoUnidade)
+    nota_fiscal, observacoes, criado_por, criado_em
+    # save() incrementa Produto.quantidade_estoque via F() só em criações
+```
+
+### Pedido + ItemPedido (`orcamentos/models.py`) — SystemD 2.0.0 Fase 2
+```python
+class Pedido(models.Model):
+    # Separado de Orcamento de propósito: nasce de um orçamento aprovado
+    # (FK opcional) OU direto, sem depender de orçamento prévio.
+    # Orcamento (numeração, sync ContratID) continua 100% intocado.
+    cliente(FK nullable), orcamento(FK nullable), numero(auto-incremento)
+    status(pendente/confirmado/em_producao/entregue/cancelado)
+    data_pedido, entrega_prevista, observacoes, criado_por, criado_em
+
+class ItemPedido(models.Model):
+    pedido(FK), produto(FK nullable), ordem, descricao
+    quantidade, unidade, valor_unitario
     # Propriedade: subtotal = quantidade * valor_unitario
 ```
 
@@ -980,6 +1039,7 @@ docker run --rm -v /root/SystemD/backend:/app python:3.12-slim chown -R 1000:100
 | Fase 9.5 | Dashboard profissional: endpoint `/api/financeiro/dashboard/` + DashboardPage reescrito com KPIs por perfil, pipeline OS, gráfico 6 meses (CSS), vencimentos 30d, top clientes; fix saldo em `livro-caixa/totais/` e `fluxo-caixa/`; rename "Fluxo de Caixa" → "Livro Caixa" no menu Relatórios | ✅ |
 | Fase 10 | Financeiro: Categoria (fin_categoria + fixture 10 itens), estorno de Despesa, endpoints receber/pagar/estornar/categorias, Sidebar Receitas→Contas a Receber / Despesas→Contas a Pagar, menu Relatórios, páginas relatório somente-leitura; Boss CLI movido para aba no RightSidebar do Office; pipeline hotfix documentado e reforçado; 72 testes automatizados (6 apps) | ✅ |
 | **Fase 11** | Pipeline agents — fluxo Lead completo via Office | ⏳ |
+| SystemD 2.0.0 | Backport de padrões do UidCore (não numerada na sequência acima — ver "Registro de Ciclos" [2026-07-31]): `BaseModel`, Produto c/ estoque real + Pedido, setor Contabilidade, `PessoaBase` (CPF/CNPJ validado) em Cliente/Fornecedor | ✅ |
 
 ---
 
@@ -1690,3 +1750,77 @@ aplicação rende sozinho, precisa conferência periódica contra o app do
 banco. E a distinção formal: Fluxo de Caixa/Livro Caixa/Contas Bancárias
 sempre batem com o banco; Resultado do mês/DRE nunca inclui aporte ou
 transferência interna; DFC não precisa bater linha a linha (analítico).
+
+---
+
+### [2026-07-31] — SystemD 2.0.0: fundação financeira + setor Contabilidade + PessoaBase (Fases 1-4)
+
+**Contexto:** com o financeiro zerado (reset de 2026-07-29, causa: watchdog
+de conciliação duplicado gerando lançamento em dobro), foi a única janela
+pra trocar a fundação dos models do financeiro sem precisar migrar dado
+real. Investigação comparou SystemD com o UidCore (template mais recente,
+com `BaseModel`/`PessoaBase`/estoque real) e concluiu: **não havia nenhum
+relatório/demonstrativo do UidCore a trazer** — SystemD já tem DRE, Fluxo
+de Caixa, Livro Caixa e Por Cliente, mais completo que o UidCore nessa
+frente. O trabalho virou backport de padrões de model/permissão, não
+fusão de código. Executado em 4 fases (a 5ª é este registro), cada uma
+commitada e deployada isoladamente via CI/CD do próprio repo (SystemD é
+a esteira — exceção documentada no CLAUDE.md global, autorizada por
+instrução direta do usuário por fase).
+
+**Fase 1 — Fundação do financeiro** (commit `09ae545`): `BaseFinanceiro`
+(`ativo`/`criado_em`/`atualizado_em`/`criado_por`) trocado por
+`common.models.BaseModel` (`is_active`/`created_at`/`updated_at`, mesmo
+padrão do UidCore) em todos os models de `financeiro/`. `id =
+IntegerField(source='pk', read_only=True)` adicionado como primeiro campo
+em todos os serializers do app.
+
+**Fase 2 — Produto com estoque + Pedido** (commit `2b4233e`): `Produto`
+ganhou `quantidade_estoque`/`estoque_minimo`/`codigo_barras` +
+`ConversaoUnidade`/`EntradaEstoque` (padrão UidCore, incremento via `F()`
+no `save()`). Novo model `Pedido`/`ItemPedido` em `orcamentos/` —
+separado de `Orcamento` de propósito (pode nascer de orçamento aprovado
+ou direto); `Orcamento` (numeração sequencial, sync ContratID) ficou
+100% intocado.
+
+**Fase 3 — Setor Contabilidade** (commit `fa7301f`): novo `Perfil.CONTABILIDADE`
+em `usuarios/models.py` + `IsAdminOrFinanceiroOrContabilidade` em
+`usuarios/permissions.py` — leitura liberada só pros 4 relatórios (DRE,
+Fluxo de Caixa, Livro Caixa, Por Cliente), sem acesso a criar/editar
+Despesa/Receita/Conta/Aporte e sem ver nada fora do financeiro. Pensado
+pro caso real de dar login pro contador externo sem expor o resto do
+sistema.
+
+**Fase 4 — PessoaBase (CPF/CNPJ validado)** (commit `8ed0745`): novo
+`common/validators.py` (algoritmo de dígito verificador idêntico ao do
+UidCore) + `common/models.py::PessoaBase` (abstract — `tipo_pessoa`,
+`documento` unique/null/blank validado, `cpf`, `cnpj`). Auditoria prévia
+via `manage.py shell` nos 17 registros reais (4 clientes + 13
+fornecedores) achou só 1 com documento preenchido — CNPJ da própria Uid
+Software, já válido — os outros 16 ficaram `documento=None`. Escopo
+**deliberadamente reduzido a meio do trabalho**: `cnpj_cpf`
+(`Cliente`)/`forn_cnpj` (`Fornecedor`) são usados por integração real com
+o ContratID (`orcamentos/services.py::sync_to_contratid`) e emissão real
+de recibo PDF (`financeiro/recibo_pdf.py`) — não mapeado no plano
+original. Decisão: **nunca renomear/remover os campos legados**, `Cliente`
+e `Fornecedor` ganharam os campos novos só aditivamente via
+`PessoaBase`. `PessoaBase` **não herda de `BaseModel`** de propósito —
+`Cliente` ainda usa `ativo`/`criado_em` próprios (nunca migrado pro
+padrão `is_active`/`created_at`), então `PessoaBase(BaseModel)` colidiria
+campo a campo; por isso é combinável nos dois casos:
+`Cliente(PessoaBase)` sozinho e `Fornecedor(BaseModel, PessoaBase)`
+(Fornecedor já tinha `BaseModel` da Fase 1). Novo model
+`AcionistaFornecedor` espelha `SocioCliente` (Fornecedor não tinha
+equivalente de sócios/acionistas antes).
+
+**UidCore:** não foi tocado em nenhum momento das 4 fases — segue como
+template/projeto independente, nunca mesclado ao SystemD.
+
+**Verificação (cada fase):** `makemigrations --check --dry-run` limpo,
+migration aplicada em container real (`docker cp` + `manage.py migrate`),
+suite de testes do(s) app(s) afetado(s) rodada via `manage.py test`
+(financeiro/clientes: 55 testes, OK), criação real via API (`APIClient`
+com `force_authenticate` + `HTTP_HOST` explícito — `ALLOWED_HOSTS`
+rejeita o `testserver` default) confirmando CPF/CNPJ inválido rejeitado
+com 400 e válido aceito com 201, `vite build` de sanidade no frontend,
+poll do container ID pós-push até recriar, reverificação em produção.

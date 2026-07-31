@@ -4,8 +4,8 @@ from rest_framework.viewsets import GenericViewSet
 
 class AuditMixin:
     def perform_destroy(self, instance):
-        instance.ativo = False
-        instance.save(update_fields=['ativo'])
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
 
 
 class ReadCreateViewSet(

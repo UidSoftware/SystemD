@@ -5,8 +5,8 @@ from .models import Aporte, Conta, Despesa, LivroCaixa, Receita
 
 @admin.register(Conta)
 class ContaAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'tipo', 'saldo_inicial', 'ativo']
-    list_filter = ['tipo', 'ativo']
+    list_display = ['nome', 'tipo', 'saldo_inicial', 'is_active']
+    list_filter = ['tipo', 'is_active']
     search_fields = ['nome']
 
 

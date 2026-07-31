@@ -3,18 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 
-
-class BaseFinanceiro(models.Model):
-    criado_em     = models.DateTimeField(auto_now_add=True)
-    atualizado_em = models.DateTimeField(auto_now=True)
-    criado_por    = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='+',
-    )
-    ativo = models.BooleanField(default=True)
-
-    class Meta:
-        abstract = True
+from common.models import BaseModel
 
 
 # ──────────────────────────────────────────────
@@ -28,13 +17,17 @@ class TipoConta(models.TextChoices):
     CARTEIRA = 'CARTEIRA', 'Carteira Digital'
 
 
-class Conta(BaseFinanceiro):
+class Conta(BaseModel):
     nome          = models.CharField(max_length=100)
     tipo          = models.CharField(max_length=20, choices=TipoConta.choices)
     banco         = models.CharField(max_length=100, blank=True)
     agencia       = models.CharField(max_length=20, blank=True)
     numero        = models.CharField(max_length=30, blank=True)
     saldo_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_by    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
 
     class Meta:
         db_table = 'fin_conta'
@@ -55,7 +48,7 @@ class TipoAporte(models.TextChoices):
     EMPRESTIMO     = 'EMPRESTIMO',     'Empréstimo'
 
 
-class Aporte(BaseFinanceiro):
+class Aporte(BaseModel):
     tipo        = models.CharField(max_length=20, choices=TipoAporte.choices)
     descricao   = models.CharField(max_length=255)
     valor       = models.DecimalField(max_digits=12, decimal_places=2)
@@ -63,6 +56,10 @@ class Aporte(BaseFinanceiro):
     data        = models.DateField()
     responsavel = models.CharField(max_length=150)
     observacoes = models.TextField(blank=True)
+    created_by  = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
 
     class Meta:
         db_table = 'fin_aporte'
@@ -91,7 +88,7 @@ class StatusReceita(models.TextChoices):
     ATRASADO  = 'ATRASADO',  'Atrasado'
 
 
-class Receita(BaseFinanceiro):
+class Receita(BaseModel):
     tipo           = models.CharField(max_length=20, choices=TipoReceita.choices)
     descricao      = models.CharField(max_length=255)
     cliente        = models.ForeignKey(
@@ -105,7 +102,7 @@ class Receita(BaseFinanceiro):
     categoria      = models.ForeignKey(
         'Categoria', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='receitas',
-        limit_choices_to={'tipo': 'ENTRADA', 'ativo': True},
+        limit_choices_to={'tipo': 'ENTRADA', 'is_active': True},
     )
     valor_bruto    = models.DecimalField(max_digits=12, decimal_places=2)
     desconto       = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -116,6 +113,10 @@ class Receita(BaseFinanceiro):
     status         = models.CharField(max_length=20, choices=StatusReceita.choices, default='PENDENTE')
     referencia_mes = models.DateField(null=True, blank=True)
     observacoes    = models.TextField(blank=True)
+    created_by     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
 
     class Meta:
         db_table = 'fin_receita'
@@ -165,7 +166,7 @@ class FormaPagamento(models.TextChoices):
     OUTRO           = 'OUTRO',           'Outro'
 
 
-class Despesa(BaseFinanceiro):
+class Despesa(BaseModel):
     tipo             = models.CharField(max_length=20, choices=TipoDespesa.choices)
     descricao        = models.CharField(max_length=255)
     fornecedor       = models.CharField(max_length=150, blank=True)
@@ -176,7 +177,7 @@ class Despesa(BaseFinanceiro):
     categoria        = models.ForeignKey(
         'Categoria', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='despesas',
-        limit_choices_to={'tipo': 'SAIDA', 'ativo': True},
+        limit_choices_to={'tipo': 'SAIDA', 'is_active': True},
     )
     vencimento       = models.DateField()
     pagamento        = models.DateField(null=True, blank=True)
@@ -195,6 +196,10 @@ class Despesa(BaseFinanceiro):
     estornado        = models.BooleanField(default=False)
     data_estorno     = models.DateField(null=True, blank=True)
     motivo_estorno   = models.TextField(blank=True)
+    created_by       = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
 
     class Meta:
         db_table = 'fin_despesa'
@@ -217,11 +222,9 @@ class TipoCategoria(models.TextChoices):
     SAIDA   = 'SAIDA',   'Saída'
 
 
-class Categoria(models.Model):
+class Categoria(BaseModel):
     nome      = models.CharField(max_length=100)
     tipo      = models.CharField(max_length=10, choices=TipoCategoria.choices)
-    ativo     = models.BooleanField(default=True)
-    criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['nome']
@@ -236,13 +239,17 @@ class Categoria(models.Model):
 # Fornecedor
 # ──────────────────────────────────────────────
 
-class Fornecedor(BaseFinanceiro):
+class Fornecedor(BaseModel):
     forn_nome        = models.CharField(max_length=200)
     forn_cnpj        = models.CharField(max_length=18, unique=True, null=True, blank=True)
     forn_email       = models.EmailField(blank=True)
     forn_telefone    = models.CharField(max_length=20, blank=True)
     forn_observacoes = models.TextField(blank=True)
     forn_ativo       = models.BooleanField(default=True)
+    created_by       = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
 
     class Meta:
         db_table = 'fin_fornecedor'
@@ -271,7 +278,15 @@ class OrigemLancamento(models.TextChoices):
 
 
 class LivroCaixa(models.Model):
-    """Imutável — nunca expor PUT/PATCH/DELETE. Correções via estorno."""
+    """Imutável — nunca expor PUT/PATCH/DELETE. Correções via estorno.
+
+    Nao herda BaseModel de proposito: nao existe conceito de "ativo/inativo"
+    pra uma linha de razao imutavel (correcao e sempre por estorno pareado,
+    nunca soft delete) — so os campos de auditoria de criacao fazem sentido
+    aqui, por isso ficam declarados direto (mesmo nome created_at/created_by
+    do BaseModel, so pra manter a nomenclatura consistente com o resto do
+    app).
+    """
     conta          = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='lancamentos')
     tipo           = models.CharField(max_length=10, choices=TipoLancamento.choices)
     origem         = models.CharField(max_length=10, choices=OrigemLancamento.choices)
@@ -281,8 +296,8 @@ class LivroCaixa(models.Model):
     data           = models.DateField()
     saldo_anterior = models.DecimalField(max_digits=12, decimal_places=2)
     saldo_atual    = models.DecimalField(max_digits=12, decimal_places=2)
-    criado_em      = models.DateTimeField(auto_now_add=True)
-    criado_por     = models.ForeignKey(
+    created_at     = models.DateTimeField(auto_now_add=True)
+    created_by     = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+',
     )
@@ -294,7 +309,7 @@ class LivroCaixa(models.Model):
 
     class Meta:
         db_table = 'fin_livro_caixa'
-        ordering = ['-data', '-criado_em']
+        ordering = ['-data', '-created_at']
 
     def __str__(self):
         return f'{self.get_tipo_display()} R$ {self.valor} — {self.descricao}'
@@ -315,7 +330,7 @@ class StatusItemConciliacao(models.TextChoices):
     FALTANDO_BANCO   = 'FALTANDO_BANCO',   'Faltando no Banco'
 
 
-class ConciliacaoExtrato(BaseFinanceiro):
+class ConciliacaoExtrato(BaseModel):
     conta          = models.ForeignKey(Conta, on_delete=models.PROTECT, related_name='conciliacoes')
     arquivo        = models.CharField(max_length=500)
     periodo        = models.DateField()
@@ -324,6 +339,10 @@ class ConciliacaoExtrato(BaseFinanceiro):
     total_banco    = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_sistema  = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     divergencias   = models.IntegerField(default=0)
+    created_by     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
 
     class Meta:
         db_table = 'fin_conciliacao_extrato'
@@ -360,7 +379,7 @@ class NaturezaPadraoConciliacao(models.TextChoices):
     RECEITA_FINANCEIRA = 'RECEITA_FINANCEIRA', 'Receita Financeira (rendimento)'
 
 
-class PadraoSeguroConciliacao(models.Model):
+class PadraoSeguroConciliacao(BaseModel):
     """
     Lista de padrões de descrição aprovados para criação automática de
     lançamentos via --auto no conciliar_extrato. Qualquer transação fora
@@ -375,9 +394,7 @@ class PadraoSeguroConciliacao(models.Model):
                    '(nunca entra no DRE); Receita Financeira entra no DRE como '
                    'rendimento, separado da receita operacional.',
     )
-    ativo            = models.BooleanField(default=True)
-    criado_em        = models.DateTimeField(auto_now_add=True)
-    criado_por       = models.ForeignKey(
+    created_by       = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+',
     )

@@ -533,7 +533,7 @@ export default function ConciliacaoPage() {
               </span>
               <span>{badgeTipo(p.tipo)}</span>
               <span style={{ fontSize: 12, color: '#94a3b8' }}>
-                {p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}
+                {p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '—'}
               </span>
               <span>
                 <button

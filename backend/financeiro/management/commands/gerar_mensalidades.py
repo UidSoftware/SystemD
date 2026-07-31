@@ -41,14 +41,14 @@ class Command(BaseCommand):
         modo = '[DRY-RUN] ' if dry_run else ''
         self.stdout.write(f'{modo}Gerando mensalidades para {MESES[mes-1]}/{ano}...\n')
 
-        conta_padrao = Conta.objects.filter(ativo=True).first()
+        conta_padrao = Conta.objects.filter(is_active=True).first()
         if not conta_padrao:
             self.stdout.write(self.style.ERROR('Nenhuma conta ativa encontrada.'))
             return
 
         os_ativas = OS.objects.filter(
             status__in=['CONTRATO', 'MANUTENCAO'],
-            ativo=True,
+            is_active=True,
             valor_mensal__isnull=False,
         ).select_related('cliente')
 

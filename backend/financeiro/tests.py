@@ -20,7 +20,7 @@ def make_user(email, perfil):
 def make_conta(nome='Caixa', saldo_inicial=Decimal('0.00')):
     return Conta.objects.create(
         nome=nome, tipo='CAIXA', saldo_inicial=saldo_inicial,
-        criado_por=Usuario.objects.filter(perfil='ADMIN').first(),
+        created_by=Usuario.objects.filter(perfil='ADMIN').first(),
     )
 
 
@@ -29,7 +29,7 @@ def make_receita(conta, status='PENDENTE', valor=Decimal('100.00')):
     return Receita.objects.create(
         descricao='Receita teste', tipo='CONSULTORIA', status=status,
         valor_bruto=valor, desconto=Decimal('0.00'), valor_liquido=valor,
-        conta=conta, vencimento=date.today(), criado_por=admin,
+        conta=conta, vencimento=date.today(), created_by=admin,
     )
 
 
@@ -38,7 +38,7 @@ def make_despesa(conta, status='PENDENTE', valor=Decimal('50.00')):
     return Despesa.objects.create(
         descricao='Despesa teste', tipo='VARIAVEL', status=status,
         valor_bruto=valor, desconto=Decimal('0.00'), valor_liquido=valor,
-        conta=conta, vencimento=date.today(), criado_por=admin,
+        conta=conta, vencimento=date.today(), created_by=admin,
     )
 
 
@@ -223,7 +223,7 @@ class DespesaEstornarTest(APITestCase):
             origem_id=self.despesa.id, descricao='Despesa teste',
             valor=self.despesa.valor_liquido, data=date.today(),
             saldo_anterior=Decimal('500.00'), saldo_atual=Decimal('450.00'),
-            criado_por=self.admin,
+            created_by=self.admin,
         )
 
     def _url(self):
@@ -314,13 +314,13 @@ class DreEstornoTest(APITestCase):
             descricao='VPS', tipo='FIXA', status='PAGO',
             valor_bruto=Decimal('97.90'), desconto=Decimal('0.00'), valor_liquido=Decimal('97.90'),
             conta=self.conta, vencimento=date(2026, 7, 4), pagamento=date(2026, 6, 1),
-            estornado=True, criado_por=self.admin,
+            estornado=True, created_by=self.admin,
         )
         Despesa.objects.create(
             descricao='VPS', tipo='FIXA', status='PAGO',
             valor_bruto=Decimal('97.90'), desconto=Decimal('0.00'), valor_liquido=Decimal('97.90'),
             conta=self.conta, vencimento=date(2026, 6, 4), pagamento=date(2026, 6, 1),
-            estornado=False, criado_por=self.admin,
+            estornado=False, created_by=self.admin,
         )
         res = self.client.get(self.url, {'ano': 2026}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -374,7 +374,7 @@ class LivroCaixaImutavelTest(APITestCase):
             conta=self.conta, tipo='ENTRADA', origem='MANUAL',
             descricao='Teste', valor=Decimal('100.00'), data=date.today(),
             saldo_anterior=Decimal('0.00'), saldo_atual=Decimal('100.00'),
-            criado_por=self.admin,
+            created_by=self.admin,
         )
 
     def test_put_retorna_405(self):
@@ -425,9 +425,9 @@ class PadraoSeguroConciliacaoTest(APITestCase):
                 descricao_padrao='PIX RECEBIDO CLIENTE', tipo='ENTRADA',
             ).exists()
         )
-        # criado_por deve ser preenchido automaticamente
+        # created_by deve ser preenchido automaticamente
         padrao = PadraoSeguroConciliacao.objects.get(descricao_padrao='PIX RECEBIDO CLIENTE')
-        self.assertEqual(padrao.criado_por, self.admin)
+        self.assertEqual(padrao.created_by, self.admin)
 
     def test_padrao_seguro_create_financeiro(self):
         """Perfil FINANCEIRO também pode criar padrões."""
@@ -448,30 +448,30 @@ class PadraoSeguroConciliacaoTest(APITestCase):
         PadraoSeguroConciliacao.objects.create(
             descricao_padrao='PIX ENTRADA',
             tipo='ENTRADA',
-            ativo=True,
-            criado_por=self.admin,
+            is_active=True,
+            created_by=self.admin,
         )
         PadraoSeguroConciliacao.objects.create(
             descricao_padrao='PIX SAIDA INATIVO',
             tipo='SAIDA',
-            ativo=False,
-            criado_por=self.admin,
+            is_active=False,
+            created_by=self.admin,
         )
         self.client.force_authenticate(self.admin)
         res = self.client.get(self.url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         descricoes = [p['descricao_padrao'] for p in res.data['results']]
         self.assertIn('PIX ENTRADA', descricoes)
-        # Padrão inativo não deve aparecer (queryset filtra ativo=True)
+        # Padrão inativo não deve aparecer (queryset filtra is_active=True)
         self.assertNotIn('PIX SAIDA INATIVO', descricoes)
 
     def test_padrao_seguro_delete_soft(self):
-        """DELETE seta ativo=False (soft delete) em vez de destruir o registro."""
+        """DELETE seta is_active=False (soft delete) em vez de destruir o registro."""
         padrao = PadraoSeguroConciliacao.objects.create(
             descricao_padrao='BOLETO PAGAMENTO',
             tipo='SAIDA',
-            ativo=True,
-            criado_por=self.admin,
+            is_active=True,
+            created_by=self.admin,
         )
         self.client.force_authenticate(self.admin)
         url_detail = reverse('padroes-seguros-conciliacao-detail', args=[padrao.id])
@@ -479,7 +479,7 @@ class PadraoSeguroConciliacaoTest(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         # Registro ainda existe no banco
         padrao.refresh_from_db()
-        self.assertFalse(padrao.ativo)
+        self.assertFalse(padrao.is_active)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -502,7 +502,7 @@ class ConciliacaoPendentesTest(APITestCase):
             total_banco=valor,
             total_sistema=Decimal('0'),
             divergencias=1,
-            criado_por=self.admin,
+            created_by=self.admin,
         )
         item = ItemConciliacao.objects.create(
             conciliacao=conc,
@@ -642,7 +642,7 @@ class LivroCaixaOrdemCronologicaTest(APITestCase):
         Aporte.objects.create(conta=conta, tipo='CAPITAL_SOCIAL', descricao='dia 23', valor=Decimal('20.00'), data=date(2026, 6, 23))
         Aporte.objects.create(conta=conta, tipo='CAPITAL_SOCIAL', descricao='dia 17', valor=Decimal('30.00'), data=date(2026, 6, 17))
 
-        lancamentos = list(LivroCaixa.objects.filter(conta=conta).order_by('data', 'criado_em'))
+        lancamentos = list(LivroCaixa.objects.filter(conta=conta).order_by('data', 'created_at'))
         self.assertEqual(len(lancamentos), 3)
 
         saldo = Decimal('100.00')
@@ -672,7 +672,7 @@ class ConciliarExtratoClassificacaoTest(APITestCase):
         conta = make_conta(nome='BTG')
         PadraoSeguroConciliacao.objects.create(
             descricao_padrao='rendimento remunera', tipo='ENTRADA',
-            natureza='RECEITA_FINANCEIRA', ativo=True,
+            natureza='RECEITA_FINANCEIRA', is_active=True,
         )
         conc = ConciliacaoExtrato.objects.create(
             conta=conta, arquivo='x.pdf', periodo=date(2026, 8, 1), status='PENDENTE',
@@ -703,7 +703,7 @@ class ConciliarExtratoClassificacaoTest(APITestCase):
         conta = make_conta(nome='BTG')
         PadraoSeguroConciliacao.objects.create(
             descricao_padrao='aporte teste padrao', tipo='ENTRADA',
-            natureza='APORTE', ativo=True,
+            natureza='APORTE', is_active=True,
         )
         conc = ConciliacaoExtrato.objects.create(
             conta=conta, arquivo='x.pdf', periodo=date(2026, 8, 1), status='PENDENTE',

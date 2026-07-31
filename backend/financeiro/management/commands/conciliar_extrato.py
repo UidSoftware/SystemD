@@ -35,7 +35,7 @@ class Command(BaseCommand):
 
         # Resolve conta
         try:
-            conta = Conta.objects.get(nome__iexact=nome_conta, ativo=True)
+            conta = Conta.objects.get(nome__iexact=nome_conta, is_active=True)
         except Conta.DoesNotExist:
             raise CommandError(f'Conta "{nome_conta}" não encontrada.')
 
@@ -90,7 +90,7 @@ class Command(BaseCommand):
                 data__gte=primeiro_dia,
                 data__lt=ultimo_dia,
                 estornado=False,
-            ).order_by('data', 'criado_em')
+            ).order_by('data', 'created_at')
         )
 
         self.stdout.write(f'   Lançamentos no sistema: {len(lancamentos_sistema)}\n')
@@ -212,7 +212,7 @@ class Command(BaseCommand):
         """
         desc_lower = descricao.lower()
         padroes_financeiros = PadraoSeguroConciliacao.objects.filter(
-            tipo='ENTRADA', natureza='RECEITA_FINANCEIRA', ativo=True,
+            tipo='ENTRADA', natureza='RECEITA_FINANCEIRA', is_active=True,
         ).values_list('descricao_padrao', flat=True)
         return any(p.lower() in desc_lower for p in padroes_financeiros)
 
@@ -284,7 +284,7 @@ class Command(BaseCommand):
 
         Passo 2 - CRIAR POR PADRÃO SEGURO:
             Para os que ainda sobrarem após o passo 1, verifica se a descrição
-            bate com algum PadraoSeguroConciliacao ativo. Se sim, cria o
+            bate com algum PadraoSeguroConciliacao is_active. Se sim, cria o
             lançamento. Se não, mantém como FALTANDO_SISTEMA para revisão humana.
         """
         pendentes_restantes = list(faltando)  # cópia para tracking
@@ -309,7 +309,7 @@ class Command(BaseCommand):
                     status__in=['PENDENTE', 'ATRASADO'],
                     valor_liquido=valor,
                     vencimento__range=(data_min, data_max),
-                    ativo=True,
+                    is_active=True,
                 ).order_by('vencimento')
 
                 receita = receita_qs.first()
@@ -321,7 +321,7 @@ class Command(BaseCommand):
                     # Recupera o LivroCaixa criado pelo signal para vincular ao item
                     lc = LivroCaixa.objects.filter(
                         conta=conta, origem='RECEITA', origem_id=receita.id,
-                    ).order_by('-criado_em').first()
+                    ).order_by('-created_at').first()
 
                     ItemConciliacao.objects.filter(
                         conciliacao=conc,
@@ -349,7 +349,7 @@ class Command(BaseCommand):
                     status__in=['PENDENTE', 'ATRASADO'],
                     valor_liquido=valor,
                     vencimento__range=(data_min, data_max),
-                    ativo=True,
+                    is_active=True,
                     estornado=False,
                 ).order_by('vencimento')
 
@@ -361,7 +361,7 @@ class Command(BaseCommand):
 
                     lc = LivroCaixa.objects.filter(
                         conta=conta, origem='DESPESA', origem_id=despesa.id,
-                    ).order_by('-criado_em').first()
+                    ).order_by('-created_at').first()
 
                     ItemConciliacao.objects.filter(
                         conciliacao=conc,
@@ -385,11 +385,11 @@ class Command(BaseCommand):
         # ── Passo 2: Criar por padrão seguro ────────────────────────────────
 
         padroes_entrada = list(
-            PadraoSeguroConciliacao.objects.filter(tipo='ENTRADA', ativo=True)
+            PadraoSeguroConciliacao.objects.filter(tipo='ENTRADA', is_active=True)
             .values_list('descricao_padrao', 'natureza')
         )
         padroes_saida = list(
-            PadraoSeguroConciliacao.objects.filter(tipo='SAIDA', ativo=True)
+            PadraoSeguroConciliacao.objects.filter(tipo='SAIDA', is_active=True)
             .values_list('descricao_padrao', flat=True)
         )
         categoria_investimento = Categoria.objects.filter(nome__iexact='Investimento', tipo='ENTRADA').first()

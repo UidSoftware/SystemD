@@ -11,7 +11,7 @@ def _ultimo_saldo(conta):
     ultimo = (
         LivroCaixa.objects.select_for_update()
         .filter(conta=conta)
-        .order_by('data', 'criado_em')
+        .order_by('data', 'created_at')
         .last()
     )
     if ultimo:
@@ -22,7 +22,7 @@ def _ultimo_saldo(conta):
 def _reconstruir_cadeia(conta):
     lancamentos = list(
         LivroCaixa.objects.filter(conta=conta)
-        .order_by('data', 'criado_em')
+        .order_by('data', 'created_at')
         .select_for_update()
     )
     saldo = conta.saldo_inicial
@@ -33,7 +33,7 @@ def _reconstruir_cadeia(conta):
     LivroCaixa.objects.bulk_update(lancamentos, ['saldo_anterior', 'saldo_atual'])
 
 
-def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, criado_por=None):
+def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, created_by=None):
     with transaction.atomic():
         # Serializa todos os lançamentos da mesma conta — previne race condition
         with connection.cursor() as cursor:
@@ -67,7 +67,7 @@ def _gerar_lancamento(conta, tipo, origem, origem_id, descricao, valor, data, cr
             data=data,
             saldo_anterior=saldo_anterior,
             saldo_atual=saldo_atual,
-            criado_por=criado_por,
+            created_by=created_by,
         )
 
         # _ultimo_saldo() pega o lançamento de maior data já existente, o que só
@@ -93,7 +93,7 @@ def aporte_para_livro_caixa(sender, instance, created, **kwargs):
         descricao=f'Aporte: {instance.descricao}',
         valor=instance.valor,
         data=instance.data,
-        criado_por=instance.criado_por,
+        created_by=instance.created_by,
     )
 
 
@@ -109,7 +109,7 @@ def receita_para_livro_caixa(sender, instance, **kwargs):
         descricao=instance.descricao,
         valor=instance.valor_liquido,
         data=instance.recebimento,
-        criado_por=instance.criado_por,
+        created_by=instance.created_by,
     )
 
 
@@ -125,5 +125,5 @@ def despesa_para_livro_caixa(sender, instance, **kwargs):
         descricao=instance.descricao,
         valor=instance.valor_liquido,
         data=instance.pagamento,
-        criado_por=instance.criado_por,
+        created_by=instance.created_by,
     )

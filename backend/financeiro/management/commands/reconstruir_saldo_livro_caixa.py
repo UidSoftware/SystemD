@@ -14,7 +14,7 @@ class Command(BaseCommand):
             with transaction.atomic():
                 lancamentos = list(
                     LivroCaixa.objects.filter(conta=conta)
-                    .order_by('data', 'criado_em')
+                    .order_by('data', 'created_at')
                     .select_for_update()
                 )
                 if not lancamentos:

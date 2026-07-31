@@ -23,7 +23,7 @@ from .serializers import (
 
 
 class CategoriaViewSet(ModelViewSet):
-    queryset = Categoria.objects.filter(ativo=True).order_by('nome')
+    queryset = Categoria.objects.filter(is_active=True).order_by('nome')
     serializer_class = CategoriaSerializer
     permission_classes = [IsAdminOrFinanceiro]
     filter_backends = [DjangoFilterBackend]
@@ -37,14 +37,14 @@ class CategoriaViewSet(ModelViewSet):
 
 
 class ContaViewSet(AuditMixin, ModelViewSet):
-    queryset = Conta.objects.filter(ativo=True).order_by('nome')
+    queryset = Conta.objects.filter(is_active=True).order_by('nome')
     serializer_class = ContaSerializer
     permission_classes = [IsAdminOrFinanceiro]
     filter_backends = [SearchFilter]
     search_fields = ['nome']
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
@@ -70,7 +70,7 @@ class ContaViewSet(AuditMixin, ModelViewSet):
             return Response({'erro': 'Valor deve ser maior que zero.'}, status=400)
 
         try:
-            conta_destino = Conta.objects.get(id=conta_destino_id, ativo=True)
+            conta_destino = Conta.objects.get(id=conta_destino_id, is_active=True)
         except Conta.DoesNotExist:
             return Response({'erro': 'Conta destino nao encontrada.'}, status=400)
 
@@ -83,7 +83,7 @@ class ContaViewSet(AuditMixin, ModelViewSet):
             return Response({'erro': 'Data invalida.'}, status=400)
 
         def ultimo_saldo(conta):
-            ult = LivroCaixa.objects.select_for_update().filter(conta=conta).order_by('-data', '-criado_em').first()
+            ult = LivroCaixa.objects.select_for_update().filter(conta=conta).order_by('-data', '-created_at').first()
             return ult.saldo_atual if ult else conta.saldo_inicial
 
         with transaction.atomic():
@@ -97,7 +97,7 @@ class ContaViewSet(AuditMixin, ModelViewSet):
                 data=data,
                 saldo_anterior=saldo_ant_origem,
                 saldo_atual=saldo_ant_origem - valor,
-                criado_por=request.user,
+                created_by=request.user,
             )
             saldo_ant_destino = ultimo_saldo(conta_destino)
             LivroCaixa.objects.create(
@@ -109,14 +109,14 @@ class ContaViewSet(AuditMixin, ModelViewSet):
                 data=data,
                 saldo_anterior=saldo_ant_destino,
                 saldo_atual=saldo_ant_destino + valor,
-                criado_por=request.user,
+                created_by=request.user,
             )
 
         return Response({'ok': True, 'mensagem': f'Transferencia de R$ {valor} realizada com sucesso.'})
 
 
 class AporteViewSet(AuditMixin, ModelViewSet):
-    queryset = Aporte.objects.filter(ativo=True).select_related('conta').order_by('-data')
+    queryset = Aporte.objects.filter(is_active=True).select_related('conta').order_by('-data')
     serializer_class = AporteSerializer
     permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
@@ -124,7 +124,7 @@ class AporteViewSet(AuditMixin, ModelViewSet):
     ordering_fields = ['data', 'valor']
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
@@ -132,7 +132,7 @@ class AporteViewSet(AuditMixin, ModelViewSet):
 
 class ReceitaViewSet(AuditMixin, ModelViewSet):
     queryset = (
-        Receita.objects.filter(ativo=True)
+        Receita.objects.filter(is_active=True)
         .select_related('cliente', 'os', 'conta')
         .order_by('vencimento')
     )
@@ -170,7 +170,7 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
                 return base
 
             campos_base = {k: v for k, v in serializer.validated_data.items()}
-            campos_base['criado_por'] = self.request.user
+            campos_base['created_by'] = self.request.user
             pagar_primeiro = campos_base.get('status') == 'RECEBIDO'
 
             for i in range(quantidade):
@@ -180,7 +180,7 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
                 else:
                     Receita.objects.create(**campos_base)
         else:
-            serializer.save(criado_por=self.request.user)
+            serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
@@ -215,7 +215,7 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
 
 class DespesaViewSet(AuditMixin, ModelViewSet):
     queryset = (
-        Despesa.objects.filter(ativo=True)
+        Despesa.objects.filter(is_active=True)
         .select_related('conta')
         .order_by('vencimento')
     )
@@ -257,7 +257,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
                 return base
 
             campos_base = {k: v for k, v in dados.items()}
-            campos_base['criado_por'] = self.request.user
+            campos_base['created_by'] = self.request.user
 
             pagar_primeiro = campos_base.get('status') == 'PAGO'
             for i in range(quantidade):
@@ -268,7 +268,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
                 else:
                     Despesa.objects.create(**campos_base)
         else:
-            serializer.save(criado_por=self.request.user)
+            serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
@@ -325,7 +325,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
         conta = despesa.conta
         if conta_id:
             try:
-                conta = Conta.objects.get(id=conta_id, ativo=True)
+                conta = Conta.objects.get(id=conta_id, is_active=True)
             except Conta.DoesNotExist:
                 return Response({'conta': 'Conta não encontrada.'}, status=400)
 
@@ -333,7 +333,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
             ultimo = (
                 LivroCaixa.objects.select_for_update()
                 .filter(conta=conta)
-                .order_by('-data', '-criado_em')
+                .order_by('-data', '-created_at')
                 .first()
             )
             saldo_anterior = ultimo.saldo_atual if ultimo else conta.saldo_inicial
@@ -355,7 +355,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
                 data=data_estorno,
                 saldo_anterior=saldo_anterior,
                 saldo_atual=saldo_atual,
-                criado_por=request.user,
+                created_by=request.user,
                 estorno_de=lancamento_original,
                 estornado=True,
             )
@@ -373,14 +373,14 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
 
 
 class FornecedorViewSet(AuditMixin, ModelViewSet):
-    queryset = Fornecedor.objects.filter(ativo=True).order_by('forn_nome')
+    queryset = Fornecedor.objects.filter(is_active=True).order_by('forn_nome')
     serializer_class = FornecedorSerializer
     permission_classes = [IsAdminOrFinanceiro]
     filter_backends = [SearchFilter]
     search_fields = ['forn_nome', 'forn_cnpj']
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
@@ -389,7 +389,7 @@ class FornecedorViewSet(AuditMixin, ModelViewSet):
 class LivroCaixaViewSet(ReadCreateViewSet):
     queryset = (
         LivroCaixa.objects.select_related('conta')
-        .order_by('-data', '-criado_em')
+        .order_by('-data', '-created_at')
     )
     serializer_class = LivroCaixaSerializer
     permission_classes = [IsAdminOrFinanceiro]
@@ -405,7 +405,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
     pagination_class = None
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def estornar(self, request, pk=None):
@@ -429,7 +429,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
                 data=date.today(),
                 saldo_anterior=Decimal('0'),
                 saldo_atual=Decimal('0'),
-                criado_por=request.user,
+                created_by=request.user,
                 estorno_de=lancamento,
                 estornado=True,
             )
@@ -470,7 +470,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
             except Conta.DoesNotExist:
                 saldo_atual = total_entradas - total_saidas
         else:
-            saldo_inicial_total = Conta.objects.filter(ativo=True).aggregate(
+            saldo_inicial_total = Conta.objects.filter(is_active=True).aggregate(
                 v=Sum('saldo_inicial')
             )['v'] or Decimal('0')
             saldo_atual = saldo_inicial_total + total_entradas - total_saidas
@@ -535,13 +535,13 @@ def fluxo_caixa(request):
         saldo_inicial = _saldo_antes(conta)
     else:
         saldo_inicial = Decimal('0')
-        for _c in Conta.objects.filter(ativo=True):
+        for _c in Conta.objects.filter(is_active=True):
             saldo_inicial += _saldo_antes(_c)
     total_entradas = agg['total_entradas'] or Decimal('0')
     total_saidas   = agg['total_saidas']   or Decimal('0')
     saldo_final    = saldo_inicial + total_entradas - total_saidas
 
-    lancamentos = LivroCaixaSerializer(qs.order_by('data', 'criado_em'), many=True).data
+    lancamentos = LivroCaixaSerializer(qs.order_by('data', 'created_at'), many=True).data
 
     return Response({
         'periodo':         f'{mes:02d}/{ano}',
@@ -575,10 +575,10 @@ def dre(request):
 
     for mes in range(1, 13):
         rec_qs = Receita.objects.filter(
-            recebimento__year=ano, recebimento__month=mes, status='RECEBIDO', ativo=True,
+            recebimento__year=ano, recebimento__month=mes, status='RECEBIDO', is_active=True,
         )
         desp_qs = Despesa.objects.filter(
-            pagamento__year=ano, pagamento__month=mes, status='PAGO', ativo=True, estornado=False,
+            pagamento__year=ano, pagamento__month=mes, status='PAGO', is_active=True, estornado=False,
         )
 
         # Receita financeira (rendimento de aplicação/conta remunerada) é
@@ -637,7 +637,7 @@ def receita_por_cliente(request):
     for cliente in clientes:
         qs = Receita.objects.filter(
             cliente=cliente, status='RECEBIDO',
-            recebimento__year=ano, ativo=True,
+            recebimento__year=ano, is_active=True,
         )
         total_bruto   = qs.aggregate(v=Sum('valor_bruto'))['v'] or Decimal('0')
         total_desc    = qs.aggregate(v=Sum('desconto'))['v'] or Decimal('0')
@@ -684,23 +684,23 @@ def dashboard(request):
         # movimentacao de caixa real mas nao devem contar como resultado.
         # Mesmo padrao ja usado em dre() abaixo.
         receita_mes = Receita.objects.filter(
-            ativo=True, status='RECEBIDO',
+            is_active=True, status='RECEBIDO',
             recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
         despesa_mes = Despesa.objects.filter(
-            ativo=True, estornado=False, status='PAGO',
+            is_active=True, estornado=False, status='PAGO',
             pagamento__gte=primeiro_dia, pagamento__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
         mrr = Receita.objects.filter(
-            ativo=True, tipo='MENSALIDADE', status='RECEBIDO',
+            is_active=True, tipo='MENSALIDADE', status='RECEBIDO',
             recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
         prox_30 = hoje + timedelta(days=30)
         receitas_vencer = []
         for r in (
-            Receita.objects.filter(ativo=True, status='PENDENTE', vencimento__gte=hoje, vencimento__lte=prox_30)
+            Receita.objects.filter(is_active=True, status='PENDENTE', vencimento__gte=hoje, vencimento__lte=prox_30)
             .select_related('cliente').order_by('vencimento')[:8]
         ):
             receitas_vencer.append({
@@ -711,7 +711,7 @@ def dashboard(request):
 
         despesas_vencer = []
         for d in (
-            Despesa.objects.filter(ativo=True, status='PENDENTE', vencimento__gte=hoje, vencimento__lte=prox_30)
+            Despesa.objects.filter(is_active=True, status='PENDENTE', vencimento__gte=hoje, vencimento__lte=prox_30)
             .order_by('vencimento')[:8]
         ):
             despesas_vencer.append({
@@ -733,15 +733,15 @@ def dashboard(request):
             # Mesmo motivo do bloco receita_mes/despesa_mes acima — resultado
             # operacional, nao soma direta de LivroCaixa.
             rec = Receita.objects.filter(
-                ativo=True, status='RECEBIDO', recebimento__gte=p, recebimento__lte=u,
+                is_active=True, status='RECEBIDO', recebimento__gte=p, recebimento__lte=u,
             ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
             des = Despesa.objects.filter(
-                ativo=True, estornado=False, status='PAGO', pagamento__gte=p, pagamento__lte=u,
+                is_active=True, estornado=False, status='PAGO', pagamento__gte=p, pagamento__lte=u,
             ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
             grafico.append({'mes': f'{y}-{m:02d}', 'label': MESES_PT[m - 1], 'receita': rec, 'despesa': des, 'resultado': rec - des})
 
         raw_top = list(
-            Receita.objects.filter(ativo=True, status='RECEBIDO', recebimento__year=hoje.year, cliente__isnull=False)
+            Receita.objects.filter(is_active=True, status='RECEBIDO', recebimento__year=hoje.year, cliente__isnull=False)
             .values('cliente__nome_empresa')
             .annotate(total=Sum('valor_liquido'))
             .order_by('-total')[:5]
@@ -753,11 +753,11 @@ def dashboard(request):
         # ultimo.saldo_atual — não é garantidamente o último elo da cadeia
         # quando há estornos/correções retroativas com data diferente da
         # data de criação.
-        saldo_total = Conta.objects.filter(ativo=True).aggregate(
+        saldo_total = Conta.objects.filter(is_active=True).aggregate(
             v=Sum('saldo_inicial')
         )['v'] or Decimal('0')
         agg_saldo = LivroCaixa.objects.filter(
-            conta__ativo=True, estornado=False,
+            conta__is_active=True, estornado=False,
         ).aggregate(
             e=Sum('valor', filter=Q(tipo='ENTRADA')),
             s=Sum('valor', filter=Q(tipo='SAIDA')),
@@ -774,8 +774,8 @@ def dashboard(request):
             'despesas_vencer': despesas_vencer,
             'grafico_6_meses': grafico,
             'top_clientes': top_clientes,
-            'receitas_atrasadas': Receita.objects.filter(ativo=True, status='ATRASADO').count(),
-            'despesas_atrasadas': Despesa.objects.filter(ativo=True, status='ATRASADO').count(),
+            'receitas_atrasadas': Receita.objects.filter(is_active=True, status='ATRASADO').count(),
+            'despesas_atrasadas': Despesa.objects.filter(is_active=True, status='ATRASADO').count(),
         })
 
     if is_ops:
@@ -832,7 +832,7 @@ class ConciliacaoViewSet(ModelViewSet):
     filterset_fields   = ['conta', 'status']
 
     def get_queryset(self):
-        return ConciliacaoExtrato.objects.filter(ativo=True).order_by('-processado_em')
+        return ConciliacaoExtrato.objects.filter(is_active=True).order_by('-processado_em')
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -847,8 +847,8 @@ class ConciliacaoViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """Soft delete — nunca objeto.delete() (regra global do CLAUDE.md)."""
         instance = self.get_object()
-        instance.ativo = False
-        instance.save(update_fields=['ativo'])
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['post'], url_path='processar')
@@ -908,7 +908,7 @@ class ConciliacaoViewSet(ModelViewSet):
 
     def _processar_arquivo(self, arquivo, nome_conta, mes_str, senha):
         try:
-            conta = Conta.objects.get(nome__iexact=nome_conta, ativo=True)
+            conta = Conta.objects.get(nome__iexact=nome_conta, is_active=True)
         except Conta.DoesNotExist:
             return Response({'erro': f'Conta "{nome_conta}" não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -960,7 +960,7 @@ class ConciliacaoViewSet(ModelViewSet):
                 data__gte=primeiro_dia,
                 data__lt=ultimo_dia,
                 estornado=False,
-            ).order_by('data', 'criado_em')
+            ).order_by('data', 'created_at')
         )
 
         usados_sistema = set()
@@ -1131,20 +1131,20 @@ class PadraoSeguroConciliacaoViewSet(ModelViewSet):
     serializer_class   = PadraoSeguroConciliacaoSerializer
     permission_classes = [IsAdminOrFinanceiro]
     filter_backends    = [DjangoFilterBackend]
-    filterset_fields   = ['tipo', 'ativo']
+    filterset_fields   = ['tipo', 'is_active']
 
     def get_queryset(self):
-        return PadraoSeguroConciliacao.objects.filter(ativo=True).order_by('tipo', 'descricao_padrao')
+        return PadraoSeguroConciliacao.objects.filter(is_active=True).order_by('tipo', 'descricao_padrao')
 
     def perform_create(self, serializer):
-        serializer.save(criado_por=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()
 
     def destroy(self, request, *args, **kwargs):
-        """Soft delete — seta ativo=False em vez de deletar do banco."""
+        """Soft delete — seta is_active=False em vez de deletar do banco."""
         instance = self.get_object()
-        instance.ativo = False
-        instance.save(update_fields=['ativo'])
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -35,6 +35,8 @@ const icons = {
 const menuRelatorios = [
   { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa',     emoji: '📈' },
   { label: 'DRE',            path: '/sistema/financeiro/dre',              emoji: '📉' },
+  { label: 'Balanço Patrimonial', path: '/sistema/financeiro/balanco',    emoji: '⚖️' },
+  { label: 'Indicadores CFO', path: '/sistema/financeiro/indicadores',   emoji: '🧭' },
   { label: 'Receitas',       path: '/sistema/relatorios/receitas',         emoji: '💵' },
   { label: 'Despesas',       path: '/sistema/relatorios/despesas',         emoji: '💸' },
   { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
@@ -45,6 +47,8 @@ const menuRelatorios = [
 const menuContabilidade = [
   { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa', emoji: '📈' },
   { label: 'DRE',            path: '/sistema/financeiro/dre',         emoji: '📉' },
+  { label: 'Balanço Patrimonial', path: '/sistema/financeiro/balanco', emoji: '⚖️' },
+  { label: 'Indicadores CFO', path: '/sistema/financeiro/indicadores', emoji: '🧭' },
   { label: 'Livro Caixa',    path: '/sistema/financeiro/livro-caixa', emoji: '📒' },
   { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente', emoji: '👥' },
   { label: 'Receitas',       path: '/sistema/relatorios/receitas',    emoji: '💵' },

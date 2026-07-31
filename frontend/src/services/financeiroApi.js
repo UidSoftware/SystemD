@@ -74,4 +74,7 @@ export const financeiroApi = {
   fluxoCaixa:            (p) => f('/fluxo-caixa/', p),
   dre:                   (p) => f('/dre/', p),
   receitaPorCliente:     (p) => f('/receita-por-cliente/', p),
+  balanco:               (p) => f('/balanco/', p),
+  fluxoProjetado:        ()  => f('/fluxo-projetado/'),
+  indicadoresCfo:        ()  => f('/indicadores/'),
 }

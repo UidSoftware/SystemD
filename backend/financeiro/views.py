@@ -15,6 +15,7 @@ from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinanceiroOrContabilidade, IsAdminOrOperacionalOrFinanceiro
 
 from .signals import _reconstruir_cadeia
+from .relatorios import calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
 from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
 from .serializers import (
     AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
@@ -664,6 +665,34 @@ def receita_por_cliente(request):
 
     resultado.sort(key=lambda x: x['total_liquido'], reverse=True)
     return Response(resultado)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def balanco_patrimonial(request):
+    """GET /api/financeiro/balanco/?data=2026-07-31 -- backport UidCore (SystemD 2.0.0)"""
+    data_str = request.query_params.get('data')
+    data_ref = None
+    if data_str:
+        try:
+            data_ref = date.fromisoformat(data_str)
+        except ValueError:
+            return Response({'detail': 'Data inválida. Use YYYY-MM-DD.'}, status=400)
+    return Response(calcular_balanco(data_ref))
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def fluxo_projetado(request):
+    """GET /api/financeiro/fluxo-projetado/ -- backport UidCore (SystemD 2.0.0)"""
+    return Response(calcular_fluxo_projetado())
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def indicadores_cfo(request):
+    """GET /api/financeiro/indicadores/ -- backport UidCore (SystemD 2.0.0)"""
+    return Response(calcular_indicadores_cfo())
 
 
 @api_view(['GET'])

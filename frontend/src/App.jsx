@@ -45,6 +45,8 @@ import AportesPage from './pages/sistema/financeiro/AportesPage'
 import VisaoGeralPage from './pages/sistema/financeiro/VisaoGeralPage'
 import DREPage from './pages/sistema/financeiro/DREPage'
 import PorClientePage from './pages/sistema/financeiro/PorClientePage'
+import BalancoPage from './pages/sistema/financeiro/BalancoPage'
+import IndicadoresPage from './pages/sistema/financeiro/IndicadoresPage'
 import ReceitasRecebidasPage from './pages/sistema/financeiro/ReceitasRecebidasPage'
 import DespesasPagasPage from './pages/sistema/financeiro/DespesasPagasPage'
 // Relatorios
@@ -102,6 +104,8 @@ export default function App() {
           <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FluxoCaixaPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DREPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><PorClientePage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/balanco" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><BalancoPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/indicadores" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><IndicadoresPage /></PrivateRoute>} />
           {/* Relatorios */}
           <Route path="/sistema/relatorios/receitas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><ReceitasRelatorioPage /></PrivateRoute>} />
           <Route path="/sistema/relatorios/despesas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DespesasRelatorioPage /></PrivateRoute>} />

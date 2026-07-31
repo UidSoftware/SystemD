@@ -2,8 +2,8 @@ from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from usuarios.permissions import IsAdminOrOperacional
-from .models import Produto
-from .serializers import ProdutoSerializer
+from .models import ConversaoUnidade, EntradaEstoque, Produto
+from .serializers import ConversaoUnidadeSerializer, EntradaEstoqueSerializer, ProdutoSerializer
 
 
 class ProdutoViewSet(viewsets.ModelViewSet):
@@ -31,3 +31,35 @@ class ProdutoViewSet(viewsets.ModelViewSet):
         instance.ativo = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ConversaoUnidadeViewSet(viewsets.ModelViewSet):
+    serializer_class = ConversaoUnidadeSerializer
+    filter_backends  = [DjangoFilterBackend]
+    filterset_fields = ['produto']
+
+    def get_permissions(self):
+        return [IsAdminOrOperacional()]
+
+    def get_queryset(self):
+        return ConversaoUnidade.objects.select_related('produto').all()
+
+
+class EntradaEstoqueViewSet(viewsets.ModelViewSet):
+    """Sempre cresce o estoque — nunca expor PUT/PATCH que altere quantidade_base
+    retroativamente (o incremento em Produto.quantidade_estoque so roda na criacao,
+    ver EntradaEstoque.save()). Correcao de erro de lancamento e via nova entrada
+    negativa (quantidade negativa), nao editando uma entrada existente."""
+    serializer_class = EntradaEstoqueSerializer
+    http_method_names = ['get', 'post', 'head', 'options']
+    filter_backends  = [DjangoFilterBackend]
+    filterset_fields = ['produto']
+
+    def get_permissions(self):
+        return [IsAdminOrOperacional()]
+
+    def get_queryset(self):
+        return EntradaEstoque.objects.select_related('produto', 'criado_por').all()
+
+    def perform_create(self, serializer):
+        serializer.save(criado_por=self.request.user)

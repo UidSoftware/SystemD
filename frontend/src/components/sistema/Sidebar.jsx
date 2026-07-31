@@ -79,6 +79,7 @@ const menuPorPerfil = {
     { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
     { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
     { label: 'Produtos',      path: '/sistema/produtos',               emoji: '🛍️' },
+    { label: 'Pedidos',       path: '/sistema/pedidos',                emoji: '📦' },
     { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
     { label: 'Contratos',     path: '/sistema/contratos',                               emoji: '📄' },

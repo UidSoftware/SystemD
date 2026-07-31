@@ -71,3 +71,70 @@ class ItemOrcamento(models.Model):
     class Meta:
         ordering = ['ordem']
         verbose_name = 'Item de Orçamento'
+
+
+class Pedido(models.Model):
+    """
+    Separado de Orcamento de proposito (Manutencao SystemD 2.0.0, Fase 2):
+    um pedido pode nascer de um orcamento aprovado (FK opcional) ou ser
+    criado direto, sem depender de orcamento previo. Orcamento continua
+    intocado -- numero sequencial simples, sync com ContratID -- nada disso
+    muda aqui.
+    """
+    STATUS = [
+        ('pendente', 'Pendente'),
+        ('confirmado', 'Confirmado'),
+        ('em_producao', 'Em Produção'),
+        ('entregue', 'Entregue'),
+        ('cancelado', 'Cancelado'),
+    ]
+
+    cliente           = models.ForeignKey('clientes.Cliente', null=True, blank=True, on_delete=models.SET_NULL, related_name='pedidos')
+    orcamento         = models.ForeignKey(Orcamento, null=True, blank=True, on_delete=models.SET_NULL, related_name='pedidos')
+    numero            = models.PositiveIntegerField(editable=False)
+    status            = models.CharField(max_length=20, choices=STATUS, default='pendente')
+    data_pedido       = models.DateField(default=date.today)
+    entrega_prevista  = models.DateField(null=True, blank=True)
+    observacoes       = models.TextField(blank=True)
+
+    criado_por    = models.ForeignKey('usuarios.Usuario', on_delete=models.CASCADE, related_name='pedidos_criados')
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    ativo         = models.BooleanField(default=True)
+
+    @property
+    def subtotal(self):
+        return sum(item.subtotal for item in self.itens.all())
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            ultimo = Pedido.objects.order_by('-numero').first()
+            self.numero = (ultimo.numero + 1) if ultimo else 1
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['-criado_em']
+        verbose_name = 'Pedido'
+        verbose_name_plural = 'Pedidos'
+
+    def __str__(self):
+        nome = self.cliente.nome_empresa if self.cliente else 'sem vínculo'
+        return f'#{self.numero} — {nome}'
+
+
+class ItemPedido(models.Model):
+    pedido         = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='itens')
+    produto        = models.ForeignKey('produtos.Produto', null=True, blank=True, on_delete=models.SET_NULL, related_name='itens_pedido')
+    ordem          = models.PositiveSmallIntegerField(default=1)
+    descricao      = models.CharField(max_length=300)
+    quantidade     = models.DecimalField(max_digits=10, decimal_places=3, default=1)
+    unidade        = models.CharField(max_length=10, default='UN')
+    valor_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+
+    @property
+    def subtotal(self):
+        return self.quantidade * self.valor_unitario
+
+    class Meta:
+        ordering = ['ordem']
+        verbose_name = 'Item de Pedido'

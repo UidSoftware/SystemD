@@ -35,6 +35,11 @@ const UNIDADES = [
   { key: 'LICENCA', label: 'Licença'  },
   { key: 'GB',      label: 'GB'       },
   { key: 'DIA',     label: 'Dia'      },
+  { key: 'PT',      label: 'Pacote'   },
+  { key: 'CX',      label: 'Caixa'    },
+  { key: 'KG',      label: 'Quilograma' },
+  { key: 'L',       label: 'Litro'    },
+  { key: 'M',       label: 'Metro'    },
 ]
 const TIPO_CORES = {
   SERVICO: { bg: 'rgba(6,59,248,0.15)',   color: '#6b8fff' },
@@ -52,6 +57,7 @@ function fmt(val) {
 const FORM_VAZIO = {
   nome: '', tipo: 'SERVICO', categoria: '', descricao: '',
   unidade: 'UN', preco_padrao: '', preco_minimo: '',
+  codigo_barras: '', estoque_minimo: '',
 }
 
 export default function ProdutosPage() {
@@ -89,8 +95,28 @@ export default function ProdutosPage() {
     setEditandoId(p.id)
     setModal({ nome: p.nome || '', tipo: p.tipo || 'SERVICO', categoria: p.categoria || '',
       descricao: p.descricao || '', unidade: p.unidade || 'UN',
-      preco_padrao: p.preco_padrao || '', preco_minimo: p.preco_minimo || '' })
+      preco_padrao: p.preco_padrao || '', preco_minimo: p.preco_minimo || '',
+      codigo_barras: p.codigo_barras || '', estoque_minimo: p.estoque_minimo || '',
+      quantidade_estoque: p.quantidade_estoque })
     setErro('')
+  }
+
+  const [modalEntrada, setModalEntrada] = useState(null)
+  const abrirEntrada = (p) => setModalEntrada({ produto: p, quantidade: '', unidade: p.unidade, nota_fiscal: '' })
+  const salvarEntrada = async () => {
+    if (!modalEntrada.quantidade) { return }
+    try {
+      await api.post('/entradas-estoque/', {
+        produto: modalEntrada.produto.id,
+        quantidade: modalEntrada.quantidade,
+        unidade: modalEntrada.unidade,
+        nota_fiscal: modalEntrada.nota_fiscal,
+      })
+      setModalEntrada(null)
+      carregar(pagina)
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Erro ao registrar entrada de estoque.')
+    }
   }
 
   const excluir = async (id) => {
@@ -104,7 +130,8 @@ export default function ProdutosPage() {
     if (!modal.preco_padrao) { setErro('Preencha o preço padrão.'); return }
     setSalvando(true); setErro('')
     try {
-      const payload = { ...modal, preco_minimo: modal.preco_minimo || null }
+      const { quantidade_estoque, ...resto } = modal
+      const payload = { ...resto, preco_minimo: modal.preco_minimo || null, estoque_minimo: modal.estoque_minimo || 0 }
       if (editandoId) await api.patch('/produtos/' + editandoId + '/', payload)
       else            await api.post('/produtos/', payload)
       setModal(null); carregar(pagina)
@@ -154,16 +181,16 @@ export default function ProdutosPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Tipo', 'Nome', 'Categoria', 'Unidade', 'Preço Padrão', 'Preço Mínimo', 'Status', 'Ações'].map(h => (
+                {['Tipo', 'Nome', 'Categoria', 'Unidade', 'Estoque', 'Preço Padrão', 'Preço Mínimo', 'Status', 'Ações'].map(h => (
                   <th key={h} style={thS}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {carregando ? (
-                <tr><td colSpan={8} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</td></tr>
+                <tr><td colSpan={9} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</td></tr>
               ) : lista.length === 0 ? (
-                <tr><td colSpan={8} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhum item no catálogo</td></tr>
+                <tr><td colSpan={9} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhum item no catálogo</td></tr>
               ) : lista.map(p => {
                 const tc = TIPO_CORES[p.tipo] || TIPO_CORES.SERVICO
                 return (
@@ -178,6 +205,13 @@ export default function ProdutosPage() {
                     <td style={{ ...tdS, fontWeight: 600 }}>{p.nome}</td>
                     <td style={{ ...tdS, color: '#94a3b8' }}>{p.categoria || '—'}</td>
                     <td style={{ ...tdS, color: '#a78bca', fontSize: 12 }}>{unLabel(p.unidade)}</td>
+                    <td style={tdS}>
+                      {p.tipo !== 'PRODUTO' ? <span style={{ color: '#64748b' }}>—</span> : (
+                        <span style={{ color: parseFloat(p.quantidade_estoque) <= parseFloat(p.estoque_minimo) ? '#f87171' : '#e2e8f0', fontWeight: 600 }}>
+                          {parseFloat(p.quantidade_estoque).toLocaleString('pt-BR')} {unLabel(p.unidade)}
+                        </span>
+                      )}
+                    </td>
                     <td style={{ ...tdS, fontWeight: 600, color: '#34d399' }}>{fmt(p.preco_padrao)}</td>
                     <td style={{ ...tdS, color: '#94a3b8' }}>{p.preco_minimo ? fmt(p.preco_minimo) : '—'}</td>
                     <td style={tdS}>
@@ -186,6 +220,12 @@ export default function ProdutosPage() {
                         : <span style={{ color: '#64748b', fontSize: 12 }}>○ Inativo</span>}
                     </td>
                     <td style={tdS}>
+                      {p.tipo === 'PRODUTO' && (
+                        <button onClick={() => abrirEntrada(p)}
+                          style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
+                          + Estoque
+                        </button>
+                      )}
                       <button onClick={() => abrirEditar(p)}
                         style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
                         Editar
@@ -269,6 +309,26 @@ export default function ProdutosPage() {
                   onChange={e => set('preco_minimo', e.target.value)} placeholder="Limite de desconto" />
               </Fld>
 
+              {modal.tipo === 'PRODUTO' && (
+                <>
+                  <Fld label="Código de barras">
+                    <input style={IS} value={modal.codigo_barras}
+                      onChange={e => set('codigo_barras', e.target.value)} placeholder="Opcional" />
+                  </Fld>
+
+                  <Fld label="Estoque mínimo">
+                    <input type="number" step="0.001" min="0" style={IS} value={modal.estoque_minimo}
+                      onChange={e => set('estoque_minimo', e.target.value)} placeholder="Alerta abaixo deste valor" />
+                  </Fld>
+
+                  {editandoId && (
+                    <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#a78bca' }}>
+                      Estoque atual: <strong style={{ color: '#e2e8f0' }}>{parseFloat(modal.quantidade_estoque || 0).toLocaleString('pt-BR')} {unLabel(modal.unidade)}</strong> — só muda via "+ Estoque" na listagem.
+                    </div>
+                  )}
+                </>
+              )}
+
               <div style={{ gridColumn: '1 / -1' }}>
                 <Fld label="Descrição técnica">
                   <textarea rows={3} style={{ ...IS, resize: 'vertical', lineHeight: 1.6 }}
@@ -286,6 +346,41 @@ export default function ProdutosPage() {
               <button onClick={salvar} disabled={salvando}
                 style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
                 {salvando ? 'Salvando...' : editandoId ? 'Salvar alterações' : 'Criar Item'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal — Entrada de Estoque */}
+      {modalEntrada && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 420, padding: 28 }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: 17, fontWeight: 700, marginBottom: 4 }}>+ Estoque</h2>
+            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 18 }}>{modalEntrada.produto.nome} — atual: {parseFloat(modalEntrada.produto.quantidade_estoque).toLocaleString('pt-BR')} {unLabel(modalEntrada.produto.unidade)}</p>
+
+            <Fld label="Quantidade" required>
+              <input type="number" step="0.001" min="0" style={IS} value={modalEntrada.quantidade}
+                onChange={e => setModalEntrada(m => ({ ...m, quantidade: e.target.value }))} placeholder="0" />
+            </Fld>
+            <Fld label="Unidade da entrada">
+              <select style={IS} value={modalEntrada.unidade}
+                onChange={e => setModalEntrada(m => ({ ...m, unidade: e.target.value }))}>
+                {UNIDADES.map(u => <option key={u.key} value={u.key}>{u.label}</option>)}
+              </select>
+            </Fld>
+            <Fld label="Nota fiscal">
+              <input style={IS} value={modalEntrada.nota_fiscal}
+                onChange={e => setModalEntrada(m => ({ ...m, nota_fiscal: e.target.value }))} placeholder="Opcional" />
+            </Fld>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 10 }}>
+              <button onClick={() => setModalEntrada(null)}
+                style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={salvarEntrada}
+                style={{ background: '#34d399', color: '#052e1b', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Registrar entrada
               </button>
             </div>
           </div>

@@ -18,6 +18,7 @@ import UnidadesPage from './pages/sistema/UnidadesPage'
 import EscritorioPage from './pages/sistema/EscritorioPage'
 import ContratosPage from './pages/sistema/ContratosPage'
 import OrcamentosPage from './pages/sistema/OrcamentosPage'
+import PedidosPage    from './pages/sistema/PedidosPage'
 import ProdutosPage   from './pages/sistema/ProdutosPage'
 import BoardPage from './pages/sistema/office/BoardPage'
 import AgentsPage from './pages/sistema/office/AgentsPage'
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="/sistema/office/escritorio" element={<PrivateRoute perfisPermitidos={['ADMIN']}><EscritorioPage /></PrivateRoute>} />
           <Route path="/sistema/produtos" element={<PrivateRoute perfisPermitidos={['ADMIN','OPERACIONAL']}><ProdutosPage /></PrivateRoute>} />
           <Route path="/sistema/orcamentos" element={<PrivateRoute perfisPermitidos={['ADMIN']}><OrcamentosPage /></PrivateRoute>} />
+          <Route path="/sistema/pedidos" element={<PrivateRoute perfisPermitidos={['ADMIN','OPERACIONAL']}><PedidosPage /></PrivateRoute>} />
           <Route path="/sistema/contratos" element={<PrivateRoute perfisPermitidos={['ADMIN']}><ContratosPage /></PrivateRoute>} />
           <Route path="/sistema/office/board" element={<PrivateRoute perfisPermitidos={['ADMIN']}><BoardPage /></PrivateRoute>} />
           <Route path="/sistema/office/agents" element={<PrivateRoute perfisPermitidos={['ADMIN']}><AgentsPage /></PrivateRoute>} />

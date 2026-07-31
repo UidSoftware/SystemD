@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 
-from .models import Orcamento
-from .serializers import OrcamentoSerializer
+from .models import Orcamento, Pedido
+from .serializers import OrcamentoSerializer, PedidoSerializer
 from .services import sync_to_contratid
 from usuarios.permissions import IsAdmin, IsAdminOrOperacional
 
@@ -48,3 +48,31 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         if ok:
             return Response({'ok': True, 'contratid_id': result})
         return Response({'ok': False, 'erro': result}, status=500)
+
+
+class PedidoViewSet(viewsets.ModelViewSet):
+    """Sem sync com ContratID — essa integração é exclusiva do Orcamento."""
+    serializer_class   = PedidoSerializer
+    permission_classes = [IsAdminOrOperacional]
+    filter_backends    = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields   = ['status', 'cliente', 'orcamento']
+    search_fields      = ['cliente__nome_empresa']
+    ordering_fields    = ['criado_em', 'numero', 'data_pedido', 'entrega_prevista']
+    ordering           = ['-criado_em']
+
+    def get_queryset(self):
+        return (
+            Pedido.objects
+            .filter(ativo=True)
+            .select_related('cliente', 'orcamento', 'criado_por')
+            .prefetch_related('itens')
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(criado_por=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

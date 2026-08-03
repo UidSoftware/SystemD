@@ -6,17 +6,39 @@ from django.db.models import Sum, Q
 from .models import Aporte, Conta, Despesa, LivroCaixa, Receita
 
 
-def _saldo_total_contas():
-    saldo_inicial = Conta.objects.filter(is_active=True).aggregate(
-        v=Sum('saldo_inicial')
-    )['v'] or Decimal('0')
+def _saldo_contas_por_tipo(tipos):
+    """Soma saldo_inicial + (entradas - saidas) só das contas dos tipos informados."""
+    contas = Conta.objects.filter(is_active=True, tipo__in=tipos)
+    saldo_inicial = contas.aggregate(v=Sum('saldo_inicial'))['v'] or Decimal('0')
     agg = LivroCaixa.objects.filter(
-        conta__is_active=True, estornado=False,
+        conta__in=contas, estornado=False,
     ).aggregate(
         e=Sum('valor', filter=Q(tipo='ENTRADA')),
         s=Sum('valor', filter=Q(tipo='SAIDA')),
     )
     return saldo_inicial + (agg['e'] or Decimal('0')) - (agg['s'] or Decimal('0'))
+
+
+def _saldo_total_contas():
+    # Caixa e equivalentes = contas de banco/caixa reais (Corrente/Poupança/
+    # Caixa). CARTEIRA (cartão de crédito) fica de fora de propósito: saldo
+    # negativo nela é dívida (Passivo Circulante), não redução de caixa
+    # disponível -- ver _divida_cartao_credito() e calcular_balanco(). Antes
+    # dessa separação, uma fatura em aberto reduzia "caixa e equivalentes"
+    # (e o runway/saldo projetado) como se fosse dinheiro a menos no banco,
+    # quando na real é dívida a pagar -- achado real (SystemD, 2026-08-02).
+    return _saldo_contas_por_tipo(['CORRENTE', 'POUPANCA', 'CAIXA'])
+
+
+def _divida_cartao_credito():
+    """Soma o saldo negativo (fatura em aberto) das contas tipo=CARTEIRA.
+    Retorna valor positivo representando a dívida (0 se não houver nenhuma).
+    Nota: soma todas as contas CARTEIRA juntas antes de checar o sinal -- com
+    múltiplos cartões, uma positiva poderia mascarar outra negativa. Não é
+    problema hoje (só existe 1 conta CARTEIRA), mas vale revisitar se um
+    segundo cartão for cadastrado."""
+    saldo_cartoes = _saldo_contas_por_tipo(['CARTEIRA'])
+    return -saldo_cartoes if saldo_cartoes < 0 else Decimal('0')
 
 
 def _calcular_dre_mes(ano, mes):
@@ -84,11 +106,13 @@ def calcular_balanco(data_ref=None):
         is_active=True, status__in=['PENDENTE', 'ATRASADO'], estornado=False,
     ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
+    cartao_credito = _divida_cartao_credito()
+
     emprestimos = Aporte.objects.filter(
         is_active=True, tipo='EMPRESTIMO',
     ).aggregate(v=Sum('valor'))['v'] or Decimal('0')
 
-    passivo_circulante = contas_a_pagar
+    passivo_circulante = contas_a_pagar + cartao_credito
     passivo_exigivel_lp = emprestimos
     passivo_total = passivo_circulante + passivo_exigivel_lp
 
@@ -125,6 +149,7 @@ def calcular_balanco(data_ref=None):
         'passivo': {
             'circulante': {
                 'contas_a_pagar': contas_a_pagar,
+                'cartao_credito': cartao_credito,
                 'total': passivo_circulante,
             },
             'exigivel_lp': {

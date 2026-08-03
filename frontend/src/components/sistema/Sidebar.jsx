@@ -42,14 +42,17 @@ const menuRelatorios = [
   { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
 ]
 
-// So relatorio (leitura) -- mesmas telas do menuRelatorios + Livro Caixa,
-// nada de lancamento/edicao (Receitas, Despesas, Contas, Aportes ficam de fora).
+// So relatorio (leitura) -- mesmas telas do menuRelatorios + Livro Caixa +
+// Aportes, nada de lancamento/edicao (Receitas, Despesas, Contas ficam de
+// fora). Aportes liberado pra visualizacao em 03/08/2026 (backend ja
+// restringe create/update/delete a ADMIN via AporteViewSet.get_permissions).
 const menuContabilidade = [
   { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa', emoji: '📈' },
   { label: 'DRE',            path: '/sistema/financeiro/dre',         emoji: '📉' },
   { label: 'Balanço Patrimonial', path: '/sistema/financeiro/balanco', emoji: '⚖️' },
   { label: 'Indicadores CFO', path: '/sistema/financeiro/indicadores', emoji: '🧭' },
   { label: 'Livro Caixa',    path: '/sistema/financeiro/livro-caixa', emoji: '📒' },
+  { label: 'Aportes',        path: '/sistema/financeiro/aportes',     emoji: '💰' },
   { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente', emoji: '👥' },
   { label: 'Receitas',       path: '/sistema/relatorios/receitas',    emoji: '💵' },
   { label: 'Despesas',       path: '/sistema/relatorios/despesas',    emoji: '💸' },

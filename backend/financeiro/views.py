@@ -130,10 +130,19 @@ class ContaViewSet(AuditMixin, ModelViewSet):
 class AporteViewSet(AuditMixin, ModelViewSet):
     queryset = Aporte.objects.filter(is_active=True).select_related('conta').order_by('-data')
     serializer_class = AporteSerializer
-    permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['tipo', 'conta']
     ordering_fields = ['data', 'valor']
+
+    def get_permissions(self):
+        # list/retrieve (leitura) libera pra Financeiro/Contabilidade tambem;
+        # create/update/delete continua exclusivo de ADMIN -- Aporte e dado
+        # sensivel (capital social, aporte de investidor), mesmo padrao do
+        # LivroCaixaViewSet acima, nunca usar IsAdminOrFinanceiroOrContabilidade
+        # em action de escrita.
+        if self.action in ('list', 'retrieve'):
+            return [IsAdminOrFinanceiroOrContabilidade()]
+        return [IsAdmin()]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

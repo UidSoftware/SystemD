@@ -15,7 +15,7 @@ from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinanceiroOrContabilidade, IsAdminOrOperacionalOrFinanceiro
 
 from .signals import _reconstruir_cadeia
-from .relatorios import calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
+from .relatorios import _saldo_total_contas, calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
 from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita, SubCategoria
 from .serializers import (
     AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
@@ -810,21 +810,13 @@ def dashboard(request):
         )
         top_clientes = [{'cliente_nome': r['cliente__nome_empresa'], 'total': r['total']} for r in raw_top]
 
-        # Saldo total de todas as contas = saldo_inicial + soma de entradas -
-        # soma de saídas dos lançamentos não estornados. NUNCA ler
-        # ultimo.saldo_atual — não é garantidamente o último elo da cadeia
-        # quando há estornos/correções retroativas com data diferente da
-        # data de criação.
-        saldo_total = Conta.objects.filter(is_active=True).aggregate(
-            v=Sum('saldo_inicial')
-        )['v'] or Decimal('0')
-        agg_saldo = LivroCaixa.objects.filter(
-            conta__is_active=True, estornado=False,
-        ).aggregate(
-            e=Sum('valor', filter=Q(tipo='ENTRADA')),
-            s=Sum('valor', filter=Q(tipo='SAIDA')),
-        )
-        saldo_total += (agg_saldo['e'] or Decimal('0')) - (agg_saldo['s'] or Decimal('0'))
+        # Caixa e equivalentes -- reaproveita o mesmo helper do Balanço/CFO
+        # (relatorios._saldo_total_contas), que já exclui contas CARTEIRA
+        # (cartão de crédito): saldo negativo de fatura em aberto é dívida
+        # (Passivo Circulante), não redução de caixa disponível. Antes este
+        # bloco duplicava a soma sem essa exclusão -- divergia do Balanço/CFO
+        # em exatamente o valor da fatura aberta (achado real 03/08/2026).
+        saldo_total = _saldo_total_contas()
 
         data.update({
             'receita_mes': receita_mes,

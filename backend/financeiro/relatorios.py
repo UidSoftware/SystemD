@@ -45,11 +45,13 @@ def _calcular_dre_mes(ano, mes):
     # Espelha a agregação de views.py::dre() por mês -- duplicado de propósito
     # (privado, só usado por calcular_indicadores_cfo) em vez de refatorar a
     # view dre() já testada/deployada pra reaproveitar isso.
+    # Competência (referencia_mes), não caixa -- mesma decisão do dre(), ver
+    # comentário lá. Fluxo de Caixa/Conciliação continuam em caixa.
     rec_qs = Receita.objects.filter(
-        recebimento__year=ano, recebimento__month=mes, status='RECEBIDO', is_active=True,
+        referencia_mes__year=ano, referencia_mes__month=mes, status='RECEBIDO', is_active=True,
     )
     desp_qs = Despesa.objects.filter(
-        pagamento__year=ano, pagamento__month=mes, status='PAGO', is_active=True, estornado=False,
+        referencia_mes__year=ano, referencia_mes__month=mes, status='PAGO', is_active=True, estornado=False,
     )
 
     receita_operacional = rec_qs.exclude(tipo='RECEITA_FINANCEIRA').aggregate(v=Sum('valor_bruto'))['v'] or Decimal('0')
@@ -252,16 +254,20 @@ def calcular_indicadores_cfo():
     else:
         ponto_equilibrio = Decimal('0')
 
+    # Competência (referencia_mes) -- consistente com dre_mes acima, que já
+    # vem de _calcular_dre_mes (competência). Antes usava recebimento/
+    # pagamento (caixa), o que misturava base de cálculo dentro da mesma
+    # função (achado + decisão 02-03/08/2026).
     clientes_distintos = Receita.objects.filter(
         is_active=True, status='RECEBIDO',
-        recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
+        referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
         cliente__isnull=False,
     ).values('cliente').distinct().count()
     ticket_medio = (receita_liq / clientes_distintos) if clientes_distintos else Decimal('0')
 
     mrr = Receita.objects.filter(
         is_active=True, tipo='MENSALIDADE', status='RECEBIDO',
-        recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
+        referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
     ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
     saldo_total = _saldo_total_contas()
@@ -273,8 +279,9 @@ def calcular_indicadores_cfo():
         if m <= 0:
             m += 12
             y -= 1
+        # Burn rate/runway = competência, mesmo motivo do bloco acima.
         total_desp = Despesa.objects.filter(
-            pagamento__year=y, pagamento__month=m,
+            referencia_mes__year=y, referencia_mes__month=m,
             status='PAGO', is_active=True, estornado=False,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
         despesas_3m.append(total_desp)

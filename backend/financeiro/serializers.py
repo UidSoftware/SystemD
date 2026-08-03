@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import AcionistaFornecedor, Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
+from .models import AcionistaFornecedor, Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita, SubCategoria
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -11,6 +11,16 @@ class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
         fields = ['id', 'nome', 'tipo', 'is_active', 'created_at']
+        read_only_fields = ['created_at']
+
+
+class SubCategoriaSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='pk', read_only=True)
+    categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
+
+    class Meta:
+        model = SubCategoria
+        fields = ['id', 'categoria', 'categoria_nome', 'nome', 'is_active', 'created_at']
         read_only_fields = ['created_at']
 
 
@@ -45,13 +55,14 @@ class ReceitaSerializer(serializers.ModelSerializer):
     os_titulo      = serializers.CharField(source='os.titulo', read_only=True)
     conta_nome     = serializers.CharField(source='conta.nome', read_only=True)
     categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
+    subcategoria_nome = serializers.CharField(source='subcategoria.nome', read_only=True)
 
     class Meta:
         model = Receita
         fields = [
             'id', 'tipo', 'descricao',
             'cliente', 'cliente_nome', 'os', 'os_titulo',
-            'categoria', 'categoria_nome',
+            'categoria', 'categoria_nome', 'subcategoria', 'subcategoria_nome',
             'valor_bruto', 'desconto', 'valor_liquido',
             'conta', 'conta_nome',
             'vencimento', 'recebimento', 'status',
@@ -71,6 +82,7 @@ class DespesaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk', read_only=True)
     conta_nome     = serializers.CharField(source='conta.nome', read_only=True)
     categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
+    subcategoria_nome = serializers.CharField(source='subcategoria.nome', read_only=True)
 
     class Meta:
         model = Despesa
@@ -78,9 +90,9 @@ class DespesaSerializer(serializers.ModelSerializer):
             'id', 'tipo', 'descricao', 'fornecedor',
             'valor_bruto', 'desconto', 'valor_liquido',
             'conta', 'conta_nome',
-            'categoria', 'categoria_nome',
+            'categoria', 'categoria_nome', 'subcategoria', 'subcategoria_nome',
             'vencimento', 'pagamento', 'forma_pagamento', 'status',
-            'referencia_mes', 'comprovante', 'observacoes',
+            'referencia_mes', 'recorrencia_suspeita', 'comprovante', 'observacoes',
             'recorrente', 'frequencia', 'quantidade',
             'estornado', 'data_estorno', 'motivo_estorno',
             'is_active', 'created_at',

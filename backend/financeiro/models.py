@@ -104,6 +104,10 @@ class Receita(BaseModel):
         on_delete=models.SET_NULL, related_name='receitas',
         limit_choices_to={'tipo': 'ENTRADA', 'is_active': True},
     )
+    subcategoria   = models.ForeignKey(
+        'SubCategoria', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='receitas',
+    )
     valor_bruto    = models.DecimalField(max_digits=12, decimal_places=2)
     desconto       = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     valor_liquido  = models.DecimalField(max_digits=12, decimal_places=2)
@@ -124,6 +128,12 @@ class Receita(BaseModel):
 
     def save(self, *args, **kwargs):
         self.valor_liquido = self.valor_bruto - (self.desconto or Decimal('0'))
+        # Competência (mês a que a receita se refere) — usada por DRE/Burn
+        # Rate/Runway, nunca por Fluxo de Caixa/Conciliação (esses usam
+        # recebimento/data real). Default = mês do vencimento quando não
+        # informado explicitamente, pra não depender de preenchimento manual.
+        if not self.referencia_mes and self.vencimento:
+            self.referencia_mes = self.vencimento.replace(day=1)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -166,6 +176,18 @@ class FormaPagamento(models.TextChoices):
     OUTRO           = 'OUTRO',           'Outro'
 
 
+class RecorrenciaSuspeita(models.TextChoices):
+    """Recorrência que ainda não foi confirmada por repetição real (ex: um
+    imposto anual visto só 1x). Não aciona nenhuma automação — é só um
+    registro estruturado pra comparar quando o ciclo se repetir, em vez de
+    garimpar manualmente de novo. Ver achado 02/08/2026: imposto municipal
+    (Taxa Municipal alug. Cidade) visto só em jun/2026, suspeita de ser
+    anual, sem confirmação ainda."""
+    ANUAL      = 'ANUAL',      'Anual (suspeita)'
+    SEMESTRAL  = 'SEMESTRAL',  'Semestral (suspeita)'
+    TRIMESTRAL = 'TRIMESTRAL', 'Trimestral (suspeita)'
+
+
 class Despesa(BaseModel):
     tipo             = models.CharField(max_length=20, choices=TipoDespesa.choices)
     descricao        = models.CharField(max_length=255)
@@ -179,6 +201,10 @@ class Despesa(BaseModel):
         on_delete=models.SET_NULL, related_name='despesas',
         limit_choices_to={'tipo': 'SAIDA', 'is_active': True},
     )
+    subcategoria     = models.ForeignKey(
+        'SubCategoria', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='despesas',
+    )
     vencimento       = models.DateField()
     pagamento        = models.DateField(null=True, blank=True)
     forma_pagamento  = models.CharField(
@@ -186,6 +212,10 @@ class Despesa(BaseModel):
     )
     status           = models.CharField(max_length=20, choices=StatusDespesa.choices, default='PENDENTE')
     referencia_mes   = models.DateField(null=True, blank=True)
+    recorrencia_suspeita = models.CharField(
+        max_length=20, choices=RecorrenciaSuspeita.choices, blank=True,
+        help_text='Recorrência não-mensal ainda não confirmada por repetição real (ex: imposto anual visto 1x).',
+    )
     comprovante      = models.FileField(upload_to='despesas/', blank=True)
     observacoes      = models.TextField(blank=True)
     recorrente       = models.BooleanField(default=False)
@@ -207,6 +237,9 @@ class Despesa(BaseModel):
 
     def save(self, *args, **kwargs):
         self.valor_liquido = self.valor_bruto - (self.desconto or Decimal('0'))
+        # Competência — mesmo padrão do Receita.save(), ver comentário lá.
+        if not self.referencia_mes and self.vencimento:
+            self.referencia_mes = self.vencimento.replace(day=1)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -233,6 +266,24 @@ class Categoria(BaseModel):
 
     def __str__(self):
         return f'{self.nome} ({self.tipo})'
+
+
+class SubCategoria(BaseModel):
+    """Subdivisão de uma Categoria pra relatórios mais detalhados (ex:
+    categoria 'Combustível' -> subcategorias 'Moto'/'Carro'/'Caminhão').
+    Campo existe mesmo sem uso em relatório nenhum ainda — viabiliza
+    detalhamento futuro sem precisar de outra migration (pedido do
+    usuário, 02/08/2026)."""
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='subcategorias')
+    nome      = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['categoria__nome', 'nome']
+        unique_together = [['categoria', 'nome']]
+        db_table = 'fin_subcategoria'
+
+    def __str__(self):
+        return f'{self.categoria.nome} → {self.nome}'
 
 
 # ──────────────────────────────────────────────

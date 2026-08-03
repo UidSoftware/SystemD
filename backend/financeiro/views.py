@@ -16,10 +16,10 @@ from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinancei
 
 from .signals import _reconstruir_cadeia
 from .relatorios import calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
-from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita
+from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita, SubCategoria
 from .serializers import (
     AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
-    FornecedorSerializer, ItemConciliacaoSerializer, LivroCaixaSerializer, PadraoSeguroConciliacaoSerializer, ReceitaSerializer,
+    FornecedorSerializer, ItemConciliacaoSerializer, LivroCaixaSerializer, PadraoSeguroConciliacaoSerializer, ReceitaSerializer, SubCategoriaSerializer,
 )
 
 
@@ -34,6 +34,17 @@ class CategoriaViewSet(ModelViewSet):
         serializer.save()
 
     def perform_update(self, serializer):
+        serializer.save()
+
+
+class SubCategoriaViewSet(ModelViewSet):
+    queryset = SubCategoria.objects.filter(is_active=True).select_related('categoria').order_by('categoria__nome', 'nome')
+    serializer_class = SubCategoriaSerializer
+    permission_classes = [IsAdminOrFinanceiro]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['categoria']
+
+    def perform_create(self, serializer):
         serializer.save()
 
 
@@ -176,6 +187,10 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
 
             for i in range(quantidade):
                 campos_base['vencimento'] = proxima_data(vencimento_base, i, frequencia)
+                # Mesmo motivo do DespesaViewSet.perform_create -- competência
+                # acompanha o vencimento de cada parcela, nunca fica travada
+                # no valor da 1ª parcela.
+                campos_base['referencia_mes'] = campos_base['vencimento'].replace(day=1)
                 if pagar_primeiro and i > 0:
                     Receita.objects.create(**{**campos_base, 'status': 'PENDENTE', 'recebimento': None})
                 else:
@@ -263,6 +278,11 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
             pagar_primeiro = campos_base.get('status') == 'PAGO'
             for i in range(quantidade):
                 campos_base['vencimento'] = proxima_data(vencimento_base, i, frequencia)
+                # Competência acompanha o vencimento de CADA parcela -- sem
+                # isso, um referencia_mes explícito no payload (1ª parcela)
+                # ficava colado em todas as N parcelas (achado real 03/08/2026:
+                # aluguel recorrente set-dez/2026 todas com referencia_mes=09).
+                campos_base['referencia_mes'] = campos_base['vencimento'].replace(day=1)
                 if pagar_primeiro and i > 0:
                     campos_iter = {**campos_base, 'status': 'PENDENTE', 'pagamento': None, 'forma_pagamento': ''}
                     Despesa.objects.create(**campos_iter)
@@ -582,11 +602,16 @@ def dre(request):
     }
 
     for mes in range(1, 13):
+        # DRE é competência (referencia_mes), não caixa — resolve casos como
+        # aluguel antecipado (2x pago no mesmo mês, 0 no seguinte) e imposto
+        # anual concentrado num mês só. Fluxo de Caixa/Conciliação continuam
+        # em recebimento/pagamento (data real do dinheiro), propositalmente
+        # não tocados aqui (achado + decisão 02-03/08/2026).
         rec_qs = Receita.objects.filter(
-            recebimento__year=ano, recebimento__month=mes, status='RECEBIDO', is_active=True,
+            referencia_mes__year=ano, referencia_mes__month=mes, status='RECEBIDO', is_active=True,
         )
         desp_qs = Despesa.objects.filter(
-            pagamento__year=ano, pagamento__month=mes, status='PAGO', is_active=True, estornado=False,
+            referencia_mes__year=ano, referencia_mes__month=mes, status='PAGO', is_active=True, estornado=False,
         )
 
         # Receita financeira (rendimento de aplicação/conta remunerada) é
@@ -718,19 +743,20 @@ def dashboard(request):
         # contas proprias (origem=TRANSFER) e lancamentos ativo=False
         # (ex: aplicacao/resgate CDB, transferencia entre bolsos), que sao
         # movimentacao de caixa real mas nao devem contar como resultado.
-        # Mesmo padrao ja usado em dre() abaixo.
+        # Mesmo padrao ja usado em dre() abaixo -- e, desde 03/08/2026,
+        # tambem competencia (referencia_mes) igual ao dre(), nao caixa.
         receita_mes = Receita.objects.filter(
             is_active=True, status='RECEBIDO',
-            recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
+            referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
         despesa_mes = Despesa.objects.filter(
             is_active=True, estornado=False, status='PAGO',
-            pagamento__gte=primeiro_dia, pagamento__lte=ultimo_dia,
+            referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
         mrr = Receita.objects.filter(
             is_active=True, tipo='MENSALIDADE', status='RECEBIDO',
-            recebimento__gte=primeiro_dia, recebimento__lte=ultimo_dia,
+            referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
         prox_30 = hoje + timedelta(days=30)
@@ -767,12 +793,12 @@ def dashboard(request):
             p = date(y, m, 1)
             u = date(y + 1, 1, 1) - timedelta(days=1) if m == 12 else date(y, m + 1, 1) - timedelta(days=1)
             # Mesmo motivo do bloco receita_mes/despesa_mes acima — resultado
-            # operacional, nao soma direta de LivroCaixa.
+            # operacional por competência, nao soma direta de LivroCaixa.
             rec = Receita.objects.filter(
-                is_active=True, status='RECEBIDO', recebimento__gte=p, recebimento__lte=u,
+                is_active=True, status='RECEBIDO', referencia_mes__gte=p, referencia_mes__lte=u,
             ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
             des = Despesa.objects.filter(
-                is_active=True, estornado=False, status='PAGO', pagamento__gte=p, pagamento__lte=u,
+                is_active=True, estornado=False, status='PAGO', referencia_mes__gte=p, referencia_mes__lte=u,
             ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
             grafico.append({'mes': f'{y}-{m:02d}', 'label': MESES_PT[m - 1], 'receita': rec, 'despesa': des, 'resultado': rec - des})
 

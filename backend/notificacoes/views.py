@@ -57,7 +57,13 @@ class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
         SSH, o proximo ciclo do cron do disparar_hotfix pega a manutencao
         como pendente de novo e tenta a delegacao inteira do zero."""
         notificacao = self.get_object()
-        match = re.match(r'^manutencao:(\d+)$', notificacao.referencia or '')
+        # Aceita sufixos apos o id (ex: "manutencao:15:aprovacao-comercial",
+        # criado pelo Analista pra pedidos que precisam de aprovacao de
+        # escopo/orcamento antes de Forge/Loom seguirem) -- so exigir o
+        # prefixo "manutencao:<id>", nunca casar o fim exato da string
+        # (achado real: SystemD, 03/08/2026, "Liberar"/"Rodar no terminal"
+        # falhavam silenciosamente nesse tipo de notificacao).
+        match = re.match(r'^manutencao:(\d+)', notificacao.referencia or '')
         if not match:
             return Response(
                 {'erro': 'Notificacao sem referencia de manutencao valida para liberar.'},
@@ -84,7 +90,8 @@ class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
         caminho confirmado que passa do classificador de seguranca do
         Claude Code pra delegacoes encadeadas."""
         notificacao = self.get_object()
-        match = re.match(r'^manutencao:(\d+)$', notificacao.referencia or '')
+        # Mesmo motivo do liberar() acima -- aceitar sufixo apos o id.
+        match = re.match(r'^manutencao:(\d+)', notificacao.referencia or '')
         if not match:
             return Response(
                 {'erro': 'Notificacao sem referencia de manutencao valida.'},

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
+import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, formatMoeda, formatData, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 const STATUS_CFG = {
@@ -67,6 +67,9 @@ export default function ReceitasRelatorioPage() {
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Relatorio de Receitas</h1>
+          <BotaoPdf onGerar={() => financeiroApi.receitasPdf({
+            status: filtros.status || undefined, tipo: filtros.tipo || undefined, cliente: filtros.cliente || undefined,
+          })} />
         </div>
 
         {/* Totais por periodo */}

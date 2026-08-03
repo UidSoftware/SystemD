@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { FinanceiroTable, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
+import { FinanceiroTable, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 import { useAuth } from '../../../contexts/AuthContext'
 
@@ -107,7 +107,12 @@ export default function LivroCaixaPage() {
   return (
     <SistemaLayout>
       <div style={{ padding: '24px 24px 0' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>Livro Caixa</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Livro Caixa</h1>
+          <BotaoPdf onGerar={() => financeiroApi.livroCaixaPdf({
+            conta: filtros.conta || undefined, tipo: filtros.tipo || undefined, origem: filtros.origem || undefined,
+          })} />
+        </div>
 
         {totais && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>

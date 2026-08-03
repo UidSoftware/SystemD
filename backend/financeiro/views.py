@@ -15,7 +15,7 @@ from financeiro.mixins import AuditMixin, ReadCreateViewSet
 from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinanceiroOrContabilidade, IsAdminOrOperacionalOrFinanceiro, IsAdminOrOperacionalOrFinanceiroOrContabilidade
 
 from .signals import _reconstruir_cadeia
-from .relatorios import _saldo_total_contas, calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
+from .relatorios import _calcular_dre_mes, _saldo_total_contas, calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
 from .models import Aporte, Categoria, ConciliacaoExtrato, Conta, Despesa, FormaPagamento, Fornecedor, ItemConciliacao, LivroCaixa, PadraoSeguroConciliacao, Receita, SubCategoria
 from .serializers import (
     AporteSerializer, CategoriaSerializer, ConciliacaoExtratoSerializer, ConciliacaoListSerializer, ContaSerializer, DespesaSerializer,
@@ -140,7 +140,7 @@ class AporteViewSet(AuditMixin, ModelViewSet):
         # sensivel (capital social, aporte de investidor), mesmo padrao do
         # LivroCaixaViewSet acima, nunca usar IsAdminOrFinanceiroOrContabilidade
         # em action de escrita.
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'pdf'):
             return [IsAdminOrFinanceiroOrContabilidade()]
         return [IsAdmin()]
 
@@ -149,6 +149,21 @@ class AporteViewSet(AuditMixin, ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=['get'], url_path='pdf')
+    def pdf(self, request):
+        """GET /api/financeiro/aportes/pdf/ -- respeita os mesmos filtros (tipo, conta) da tela."""
+        from common.pdf_utils import gerar_pdf_tabela, fmt_money, fmt_date
+        qs = self.filter_queryset(self.get_queryset())
+        headers = ['Data', 'Tipo', 'Descrição', 'Conta', 'Responsável', 'Valor']
+        rows = [
+            [fmt_date(a.data), a.get_tipo_display(), a.descricao, a.conta.nome, a.responsavel, fmt_money(a.valor)]
+            for a in qs
+        ]
+        return gerar_pdf_tabela(
+            titulo='Aportes', headers=headers, rows=rows,
+            filename='aportes.pdf', gerado_por=request.user.nome,
+        )
 
 
 class ReceitaViewSet(AuditMixin, ModelViewSet):
@@ -171,7 +186,7 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
         # retornava 403 silencioso, frontend mostrava so "Nenhum registro
         # encontrado" em vez de erro). Escrita continua exclusiva ADMIN/
         # FINANCEIRO -- mesmo padrao de LivroCaixaViewSet/AporteViewSet.
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'pdf'):
             return [IsAdminOrFinanceiroOrContabilidade()]
         return [IsAdminOrFinanceiro()]
 
@@ -220,6 +235,28 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
     def perform_update(self, serializer):
         serializer.save()
 
+    @action(detail=False, methods=['get'], url_path='pdf')
+    def pdf(self, request):
+        """GET /api/financeiro/receitas/pdf/ -- respeita os filtros da tela (tipo, status, cliente, os, conta, busca)."""
+        from common.pdf_utils import gerar_pdf_tabela, fmt_money, fmt_date
+        qs = self.filter_queryset(self.get_queryset())
+        headers = ['Vencimento', 'Recebimento', 'Descrição', 'Cliente', 'Categoria', 'Status', 'Valor Líquido']
+        rows = [
+            [
+                fmt_date(r.vencimento), fmt_date(r.recebimento), r.descricao,
+                r.cliente.nome_empresa if r.cliente else '—',
+                r.categoria.nome if r.categoria else '—',
+                r.get_status_display(), fmt_money(r.valor_liquido),
+            ]
+            for r in qs
+        ]
+        total = sum((r.valor_liquido for r in qs), Decimal('0'))
+        total_row = ['', '', '', '', '', 'TOTAL', fmt_money(total)]
+        return gerar_pdf_tabela(
+            titulo='Relatório de Receitas', headers=headers, rows=rows, total_linha=total_row,
+            filename='relatorio_receitas.pdf', gerado_por=request.user.nome,
+        )
+
     @action(detail=True, methods=['patch'], url_path='receber', permission_classes=[IsAdminOrFinanceiro])
     def marcar_recebido(self, request, pk=None):
         receita = self.get_object()
@@ -264,7 +301,7 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
     def get_permissions(self):
         # Mesmo motivo do ReceitaViewSet acima -- "Relatorio de Despesas"
         # ja esta no menu de Contabilidade, precisa de leitura liberada.
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'pdf'):
             return [IsAdminOrFinanceiroOrContabilidade()]
         return [IsAdminOrFinanceiro()]
 
@@ -318,6 +355,27 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=['get'], url_path='pdf')
+    def pdf(self, request):
+        """GET /api/financeiro/despesas/pdf/ -- respeita os filtros da tela (tipo, status, conta, estornado, busca)."""
+        from common.pdf_utils import gerar_pdf_tabela, fmt_money, fmt_date
+        qs = self.filter_queryset(self.get_queryset())
+        headers = ['Vencimento', 'Pagamento', 'Descrição', 'Fornecedor', 'Categoria', 'Status', 'Valor Líquido']
+        rows = [
+            [
+                fmt_date(d.vencimento), fmt_date(d.pagamento), d.descricao, d.fornecedor or '—',
+                d.categoria.nome if d.categoria else '—',
+                d.get_status_display(), fmt_money(d.valor_liquido),
+            ]
+            for d in qs
+        ]
+        total = sum((d.valor_liquido for d in qs), Decimal('0'))
+        total_row = ['', '', '', '', '', 'TOTAL', fmt_money(total)]
+        return gerar_pdf_tabela(
+            titulo='Relatório de Despesas', headers=headers, rows=rows, total_linha=total_row,
+            filename='relatorio_despesas.pdf', gerado_por=request.user.nome,
+        )
 
     @action(detail=True, methods=['patch'], url_path='pagar', permission_classes=[IsAdminOrFinanceiro])
     def marcar_pago(self, request, pk=None):
@@ -446,7 +504,7 @@ class LivroCaixaViewSet(ReadCreateViewSet):
         # list/retrieve (leitura) libera pra Contabilidade tambem; create
         # (lancamento manual) continua exclusivo de ADMIN/FINANCEIRO -- ver
         # IsAdminOrFinanceiroOrContabilidade, nunca usar em action de escrita.
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'pdf'):
             return [IsAdminOrFinanceiroOrContabilidade()]
         return [IsAdminOrFinanceiro()]
     # Sem paginacao (mesmo padrao de DespesaViewSet/ReceitaViewSet) — o
@@ -459,6 +517,28 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='pdf')
+    def pdf(self, request):
+        """GET /api/financeiro/livro-caixa/pdf/ -- respeita os filtros da tela
+        (conta, tipo, origem, estornado) + ?ano= opcional (FluxoCaixaPage.jsx
+        agrupa por ano no cliente a partir dessa mesma listagem, não usa o
+        endpoint fluxo-caixa/?mes= -- filtro de ano aplicado só aqui, não no
+        filterset_fields do ViewSet, pra não mexer no comportamento da listagem JSON)."""
+        from common.pdf_utils import gerar_pdf_tabela, fmt_money, fmt_date
+        qs = self.filter_queryset(self.get_queryset())
+        ano = request.query_params.get('ano')
+        if ano:
+            qs = qs.filter(data__year=ano)
+        headers = ['Data', 'Conta', 'Tipo', 'Origem', 'Descrição', 'Valor', 'Saldo Atual']
+        rows = [
+            [fmt_date(l.data), l.conta.nome, l.get_tipo_display(), l.get_origem_display(), l.descricao, fmt_money(l.valor), fmt_money(l.saldo_atual)]
+            for l in qs
+        ]
+        return gerar_pdf_tabela(
+            titulo='Livro Caixa', headers=headers, rows=rows,
+            filename='livro_caixa.pdf', gerado_por=request.user.nome,
+        )
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def estornar(self, request, pk=None):
@@ -537,22 +617,9 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 
 # ─── Views calculadas ────────────────────────────────────────
 
-@api_view(['GET'])
-@permission_classes([IsAdminOrFinanceiroOrContabilidade])
-def fluxo_caixa(request):
-    """GET /api/financeiro/fluxo-caixa/?mes=2026-05&conta=1"""
-    mes_str  = request.query_params.get('mes')
-    conta_id = request.query_params.get('conta')
-
-    try:
-        if mes_str:
-            ano, mes = int(mes_str[:4]), int(mes_str[5:7])
-        else:
-            hoje = date.today()
-            ano, mes = hoje.year, hoje.month
-    except (ValueError, IndexError):
-        return Response({'detail': 'Formato inválido. Use mes=YYYY-MM.'}, status=400)
-
+def _calcular_fluxo_caixa(ano, mes, conta_id):
+    """Compartilhado por fluxo_caixa() (JSON) e fluxo_caixa_pdf() -- nunca
+    duplicar essa lógica em dois lugares (achado + regra 03/08/2026)."""
     qs = LivroCaixa.objects.filter(
         data__year=ano, data__month=mes, estornado=False,
     )
@@ -594,17 +661,66 @@ def fluxo_caixa(request):
     total_saidas   = agg['total_saidas']   or Decimal('0')
     saldo_final    = saldo_inicial + total_entradas - total_saidas
 
-    lancamentos = LivroCaixaSerializer(qs.order_by('data', 'created_at'), many=True).data
-
-    return Response({
+    return {
         'periodo':         f'{mes:02d}/{ano}',
         'conta':           conta.nome if conta else 'Todas',
         'saldo_inicial':   saldo_inicial,
         'total_entradas':  total_entradas,
         'total_saidas':    total_saidas,
         'saldo_final':     saldo_final,
-        'lancamentos':     lancamentos,
-    })
+        'lancamentos_qs':  qs.order_by('data', 'created_at'),
+    }
+
+
+def _parse_mes_param(request):
+    mes_str = request.query_params.get('mes')
+    try:
+        if mes_str:
+            return int(mes_str[:4]), int(mes_str[5:7])
+        hoje = date.today()
+        return hoje.year, hoje.month
+    except (ValueError, IndexError):
+        return None, None
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def fluxo_caixa(request):
+    """GET /api/financeiro/fluxo-caixa/?mes=2026-05&conta=1"""
+    ano, mes = _parse_mes_param(request)
+    if ano is None:
+        return Response({'detail': 'Formato inválido. Use mes=YYYY-MM.'}, status=400)
+
+    dados = _calcular_fluxo_caixa(ano, mes, request.query_params.get('conta'))
+    lancamentos = LivroCaixaSerializer(dados.pop('lancamentos_qs'), many=True).data
+    return Response({**dados, 'lancamentos': lancamentos})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def fluxo_caixa_pdf(request):
+    """GET /api/financeiro/fluxo-caixa/pdf/?mes=2026-05&conta=1"""
+    from common.pdf_utils import gerar_pdf_tabela, fmt_money, fmt_date
+    ano, mes = _parse_mes_param(request)
+    if ano is None:
+        return Response({'detail': 'Formato inválido. Use mes=YYYY-MM.'}, status=400)
+
+    dados = _calcular_fluxo_caixa(ano, mes, request.query_params.get('conta'))
+    headers = ['Data', 'Conta', 'Tipo', 'Origem', 'Descrição', 'Valor', 'Saldo']
+    rows = [
+        [fmt_date(l.data), l.conta.nome, l.get_tipo_display(), l.get_origem_display(), l.descricao, fmt_money(l.valor), fmt_money(l.saldo_atual)]
+        for l in dados['lancamentos_qs']
+    ]
+    subtitulo = [
+        f"Período: {dados['periodo']} — Conta: {dados['conta']}",
+        f"Saldo inicial: {fmt_money(dados['saldo_inicial'])} | Entradas: {fmt_money(dados['total_entradas'])} | "
+        f"Saídas: {fmt_money(dados['total_saidas'])} | Saldo final: {fmt_money(dados['saldo_final'])}",
+    ]
+    return gerar_pdf_tabela(
+        titulo='Fluxo de Caixa', headers=headers, rows=rows, subtitulo_linhas=subtitulo,
+        filename=f"fluxo_caixa_{dados['periodo'].replace('/', '-')}.pdf",
+        gerado_por=request.user.nome,
+    )
 
 
 @api_view(['GET'])
@@ -682,13 +798,44 @@ def dre(request):
 
 @api_view(['GET'])
 @permission_classes([IsAdminOrFinanceiroOrContabilidade])
-def receita_por_cliente(request):
-    """GET /api/financeiro/receita-por-cliente/?ano=2026"""
+def dre_pdf(request):
+    """GET /api/financeiro/dre/pdf/?ano=2026"""
+    from common.pdf_utils import gerar_pdf_tabela, fmt_money
     try:
         ano = int(request.query_params.get('ano', date.today().year))
     except ValueError:
         return Response({'detail': 'Ano inválido.'}, status=400)
 
+    headers = ['Mês', 'Receita Líquida', 'Desp. Fixas', 'Desp. Variáveis', 'Pró-labore', 'Impostos', 'Outros', 'Total Despesas', 'Resultado']
+    rows = []
+    totais = None
+    for mes in range(1, 13):
+        d = _calcular_dre_mes(ano, mes)
+        rows.append([
+            f'{mes:02d}/{ano}', fmt_money(d['receita_liquida']), fmt_money(d['despesas_fixas']),
+            fmt_money(d['despesas_variaveis']), fmt_money(d['prolabore']), fmt_money(d['impostos']),
+            fmt_money(d['outros']), fmt_money(d['total_despesas']), fmt_money(d['resultado']),
+        ])
+        if totais is None:
+            totais = dict(d)
+        else:
+            for k in totais:
+                totais[k] += d[k]
+
+    total_row = [
+        'TOTAL ANO', fmt_money(totais['receita_liquida']), fmt_money(totais['despesas_fixas']),
+        fmt_money(totais['despesas_variaveis']), fmt_money(totais['prolabore']), fmt_money(totais['impostos']),
+        fmt_money(totais['outros']), fmt_money(totais['total_despesas']), fmt_money(totais['resultado']),
+    ]
+    return gerar_pdf_tabela(
+        titulo=f'DRE — Demonstrativo de Resultado ({ano})', headers=headers, rows=rows,
+        total_linha=total_row, filename=f'dre_{ano}.pdf', gerado_por=request.user.nome,
+    )
+
+
+def _calcular_receita_por_cliente(ano):
+    """Compartilhado por receita_por_cliente() (JSON) e o _pdf -- nunca
+    duplicar essa lógica em dois lugares (achado + regra 03/08/2026)."""
     from clientes.models import Cliente
     clientes = Cliente.objects.filter(ativo=True).order_by('nome_empresa')
     resultado = []
@@ -712,9 +859,41 @@ def receita_por_cliente(request):
                 'mensalidades':      mensalidades,
                 'entradas_contrato': entradas,
             })
-
     resultado.sort(key=lambda x: x['total_liquido'], reverse=True)
-    return Response(resultado)
+    return resultado
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def receita_por_cliente(request):
+    """GET /api/financeiro/receita-por-cliente/?ano=2026"""
+    try:
+        ano = int(request.query_params.get('ano', date.today().year))
+    except ValueError:
+        return Response({'detail': 'Ano inválido.'}, status=400)
+    return Response(_calcular_receita_por_cliente(ano))
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def receita_por_cliente_pdf(request):
+    """GET /api/financeiro/receita-por-cliente/pdf/?ano=2026"""
+    from common.pdf_utils import gerar_pdf_tabela, fmt_money
+    try:
+        ano = int(request.query_params.get('ano', date.today().year))
+    except ValueError:
+        return Response({'detail': 'Ano inválido.'}, status=400)
+
+    dados = _calcular_receita_por_cliente(ano)
+    headers = ['Cliente', 'Total Bruto', 'Descontos', 'Total Líquido', 'Mensalidades', 'Entradas de Contrato']
+    rows = [
+        [d['cliente'], fmt_money(d['total_bruto']), fmt_money(d['total_descontos']), fmt_money(d['total_liquido']), d['mensalidades'], d['entradas_contrato']]
+        for d in dados
+    ]
+    return gerar_pdf_tabela(
+        titulo=f'Receita por Cliente ({ano})', headers=headers, rows=rows,
+        filename=f'receita_por_cliente_{ano}.pdf', gerado_por=request.user.nome,
+    )
 
 
 @api_view(['GET'])
@@ -733,6 +912,55 @@ def balanco_patrimonial(request):
 
 @api_view(['GET'])
 @permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def balanco_patrimonial_pdf(request):
+    """GET /api/financeiro/balanco/pdf/?data=2026-07-31"""
+    from common.pdf_utils import gerar_pdf_resumo, fmt_money
+    data_str = request.query_params.get('data')
+    data_ref = None
+    if data_str:
+        try:
+            data_ref = date.fromisoformat(data_str)
+        except ValueError:
+            return Response({'detail': 'Data inválida. Use YYYY-MM-DD.'}, status=400)
+
+    b = calcular_balanco(data_ref)
+    secoes = [
+        {
+            'nome': 'Ativo',
+            'itens': [
+                ('Caixa e Equivalentes', fmt_money(b['ativo']['circulante']['caixa_equivalentes'])),
+                ('Contas a Receber', fmt_money(b['ativo']['circulante']['contas_a_receber'])),
+            ],
+            'destaque': ('Total do Ativo', fmt_money(b['ativo']['total'])),
+        },
+        {
+            'nome': 'Passivo',
+            'itens': [
+                ('Contas a Pagar', fmt_money(b['passivo']['circulante']['contas_a_pagar'])),
+                ('Cartão de Crédito a Pagar', fmt_money(b['passivo']['circulante']['cartao_credito'])),
+                ('Empréstimos', fmt_money(b['passivo']['exigivel_lp']['emprestimos'])),
+            ],
+            'destaque': ('Total do Passivo', fmt_money(b['passivo']['total'])),
+        },
+        {
+            'nome': 'Patrimônio Líquido',
+            'itens': [
+                ('Capital / Aportes', fmt_money(b['patrimonio_liquido']['capital_aportes'])),
+                ('Lucros/Prejuízos Acumulados', fmt_money(b['patrimonio_liquido']['lucros_acumulados'])),
+            ],
+            'destaque': ('Total do Patrimônio Líquido', fmt_money(b['patrimonio_liquido']['total'])),
+        },
+    ]
+    equacao_txt = 'Ativo = Passivo + PL — equação fechada' if b['equacao_ok'] else 'ATENÇÃO: equação Ativo = Passivo + PL NÃO fechou'
+    return gerar_pdf_resumo(
+        titulo='Balanço Patrimonial', secoes=secoes,
+        subtitulo_linhas=[f"Data de referência: {b['data_referencia']}", equacao_txt],
+        filename=f"balanco_{b['data_referencia']}.pdf", gerado_por=request.user.nome,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
 def fluxo_projetado(request):
     """GET /api/financeiro/fluxo-projetado/ -- backport UidCore (SystemD 2.0.0)"""
     return Response(calcular_fluxo_projetado())
@@ -743,6 +971,37 @@ def fluxo_projetado(request):
 def indicadores_cfo(request):
     """GET /api/financeiro/indicadores/ -- backport UidCore (SystemD 2.0.0)"""
     return Response(calcular_indicadores_cfo())
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminOrFinanceiroOrContabilidade])
+def indicadores_cfo_pdf(request):
+    """GET /api/financeiro/indicadores/pdf/"""
+    from common.pdf_utils import gerar_pdf_resumo, fmt_money
+    i = calcular_indicadores_cfo()
+    secoes = [
+        {
+            'nome': 'Indicadores CFO',
+            'itens': [
+                ('Margem Líquida', f"{i['margem_liquida']:.2f}%"),
+                ('Ponto de Equilíbrio', fmt_money(i['ponto_equilibrio'])),
+                ('Ticket Médio', fmt_money(i['ticket_medio'])),
+                ('MRR (Receita Recorrente Mensal)', fmt_money(i['mrr'])),
+                ('Saldo Total (Caixa e Equivalentes)', fmt_money(i['saldo_total'])),
+                ('Runway', f"{i['runway_meses']:.1f} meses"),
+                ('Resultado do Mês', fmt_money(i['resultado_mes'])),
+                ('Receita Líquida do Mês', fmt_money(i['receita_liquida_mes'])),
+                ('EBITDA do Mês', fmt_money(i['ebitda_mes'])),
+                ('Variação vs. Mês Anterior', f"{i['var_mes_anterior']:.2f}%"),
+                ('Variação vs. Ano Anterior', f"{i['var_ano_anterior']:.2f}%"),
+            ],
+        },
+    ]
+    return gerar_pdf_resumo(
+        titulo='Indicadores CFO', secoes=secoes,
+        subtitulo_linhas=[f"Referência: {date.today().strftime('%m/%Y')}"],
+        filename=f"indicadores_cfo_{date.today().strftime('%Y-%m')}.pdf", gerado_por=request.user.nome,
+    )
 
 
 @api_view(['GET'])

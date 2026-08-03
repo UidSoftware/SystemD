@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { inputStyle, Spinner, Vazio, formatMoeda } from '../../../components/sistema/FinanceiroTable'
+import { inputStyle, Spinner, Vazio, formatMoeda, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 export default function PorClientePage() {
@@ -35,6 +35,7 @@ export default function PorClientePage() {
               style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Buscar
             </button>
+            <BotaoPdf onGerar={() => financeiroApi.receitaPorClientePdf({ ano })} />
           </div>
         </div>
 

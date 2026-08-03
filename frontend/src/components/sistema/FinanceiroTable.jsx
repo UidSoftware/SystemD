@@ -1,4 +1,6 @@
 // Tabela genérica reutilizável nas telas financeiras
+import { useState } from 'react'
+
 export function FinanceiroTable({ colunas, dados, onRowClick }) {
   const labelStyle = { fontSize: 11, color: '#6b6b8a' }
   const valueStyle = { fontSize: 13, color: '#e2d9f3' }
@@ -137,6 +139,37 @@ export function BotoesModal({ onCancel, salvando, labelConfirmar = 'Salvar' }) {
         {salvando ? 'Salvando...' : labelConfirmar}
       </button>
     </div>
+  )
+}
+
+// Abre o blob de um PDF retornado por axios (responseType: 'blob') em nova
+// aba — mesmo padrão já usado no recibo (ReceitasRecebidasPage.jsx).
+export function abrirPdfBlob(res) {
+  const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
+}
+
+// Botão "Baixar PDF" reutilizável nas telas de relatório — o chamador só
+// passa a função que busca o PDF (já filtrada com os parâmetros da tela).
+export function BotaoPdf({ onGerar, label = 'Baixar PDF' }) {
+  const [gerando, setGerando] = useState(false)
+  const handleClick = async () => {
+    setGerando(true)
+    try {
+      const res = await onGerar()
+      abrirPdfBlob(res)
+    } catch {
+      alert('Erro ao gerar PDF.')
+    } finally {
+      setGerando(false)
+    }
+  }
+  return (
+    <button onClick={handleClick} disabled={gerando} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+      style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#a78bca', opacity: gerando ? 0.6 : 1 }}>
+      🖨️ {gerando ? 'Gerando...' : label}
+    </button>
   )
 }
 

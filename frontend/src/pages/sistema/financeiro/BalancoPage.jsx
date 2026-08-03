@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { inputStyle, Spinner, formatMoeda } from '../../../components/sistema/FinanceiroTable'
+import { inputStyle, Spinner, formatMoeda, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 const cardStyle = {
@@ -52,6 +52,7 @@ export default function BalancoPage() {
               style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Gerar
             </button>
+            <BotaoPdf onGerar={() => financeiroApi.balancoPdf({ data })} />
           </div>
         </div>
 
@@ -88,6 +89,9 @@ export default function BalancoPage() {
                 <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#FF0000', marginBottom: 10 }}>Passivo</div>
                 <div style={{ fontSize: 12, color: '#6b6b8a', marginBottom: 4 }}>Circulante</div>
                 <Linha label="Contas a Pagar" valor={dados.passivo.circulante.contas_a_pagar} indent />
+                {dados.passivo.circulante.cartao_credito > 0 && (
+                  <Linha label="Cartão de Crédito a Pagar" valor={dados.passivo.circulante.cartao_credito} indent />
+                )}
                 <Linha label="Total Circulante" valor={dados.passivo.circulante.total} bold />
                 <div style={{ fontSize: 12, color: '#6b6b8a', marginTop: 10, marginBottom: 4 }}>Exigível a Longo Prazo</div>
                 <Linha label="Empréstimos" valor={dados.passivo.exigivel_lp.emprestimos} indent />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { inputStyle, Spinner, Vazio, formatMoeda } from '../../../components/sistema/FinanceiroTable'
+import { inputStyle, Spinner, Vazio, formatMoeda, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -94,9 +94,12 @@ export default function FluxoCaixaPage() {
   return (
     <SistemaLayout>
       <div style={{ padding: '24px 24px 0' }}>
-        <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>Fluxo de Caixa</h1>
-          <p style={{ fontSize: 13, color: '#a78bca', margin: 0 }}>Entradas, saídas e saldo acumulado por mês</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>Fluxo de Caixa</h1>
+            <p style={{ fontSize: 13, color: '#a78bca', margin: 0 }}>Entradas, saídas e saldo acumulado por mês</p>
+          </div>
+          <BotaoPdf onGerar={() => financeiroApi.livroCaixaPdf({ conta: filtros.conta || undefined, ano: filtros.ano || undefined })} />
         </div>
 
         {/* Filtros */}

@@ -22,6 +22,7 @@ export const financeiroApi = {
   criarAporte:           (d) => post('/aportes/', d),
   editarAporte:          (id, d) => patch(`/aportes/${id}/`, d),
   deletarAporte:         (id) => del(`/aportes/${id}/`),
+  aportesPdf:            (p) => api.get('/financeiro/aportes/pdf/', { params: p, responseType: 'blob' }),
 
   // Receitas
   listarReceitas:        (p) => f('/receitas/', p),
@@ -30,6 +31,7 @@ export const financeiroApi = {
   deletarReceita:        (id) => del(`/receitas/${id}/`),
   marcarRecebido:        (id, d) => patch(`/receitas/${id}/receber/`, d),
   gerarRecibo:           (id) => api.get(`/financeiro/receitas/${id}/recibo/`, { responseType: 'blob' }),
+  receitasPdf:           (p) => api.get('/financeiro/receitas/pdf/', { params: p, responseType: 'blob' }),
 
   // Despesas
   listarDespesas:        (p) => f('/despesas/', p),
@@ -38,6 +40,7 @@ export const financeiroApi = {
   deletarDespesa:        (id) => del(`/despesas/${id}/`),
   marcarPago:            (id, d) => patch(`/despesas/${id}/pagar/`, d),
   estornarDespesa:       (id, d) => post(`/despesas/${id}/estornar/`, d),
+  despesasPdf:           (p) => api.get('/financeiro/despesas/pdf/', { params: p, responseType: 'blob' }),
   transferir:            (id, d) => post(`/contas/${id}/transferir/`, d),
   listarFornecedores:    (p) => f('/fornecedores/', p),
   criarFornecedor:       (d) => post('/fornecedores/', d),
@@ -49,6 +52,7 @@ export const financeiroApi = {
   criarLancamento:       (d) => post('/livro-caixa/', d),
   totaisLivroCaixa:      (p) => f('/livro-caixa/totais/', p),
   estornar:              (id, d) => post(`/livro-caixa/${id}/estornar/`, d),
+  livroCaixaPdf:         (p) => api.get('/financeiro/livro-caixa/pdf/', { params: p, responseType: 'blob' }),
 
   // Conciliação Bancária
   listarConciliacoes:          (p) => f('/conciliacoes/', p),
@@ -72,9 +76,14 @@ export const financeiroApi = {
   // Views calculadas
   dashboard:             ()  => f('/dashboard/'),
   fluxoCaixa:            (p) => f('/fluxo-caixa/', p),
+  fluxoCaixaPdf:         (p) => api.get('/financeiro/fluxo-caixa/pdf/', { params: p, responseType: 'blob' }),
   dre:                   (p) => f('/dre/', p),
+  drePdf:                (p) => api.get('/financeiro/dre/pdf/', { params: p, responseType: 'blob' }),
   receitaPorCliente:     (p) => f('/receita-por-cliente/', p),
+  receitaPorClientePdf:  (p) => api.get('/financeiro/receita-por-cliente/pdf/', { params: p, responseType: 'blob' }),
   balanco:               (p) => f('/balanco/', p),
+  balancoPdf:            (p) => api.get('/financeiro/balanco/pdf/', { params: p, responseType: 'blob' }),
   fluxoProjetado:        ()  => f('/fluxo-projetado/'),
   indicadoresCfo:        ()  => f('/indicadores/'),
+  indicadoresCfoPdf:     ()  => api.get('/financeiro/indicadores/pdf/', { responseType: 'blob' }),
 }

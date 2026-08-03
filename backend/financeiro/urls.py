@@ -5,8 +5,9 @@ from .views import (
     AporteViewSet, CategoriaViewSet, ConciliacaoViewSet, ContaViewSet,
     DespesaViewSet, FornecedorViewSet,
     LivroCaixaViewSet, PadraoSeguroConciliacaoViewSet, ReceitaViewSet, SubCategoriaViewSet,
-    balanco_patrimonial, dashboard, dre, fluxo_caixa, fluxo_projetado,
-    indicadores_cfo, receita_por_cliente,
+    balanco_patrimonial, balanco_patrimonial_pdf, dashboard, dre, dre_pdf,
+    fluxo_caixa, fluxo_caixa_pdf, fluxo_projetado,
+    indicadores_cfo, indicadores_cfo_pdf, receita_por_cliente, receita_por_cliente_pdf,
 )
 
 router = DefaultRouter()
@@ -25,9 +26,14 @@ urlpatterns = [
     path('', include(router.urls)),
     path('dashboard/',            dashboard,            name='dashboard'),
     path('fluxo-caixa/',         fluxo_caixa,          name='fluxo-caixa'),
+    path('fluxo-caixa/pdf/',     fluxo_caixa_pdf,      name='fluxo-caixa-pdf'),
     path('dre/',                 dre,                  name='dre'),
+    path('dre/pdf/',             dre_pdf,              name='dre-pdf'),
     path('receita-por-cliente/', receita_por_cliente,  name='receita-por-cliente'),
+    path('receita-por-cliente/pdf/', receita_por_cliente_pdf, name='receita-por-cliente-pdf'),
     path('balanco/',             balanco_patrimonial,  name='balanco-patrimonial'),
+    path('balanco/pdf/',         balanco_patrimonial_pdf, name='balanco-patrimonial-pdf'),
     path('fluxo-projetado/',     fluxo_projetado,      name='fluxo-projetado'),
     path('indicadores/',         indicadores_cfo,      name='indicadores-cfo'),
+    path('indicadores/pdf/',     indicadores_cfo_pdf,  name='indicadores-cfo-pdf'),
 ]

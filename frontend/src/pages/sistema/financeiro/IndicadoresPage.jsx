@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import SistemaLayout from '../../../components/sistema/SistemaLayout'
-import { Spinner, formatMoeda } from '../../../components/sistema/FinanceiroTable'
+import { Spinner, formatMoeda, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
 const cardStyle = {
@@ -44,7 +44,10 @@ export default function IndicadoresPage() {
   return (
     <SistemaLayout>
       <div style={{ padding: '24px 24px 0' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>Indicadores de CFO</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Indicadores de CFO</h1>
+          <BotaoPdf onGerar={() => financeiroApi.indicadoresCfoPdf()} />
+        </div>
 
         {carregando ? <Spinner /> : !indicadores ? (
           <p style={{ color: '#a78bca', fontSize: 14, textAlign: 'center', padding: 40 }}>Erro ao carregar indicadores.</p>

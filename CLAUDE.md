@@ -1824,3 +1824,89 @@ com `force_authenticate` + `HTTP_HOST` explícito — `ALLOWED_HOSTS`
 rejeita o `testserver` default) confirmando CPF/CNPJ inválido rejeitado
 com 400 e válido aceito com 201, `vite build` de sanidade no frontend,
 poll do container ID pós-push até recriar, reverificação em produção.
+
+---
+
+### [2026-08-02] — Financeiro reconstruído do zero a partir de extratos reais + bug de cartão de crédito no Balanço
+
+**Contexto:** o financeiro do SystemD tinha sido zerado por completo em
+2026-07-31 (não só LivroCaixa — Conta e Categoria também, achado só nessa
+sessão: `Conta.objects.count()` retornava 0). Também descoberto: existe
+`/root/financeiro_backup_pre_reset_20260731.json` (531 registros, fixture
+`dumpdata` completa do estado pré-reset) — usuário optou conscientemente
+por **não restaurar** esse backup (histórico antigo tinha "gambiarras"
+que sujavam o Livro Caixa), preferindo reconstrução limpa a partir dos
+PDFs reais na pasta `/mnt/dropbox/01 - Contabilidade/Extratos Onvio/Extratos/`
+(watchdog de conciliação, ver `watchdog_conciliacao.py`), usando o backup
+só como fonte de conferência pontual (fornecedores reais, tipo de
+despesa, motivo de estornos históricos).
+
+**Contas recriadas:** BTG (Corrente), C6 (Corrente), Cartão C6 (Carteira
+Digital), CDB Garantia (Poupança) — **sem** uma conta "BTG Remunerada"
+separada (criada por engano no meio da sessão, depois removida — ver
+regra nova no CLAUDE.md global, Módulo Financeiro: aplicação só vira
+Conta formal quando é produto com extrato próprio no banco, não quando é
+sub-linha líquido-zero dentro do mesmo extrato consolidado).
+
+**72 lançamentos reais** (mai/2025 a jul/2026) extraídos via
+`financeiro.parsers.parse_btg`/`parse_c6` rodados diretamente em shell
+(não pelo watchdog automático, que só processa arquivo novo/modificado) +
+classificação manual confirmada com o usuário: 18 Aportes (tipo `SOCIO`
+— confirmado de propósito, foi a contabilidade que pediu, mesmo
+divergindo do `CAPITAL_SOCIAL` usado no histórico antigo), Receitas
+(rendimento `Remunera+` do BTG, receita de cliente), Despesas
+(Integrator/hosting, Contador Direto, aluguel coworking "Vila Marieta",
+Algar, etc.), Transferências entre contas próprias.
+
+**Cartão C6 — 3 rodadas de correção, cada uma achando algo real:**
+1. Consolidação inicial (1 despesa por fatura paga) — descartada depois.
+2. Descoberta de que a fatura de maio (R$119,63) foi liquidada
+   automaticamente via CDB de garantia (não PIX) — confirmado no PDF da
+   fatura de junho, item "01 mai Pagamento CDB 119,63".
+3. **Reconstrução granular final**, usando print do app do banco +
+   detalhamento real dos PDFs de fatura (`Fatura-C6-2026-*-extrato.pdf`,
+   seção com `CLAUDE.AI SUBSCRIPTION SA`/`ANTHROPIC* CLAUDE SUB SA` +
+   `IOF Transações Exterior`) — decifrado o padrão exato: cada compra
+   (assinatura Anthropic em USD + IOF separado) tem sua própria data, e
+   os pagamentos batem exato por valor com uma compra específica **até
+   maio**; a partir de junho o cartão foi pro **rotativo** (pagamento de
+   20/06 foi só R$100 pra uma fatura de ~R$239, sobra rolou pra fatura
+   seguinte). Saldo final da conta Cartão C6: **-R$120,24** (dívida real
+   em aberto, a compra de 20/07 ainda não paga) — primeira vez que uma
+   conta Carteira Digital fica negativa no SystemD.
+
+   Erro cometido e corrigido no processo: deletar as `Despesa` antigas
+   (`Despesa.objects.filter(...).delete()`) não removeu o `LivroCaixa`
+   correspondente (sem CASCADE real entre eles) — ficaram 5 lançamentos
+   órfãos inflando o saldo em +R$868 até serem encontrados e limpados
+   manualmente. Ver regra nova no CLAUDE.md global.
+
+**CDB Garantia:** saldo calculado (R$210,37 = R$330 aplicado - R$119,63
+liquidado) conferido contra o app do banco real (print do usuário: "Total
+investido R$212,00, Rendimento bruto R$10,75, Saldo R$222,75") — pequena
+diferença de R$1,63 no principal (provável imprecisão de arredondamento
+numa das duas transações), registrada como Receita separada do
+rendimento real, com a composição explicada na `observacoes` (nunca
+misturar "rendimento real" com "ajuste de conciliação" sob o mesmo
+rótulo genérico).
+
+**Bug achado e corrigido — cartão de crédito reduzindo o Ativo em vez de
+aparecer como Passivo:** `_saldo_total_contas()` (em
+`financeiro/relatorios.py`, usada por `calcular_balanco`,
+`calcular_fluxo_projetado` e `calcular_indicadores_cfo`/runway) somava
+TODAS as contas juntas, incluindo Carteira Digital — só ficou visível
+agora porque foi a primeira vez que uma conta desse tipo ficou negativa
+no sistema. Corrigido (commit `4337bb5`): nova `_saldo_contas_por_tipo()`
+reaproveitada por `_saldo_total_contas()` (só Corrente/Poupança/Caixa) e
+nova `_divida_cartao_credito()` (soma saldo negativo das contas
+Carteira), que entra como linha própria `passivo.circulante.cartao_credito`
+em `calcular_balanco()`. Equação `Ativo = Passivo + PL` continua
+fechando (`equacao_ok`), só muda o lado que carrega a dívida. Testado:
+`manage.py test financeiro` (51 testes, OK), `calcular_balanco()` real
+antes/depois, deploy confirmado em produção.
+
+**UidCore:** mesmo bug existe lá (mesma função original, de onde o
+SystemD portou). Como UidCore segue o pipeline normal (nunca editado
+direto, mesmo sendo o mesmo dono/sessão) — criada **Manutenção #12**
+(vinculada à OS "UidCore") com o diff exato já validado no SystemD como
+referência, pra Hotfix→Planner→Forge/Loom→Sentinel→Pilot replicarem lá.

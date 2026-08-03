@@ -94,18 +94,29 @@ def calcular_balanco(data_ref=None):
 
     saldo_caixa = _saldo_total_contas()
 
+    # Competência real: só entra no Balanço o que já foi ou está sendo
+    # incorrido ATÉ o mês do balanço (referencia_mes <= mes_ref). Assinar um
+    # contrato de aluguel até dezembro não cria uma dívida de dezembro em
+    # agosto -- é compromisso contratual futuro, não obrigação já incorrida
+    # (regime de competência de verdade: reconhece quando o serviço é
+    # prestado/consumido, não quando o contrato é assinado). Sem esse corte,
+    # despesas PENDENTE com vencimento em meses futuros inflavam Contas a
+    # Pagar e Lucros Acumulados como se já fossem dívida vencível hoje --
+    # achado + correção 03/08/2026.
+    mes_ref = date(data_ref.year, data_ref.month, 1)
+
     # Contas a receber/pagar precisam incluir PENDENTE e ATRASADO -- um
     # recebível/pagável em atraso continua sendo um recebível/pagável, só
     # que vencido; excluir ATRASADO subestimava o balanço.
     contas_a_receber = Receita.objects.filter(
-        is_active=True, status__in=['PENDENTE', 'ATRASADO'],
+        is_active=True, status__in=['PENDENTE', 'ATRASADO'], referencia_mes__lte=mes_ref,
     ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
     ativo_circulante = saldo_caixa + contas_a_receber
     ativo_total = ativo_circulante
 
     contas_a_pagar = Despesa.objects.filter(
-        is_active=True, status__in=['PENDENTE', 'ATRASADO'], estornado=False,
+        is_active=True, status__in=['PENDENTE', 'ATRASADO'], estornado=False, referencia_mes__lte=mes_ref,
     ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
     cartao_credito = _divida_cartao_credito()
@@ -126,11 +137,13 @@ def calcular_balanco(data_ref=None):
     # com contas_a_receber/contas_a_pagar acima (também competência) --
     # regime de caixa aqui deixava a equação Ativo = Passivo + PL sem fechar
     # sempre que existisse qualquer receita/despesa pendente ou atrasada.
+    # Mesmo corte de referencia_mes__lte=mes_ref do bloco acima, pelo mesmo
+    # motivo: compromisso futuro não reduz patrimônio líquido hoje.
     total_receitas = Receita.objects.filter(
-        is_active=True,
+        is_active=True, referencia_mes__lte=mes_ref,
     ).exclude(status='CANCELADO').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
     total_despesas = Despesa.objects.filter(
-        is_active=True, estornado=False,
+        is_active=True, estornado=False, referencia_mes__lte=mes_ref,
     ).exclude(status='CANCELADO').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
     lucros_acumulados = total_receitas - total_despesas
 

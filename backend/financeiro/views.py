@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
 from financeiro.mixins import AuditMixin, ReadCreateViewSet
-from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinanceiroOrContabilidade, IsAdminOrOperacionalOrFinanceiro
+from usuarios.permissions import IsAdmin, IsAdminOrFinanceiro, IsAdminOrFinanceiroOrContabilidade, IsAdminOrOperacionalOrFinanceiro, IsAdminOrOperacionalOrFinanceiroOrContabilidade
 
 from .signals import _reconstruir_cadeia
 from .relatorios import _saldo_total_contas, calcular_balanco, calcular_fluxo_projetado, calcular_indicadores_cfo
@@ -158,12 +158,22 @@ class ReceitaViewSet(AuditMixin, ModelViewSet):
         .order_by('vencimento')
     )
     serializer_class = ReceitaSerializer
-    permission_classes = [IsAdminOrFinanceiro]
     pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['tipo', 'status', 'cliente', 'os', 'conta']
     search_fields = ['descricao']
     ordering_fields = ['vencimento', 'valor_liquido', 'status']
+
+    def get_permissions(self):
+        # list/retrieve (leitura) libera pra Contabilidade tambem -- essa
+        # tela ("Relatorio de Receitas") ja esta no menu dela, so nunca
+        # tinha sido testada de verdade com esse perfil (achado 03/08/2026,
+        # retornava 403 silencioso, frontend mostrava so "Nenhum registro
+        # encontrado" em vez de erro). Escrita continua exclusiva ADMIN/
+        # FINANCEIRO -- mesmo padrao de LivroCaixaViewSet/AporteViewSet.
+        if self.action in ('list', 'retrieve'):
+            return [IsAdminOrFinanceiroOrContabilidade()]
+        return [IsAdminOrFinanceiro()]
 
     def perform_create(self, serializer):
         recorrente = self.request.data.get('recorrente', False)
@@ -245,12 +255,18 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
         .order_by('vencimento')
     )
     serializer_class = DespesaSerializer
-    permission_classes = [IsAdminOrFinanceiro]
     pagination_class = None
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['tipo', 'status', 'conta', 'estornado']
     search_fields = ['descricao', 'fornecedor']
     ordering_fields = ['vencimento', 'valor_liquido', 'status']
+
+    def get_permissions(self):
+        # Mesmo motivo do ReceitaViewSet acima -- "Relatorio de Despesas"
+        # ja esta no menu de Contabilidade, precisa de leitura liberada.
+        if self.action in ('list', 'retrieve'):
+            return [IsAdminOrFinanceiroOrContabilidade()]
+        return [IsAdminOrFinanceiro()]
 
     def perform_create(self, serializer):
         dados = serializer.validated_data
@@ -730,11 +746,15 @@ def indicadores_cfo(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminOrOperacionalOrFinanceiro])
+@permission_classes([IsAdminOrOperacionalOrFinanceiroOrContabilidade])
 def dashboard(request):
     """GET /api/financeiro/dashboard/ — dados agregados para o painel principal"""
     perfil = request.user.perfil
-    is_fin = perfil in ('ADMIN', 'FINANCEIRO')
+    # Contabilidade ve o mesmo bloco financeiro que Financeiro ve (so
+    # leitura, endpoint inteiro e' GET) -- achado 03/08/2026: perfil
+    # CONTABILIDADE nunca tinha acesso a essa view (403), dashboard
+    # aparecia vazio pra esse perfil mesmo estando no menu dele.
+    is_fin = perfil in ('ADMIN', 'FINANCEIRO', 'CONTABILIDADE')
     is_ops = perfil in ('ADMIN', 'OPERACIONAL')
     hoje = date.today()
     data = {}

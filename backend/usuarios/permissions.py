@@ -32,3 +32,12 @@ class IsAdminOrFinanceiroOrContabilidade(BasePermission):
     nunca lanca Despesa/Receita/Conta/Aporte, so consulta relatorio."""
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'FINANCEIRO', 'CONTABILIDADE'])
+
+
+class IsAdminOrOperacionalOrFinanceiroOrContabilidade(BasePermission):
+    """So pro endpoint de dashboard financeiro (leitura) -- deliberadamente
+    SEPARADA de IsAdminOrOperacionalOrFinanceiro (essa e' compartilhada com
+    email_client/views.py; adicionar CONTABILIDADE naquela daria acesso a
+    Email pra Contabilidade, o oposto do pedido do usuario 03/08/2026)."""
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'OPERACIONAL', 'FINANCEIRO', 'CONTABILIDADE'])

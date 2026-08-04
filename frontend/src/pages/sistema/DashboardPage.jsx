@@ -155,7 +155,13 @@ export default function DashboardPage() {
       .finally(() => setCarregando(false))
   }, [perfil])
 
-  const isFin = perfil === 'ADMIN' || perfil === 'FINANCEIRO'
+  // CONTABILIDADE ve os mesmos KPIs financeiros que FINANCEIRO ve (leitura),
+  // igual ja liberado no backend (dashboard() usa
+  // IsAdminOrOperacionalOrFinanceiroOrContabilidade) -- esse filtro local
+  // tinha ficado pra tras, deixando a dashboard inteira em branco pro
+  // Contador Direto mesmo com a API respondendo 200 com dado real (achado
+  // real: SystemD, 04/08/2026).
+  const isFin = perfil === 'ADMIN' || perfil === 'FINANCEIRO' || perfil === 'CONTABILIDADE'
   const isOps = perfil === 'ADMIN' || perfil === 'OPERACIONAL'
   const resCor = (v) => Number(v) >= 0 ? '#10b981' : '#f87171'
 

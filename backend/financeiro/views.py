@@ -51,9 +51,18 @@ class SubCategoriaViewSet(ModelViewSet):
 class ContaViewSet(AuditMixin, ModelViewSet):
     queryset = Conta.objects.filter(is_active=True).order_by('nome')
     serializer_class = ContaSerializer
-    permission_classes = [IsAdminOrFinanceiro]
     filter_backends = [SearchFilter]
     search_fields = ['nome']
+
+    def get_permissions(self):
+        # list/retrieve (leitura) libera pra Contabilidade tambem -- sem
+        # isso FluxoCaixaPage.jsx/LivroCaixaPage.jsx (que buscam a lista de
+        # contas pro filtro) quebravam por inteiro pra esse perfil (achado
+        # real: SystemD, 04/08/2026). create/update/delete/transferir
+        # continuam exclusivos de ADMIN/FINANCEIRO.
+        if self.action in ('list', 'retrieve'):
+            return [IsAdminOrFinanceiroOrContabilidade()]
+        return [IsAdminOrFinanceiro()]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -303,6 +312,15 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
         # ja esta no menu de Contabilidade, precisa de leitura liberada.
         if self.action in ('list', 'retrieve', 'pdf'):
             return [IsAdminOrFinanceiroOrContabilidade()]
+        if self.action == 'estornar_despesa':
+            # get_permissions() sempre ignora o permission_classes=[IsAdmin]
+            # declarado no @action de estornar_despesa (mais abaixo) -- sem
+            # esse caso especial, FINANCEIRO caia no fallback
+            # IsAdminOrFinanceiro() e ganhava acesso a estornar despesa
+            # sozinho, contra a intencao original do decorator (achado real:
+            # SystemD, 04/08/2026, regressao introduzida ao liberar list/
+            # retrieve pra Contabilidade em 03/08/2026).
+            return [IsAdmin()]
         return [IsAdminOrFinanceiro()]
 
     def perform_create(self, serializer):
@@ -501,11 +519,22 @@ class LivroCaixaViewSet(ReadCreateViewSet):
     ordering_fields = ['data', 'valor']
 
     def get_permissions(self):
-        # list/retrieve (leitura) libera pra Contabilidade tambem; create
-        # (lancamento manual) continua exclusivo de ADMIN/FINANCEIRO -- ver
+        # list/retrieve/totais/pdf (leitura) libera pra Contabilidade tambem;
+        # create/estornar continua exclusivo de ADMIN/FINANCEIRO -- ver
         # IsAdminOrFinanceiroOrContabilidade, nunca usar em action de escrita.
-        if self.action in ('list', 'retrieve', 'pdf'):
+        # 'totais' tinha permission_classes proprio no @action (mais embaixo)
+        # mas isso e ignorado sempre que a ViewSet define get_permissions() --
+        # ficou 403 pra Contabilidade sem ninguem perceber ate testar de
+        # verdade (achado real: SystemD, 04/08/2026, Livro Caixa em branco).
+        if self.action in ('list', 'retrieve', 'pdf', 'totais'):
             return [IsAdminOrFinanceiroOrContabilidade()]
+        if self.action == 'estornar':
+            # Mesmo motivo do estornar_despesa em DespesaViewSet -- sem esse
+            # caso especial, FINANCEIRO caia no fallback IsAdminOrFinanceiro()
+            # e ganhava acesso a estornar lancamento do Livro Caixa direto,
+            # contra o @action(permission_classes=[IsAdmin]) original (que
+            # get_permissions() sempre ignora).
+            return [IsAdmin()]
         return [IsAdminOrFinanceiro()]
     # Sem paginacao (mesmo padrao de DespesaViewSet/ReceitaViewSet) — o
     # frontend (LivroCaixaPage, FluxoCaixaPage) busca tudo de uma vez e
@@ -577,8 +606,10 @@ class LivroCaixaViewSet(ReadCreateViewSet):
 
         return Response(LivroCaixaSerializer(estorno).data, status=201)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAdminOrFinanceiroOrContabilidade])
+    @action(detail=False, methods=['get'])
     def totais(self, request):
+        # Permissao real controlada por get_permissions() acima (self.action
+        # in (...,'totais',...)) -- permission_classes aqui seria ignorado.
         from .models import Conta
         conta_id = request.query_params.get('conta')
         qs = LivroCaixa.objects.filter(estornado=False)

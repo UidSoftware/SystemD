@@ -5,10 +5,11 @@ import api from '../../services/api'
 import { ModalConfirmar } from '../../components/sistema/FinanceiroTable'
 
 const PERFIS = [
-  { value: 'ADMIN',       label: 'Admin',       cor: '#FF0000' },
-  { value: 'OPERACIONAL', label: 'Operacional',  cor: '#063BF8' },
-  { value: 'FINANCEIRO',  label: 'Financeiro',   cor: '#10b981' },
-  { value: 'CLIENTE',     label: 'Cliente',      cor: '#3d0361' },
+  { value: 'ADMIN',         label: 'Admin',         cor: '#FF0000' },
+  { value: 'OPERACIONAL',   label: 'Operacional',   cor: '#063BF8' },
+  { value: 'FINANCEIRO',    label: 'Financeiro',    cor: '#10b981' },
+  { value: 'CONTABILIDADE', label: 'Contabilidade', cor: '#38bdf8' },
+  { value: 'CLIENTE',       label: 'Cliente',       cor: '#3d0361' },
 ]
 
 const formVazio = { nome: '', email: '', perfil: 'OPERACIONAL', setor_id: null, senha: '', ativo: true }

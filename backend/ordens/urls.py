@@ -4,6 +4,7 @@ from .views import (
     OSViewSet, ContratoViewSet, ChamadoViewSet, MensagemChamadoViewSet,
     ChamadoGlobalViewSet, MensagemGlobalViewSet, EntrevistaViewSet,
     ArquiteturaTecnicaViewSet, ManutencaoViewSet, SistemasParaManutencaoViewSet,
+    criar_manutencao_via_api,
 )
 
 router = DefaultRouter()
@@ -23,4 +24,7 @@ urlpatterns = router.urls + [
     path('os/<int:os_pk>/chamados/<int:pk>/', ChamadoViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}), name='os-chamado-detail'),
     # Mensagens de chamado
     path('chamados/<int:chamado_pk>/mensagens/', MensagemGlobalViewSet.as_view({'get': 'list', 'post': 'create'}), name='chamado-mensagem-list'),
+    # Integração externa — sistemas cliente (ex: UidCore-derivado) criando
+    # Manutenção direto via API Key própria da OS, sem login de usuário.
+    path('integracoes/manutencoes/', criar_manutencao_via_api, name='integracao-criar-manutencao'),
 ]

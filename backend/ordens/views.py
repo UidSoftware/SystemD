@@ -1,5 +1,9 @@
+import hashlib
+import secrets
+from datetime import timedelta
+
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
 from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS, Entrevista, ArquiteturaTecnica, Manutencao
@@ -9,7 +13,7 @@ from .serializers import (
     EntrevistaSerializer, ArquiteturaTecnicaSerializer,
     ManutencaoSerializer, OSParaManutencaoSerializer,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from usuarios.permissions import IsAdmin, IsAdminOrOperacional
 from notificacoes.models import Notificacao, TipoNotificacao, PrioridadeNotificacao
 from notificacoes.terminal_ticket import montar_briefing
@@ -19,7 +23,7 @@ class OSViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'create', 'update', 'partial_update', 'avancar']:
             return [IsAdminOrOperacional()]
-        if self.action == 'destroy':
+        if self.action in ['destroy', 'gerar_api_key']:
             return [IsAdmin()]
         # retrieve: admin, operacional e cliente (própria OS)
         return [IsAdminOrOperacional()]
@@ -97,6 +101,82 @@ class OSViewSet(viewsets.ModelViewSet):
             descricao=descricao,
         )
         return Response({'mensagem': 'OS cancelada com sucesso.'})
+
+    @action(detail=True, methods=['post'], url_path='gerar-api-key')
+    def gerar_api_key(self, request, pk=None):
+        """Gera (ou regenera, invalidando a anterior) a chave de integração
+        dessa OS -- usada por sistemas clientes (ex: um UidCore-derivado)
+        pra criar Manutencao direto no SystemD via POST /api/integracoes/
+        manutencoes/. Só guarda o hash; a chave em texto puro só aparece
+        UMA VEZ, nesta resposta -- se perder, tem que gerar outra."""
+        os_obj = self.get_object()
+        chave = secrets.token_urlsafe(32)
+        os_obj.api_key_hash = hashlib.sha256(chave.encode()).hexdigest()
+        os_obj.api_key_criada_em = timezone.now()
+        os_obj.save(update_fields=['api_key_hash', 'api_key_criada_em'])
+        return Response({
+            'chave': chave,
+            'aviso': 'Guarde essa chave agora — ela não pode ser recuperada '
+                     'depois de sair desta tela, só regenerada (o que '
+                     'invalida a anterior).',
+        })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def criar_manutencao_via_api(request):
+    """POST /api/integracoes/manutencoes/
+    Header: Authorization: ApiKey <chave>
+    Body: {"descricao": "...", "prioridade": "BAIXA"|"MEDIA"|"ALTA" (opcional)}
+
+    Permite que um sistema cliente (ex: um UidCore-derivado, quando o
+    cliente final relata um problema dentro do próprio sistema dele) crie
+    uma Manutencao direto no banco do SystemD, sem precisar de um humano
+    da Uid cadastrando manualmente. A chave já identifica a OS -- o
+    sistema chamador nunca escolhe/declara de qual cliente é, elimina erro
+    ou uso indevido em nome de outro sistema.
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('ApiKey '):
+        return Response({'erro': 'Header "Authorization: ApiKey <chave>" obrigatório.'}, status=401)
+    chave = auth_header[len('ApiKey '):].strip()
+    if not chave:
+        return Response({'erro': 'Chave vazia.'}, status=401)
+
+    chave_hash = hashlib.sha256(chave.encode()).hexdigest()
+    os_obj = OS.objects.filter(api_key_hash=chave_hash, ativo=True).first()
+    if not os_obj:
+        return Response({'erro': 'Chave inválida.'}, status=403)
+
+    descricao = (request.data.get('descricao') or '').strip()
+    if not descricao:
+        return Response({'erro': 'Campo "descricao" é obrigatório.'}, status=400)
+    if not os_obj.caminho_servidor:
+        return Response({'erro': 'OS sem caminho_servidor configurado — contate a Uid Software.'}, status=500)
+
+    # Throttle simples por OS (nao por IP -- o chamador e sempre o mesmo
+    # backend do sistema cliente, nao um usuario final direto): no maximo 5
+    # manutencoes criadas via essa rota nas ultimas 24h pra essa OS, evita
+    # flood (ex: bug em loop no sistema cliente reportando repetido).
+    janela = timezone.now() - timedelta(hours=24)
+    recentes = Manutencao.objects.filter(
+        os=os_obj, criado_em__gte=janela, descricao__startswith='[via API]',
+    ).count()
+    if recentes >= 5:
+        return Response(
+            {'erro': 'Limite de manutenções via API atingido nas últimas 24h pra esse sistema. Contate a Uid Software diretamente.'},
+            status=429,
+        )
+
+    prioridade = (request.data.get('prioridade') or '').strip().upper()
+    prefixo = f'[Prioridade: {prioridade}] ' if prioridade in ('BAIXA', 'MEDIA', 'ALTA') else ''
+    manutencao = Manutencao.objects.create(
+        os=os_obj,
+        descricao=f'[via API] {prefixo}{descricao}',
+        caminho=os_obj.caminho_servidor,
+    )
+
+    return Response({'mensagem': 'Manutenção criada com sucesso.', 'manutencao_id': manutencao.id}, status=201)
 
 
 class ContratoViewSet(viewsets.ModelViewSet):

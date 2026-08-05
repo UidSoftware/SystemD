@@ -48,6 +48,14 @@ class OS(models.Model):
         verbose_name="URL do sistema",
         help_text="Ex: https://uidsoftware.com.br",
     )
+    api_key_hash = models.CharField(
+        max_length=64, blank=True, null=True, unique=True, db_index=True,
+        verbose_name="Hash da chave de API",
+        help_text="SHA-256 da chave de integração — a chave em si nunca é "
+                   "guardada em texto puro, só o hash (só dá pra ver o "
+                   "valor real uma vez, no momento em que é gerada).",
+    )
+    api_key_criada_em = models.DateTimeField(null=True, blank=True)
     ativo         = models.BooleanField(default=True)
     criado_em     = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

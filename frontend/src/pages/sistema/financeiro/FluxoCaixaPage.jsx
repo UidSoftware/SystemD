@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { inputStyle, Spinner, Vazio, formatMoeda, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
@@ -92,7 +91,7 @@ export default function FluxoCaixaPage() {
   const corResultado = (v) => v >= 0 ? '#10b981' : '#f87171'
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
@@ -188,6 +187,6 @@ export default function FluxoCaixaPage() {
           </>
         )}
       </div>
-    </SistemaLayout>
+    </>
   )
 }

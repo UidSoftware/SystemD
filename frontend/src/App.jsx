@@ -33,22 +33,12 @@ import EntrevistaPage from './pages/sistema/office/EntrevistaPage'
 import MeusProjetosPage from './pages/sistema/portal/MeusProjetosPage'
 import SuportePage from './pages/sistema/portal/SuportePage'
 import MinhasFaturasPage from './pages/sistema/portal/MinhasFaturasPage'
-// Financeiro
-import ConciliacaoPage from './pages/sistema/financeiro/ConciliacaoPage'
-import FornecedoresPage from './pages/sistema/financeiro/FornecedoresPage'
-import ContasPage from './pages/sistema/financeiro/ContasPage'
-import LivroCaixaPage from './pages/sistema/financeiro/LivroCaixaPage'
-import FluxoCaixaPage from './pages/sistema/financeiro/FluxoCaixaPage'
-import ReceitasPage from './pages/sistema/financeiro/ReceitasPage'
-import DespesasPage from './pages/sistema/financeiro/DespesasPage'
-import AportesPage from './pages/sistema/financeiro/AportesPage'
-import VisaoGeralPage from './pages/sistema/financeiro/VisaoGeralPage'
-import DREPage from './pages/sistema/financeiro/DREPage'
-import PorClientePage from './pages/sistema/financeiro/PorClientePage'
-import BalancoPage from './pages/sistema/financeiro/BalancoPage'
-import IndicadoresPage from './pages/sistema/financeiro/IndicadoresPage'
-import ReceitasRecebidasPage from './pages/sistema/financeiro/ReceitasRecebidasPage'
-import DespesasPagasPage from './pages/sistema/financeiro/DespesasPagasPage'
+// Financeiro — consolidado 07/08/2026 numa pagina so com abas internas
+// (era 15 componentes de pagina separados, cada rota renderizava um
+// import diferente). As 15 rotas continuam existindo (permissao
+// FIN/FIN_LEITURA e checada por rota, isso nao muda), so que agora
+// todas montam FinanceiroPage — a aba ativa vem do path da URL.
+import FinanceiroPage from './pages/sistema/financeiro/FinanceiroPage'
 // Relatorios
 import ReceitasRelatorioPage from './pages/sistema/relatorios/ReceitasRelatorioPage'
 import DespesasRelatorioPage from './pages/sistema/relatorios/DespesasRelatorioPage'
@@ -91,21 +81,21 @@ export default function App() {
           <Route path="/sistema/configuracoes/setores" element={<PrivateRoute perfisPermitidos={['ADMIN']}><SetoresPage /></PrivateRoute>} />
 
           {/* Financeiro */}
-          <Route path="/sistema/financeiro/visao-geral" element={<PrivateRoute perfisPermitidos={FIN}><VisaoGeralPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/receitas" element={<PrivateRoute perfisPermitidos={FIN}><ReceitasPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/receitas-recebidas" element={<PrivateRoute perfisPermitidos={FIN}><ReceitasRecebidasPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/despesas" element={<PrivateRoute perfisPermitidos={FIN}><DespesasPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/despesas-pagas" element={<PrivateRoute perfisPermitidos={FIN}><DespesasPagasPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/fornecedores" element={<PrivateRoute perfisPermitidos={FIN}><FornecedoresPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/aportes" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><AportesPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/contas" element={<PrivateRoute perfisPermitidos={FIN}><ContasPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/livro-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><LivroCaixaPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/conciliacao" element={<PrivateRoute perfisPermitidos={FIN}><ConciliacaoPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FluxoCaixaPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DREPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><PorClientePage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/balanco" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><BalancoPage /></PrivateRoute>} />
-          <Route path="/sistema/financeiro/indicadores" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><IndicadoresPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/visao-geral" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/receitas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/receitas-recebidas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/despesas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/despesas-pagas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/fornecedores" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/aportes" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/contas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/livro-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/conciliacao" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/balanco" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/indicadores" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
           {/* Relatorios */}
           <Route path="/sistema/relatorios/receitas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><ReceitasRelatorioPage /></PrivateRoute>} />
           <Route path="/sistema/relatorios/despesas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DespesasRelatorioPage /></PrivateRoute>} />

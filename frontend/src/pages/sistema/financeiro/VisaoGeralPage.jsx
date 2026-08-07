@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { inputStyle, Spinner, formatMoeda } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
@@ -48,7 +47,7 @@ export default function VisaoGeralPage() {
   }, [contaId])
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>Visão Geral — Fluxo de Caixa</h1>
 
@@ -134,6 +133,6 @@ export default function VisaoGeralPage() {
           </>
         )}
       </div>
-    </SistemaLayout>
+    </>
   )
 }

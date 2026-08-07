@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { FinanceiroTable, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
@@ -117,7 +116,7 @@ export default function ContasPage() {
   const contasDestino = modalTransf ? dados.filter(c => c.id !== modalTransf.id) : []
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Contas Bancárias</h1>
@@ -267,6 +266,6 @@ export default function ContasPage() {
         </ModalBase>
       )}
       <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
-    </SistemaLayout>
+    </>
   )
 }

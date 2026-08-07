@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import {
   FinanceiroTable, inputStyle, Spinner, Vazio,
   ModalBase, BotoesModal, ModalConfirmar,
@@ -136,7 +135,7 @@ export default function FornecedoresPage() {
   ]
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Fornecedores</h1>
@@ -339,6 +338,6 @@ export default function FornecedoresPage() {
         </ModalBase>
       )}
       <ModalConfirmar config={modalConfirmar} onClose={() => setModalConfirmar(null)} />
-    </SistemaLayout>
+    </>
   )
 }

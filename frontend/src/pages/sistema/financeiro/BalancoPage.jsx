@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { inputStyle, Spinner, formatMoeda, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
@@ -42,7 +41,7 @@ export default function BalancoPage() {
   useEffect(() => { buscar() }, [])
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Balanço Patrimonial</h1>
@@ -109,6 +108,6 @@ export default function BalancoPage() {
           </>
         )}
       </div>
-    </SistemaLayout>
+    </>
   )
 }

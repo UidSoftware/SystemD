@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../../contexts/AuthContext'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { FinanceiroTable, BadgeStatus, inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData, BotaoPdf } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
@@ -74,7 +73,7 @@ export default function AportesPage() {
   ]
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Aportes</h1>
@@ -129,6 +128,6 @@ export default function AportesPage() {
           </form>
         </ModalBase>
       )}
-    </SistemaLayout>
+    </>
   )
 }

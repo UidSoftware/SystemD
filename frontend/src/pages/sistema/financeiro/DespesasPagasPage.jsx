@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { inputStyle, Spinner, Vazio, ModalBase, BotoesModal, formatMoeda, formatData } from '../../../components/sistema/FinanceiroTable'
 import { financeiroApi } from '../../../services/financeiroApi'
 
@@ -112,7 +111,7 @@ export default function DespesasPagasPage() {
   const valorLiquidoCalc = (parseFloat(form.valor_bruto) || 0) - (parseFloat(form.desconto) || 0)
 
   return (
-    <SistemaLayout>
+    <>
       <div style={{ padding: '24px 24px 0' }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>Despesas Pagas</h1>
@@ -250,6 +249,6 @@ export default function DespesasPagasPage() {
           </form>
         </ModalBase>
       )}
-    </SistemaLayout>
+    </>
   )
 }

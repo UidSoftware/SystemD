@@ -1956,3 +1956,60 @@ zero. Corrigido antes de começar a implementação.
 
 **Nada foi implementado ainda nesta sessão** (só o fix pontual do
 `processo_ativo_para_caminho()`) — é plano pra retomar.
+
+
+---
+
+### [2026-08-07] — EBITDA com margem/breakdown + consolidação do menu Financeiro
+
+**Contexto:** usuário observou que o "SystemD 2.0" (backport do UidCore —
+PessoaBase, Balanço Patrimonial, Indicadores CFO) trouxe o backend
+atualizado mas o frontend continuou com "cara de 1.0": menu fragmentado,
+sem parecido visual/estrutural com o UidCore, e EBITDA praticamente
+invisível (só um número solto no card de Indicadores CFO do mês atual).
+
+**Achado real:** a view `dre()` (backend/financeiro/views.py) — que
+retorna a série completa do ano, usada pela tabela do DRE — nunca
+incluía `ebitda` nem margem, mesmo o cálculo já existindo há tempos no
+helper interno `_calcular_dre_mes()` (usado só pelo card avulso do mês
+atual em Indicadores CFO). EBITDA nunca apareceu na tabela mensal nem
+no total do ano.
+
+**Fix 1 — Backend (commit `a3e8e0f`):** `dre()` agora calcula e retorna
+`ebitda` e `margem_ebitda` (%) por mês e no total do ano (margem do ano
+recalculada sobre os totais somados, não média simples das margens
+mensais — evita distorção em mês de receita zero).
+
+**Fix 2 — Frontend, DREPage.jsx (commit `b3199cf`):** linha "EBITDA"
+destacada (verde/vermelho conforme sinal) + linha "Margem EBITDA %" na
+tabela mensal. Abaixo da tabela, 4 cards de resumo: EBITDA do ano com
+margem, e o breakdown de como ele é formado — Resultado Líquido,
+(+) Impostos/DAS, (+) Pró-labore, cada um com % da receita líquida.
+
+**Fix 3 — Sidebar (commit `abc4008`):** existiam 3 arrays de submenu
+financeiro (`menuRelatorios`, `menuContabilidade`, `menuFinanceiro`) com
+DRE/Balanço/Indicadores/Fluxo de Caixa repetidos entre eles, e os
+perfis ADMIN/FINANCEIRO mostravam "Financeiro" e "Relatorios" como
+**dois itens de topo separados** apontando pro mesmo domínio — daí a
+sensação de menu fragmentado comparado ao UidCore (1 item só,
+"Financeiro"). Fundido num único `menuFinanceiro` (15 destinos, zero
+path duplicado); item de topo "Relatorios" removido de ADMIN/FINANCEIRO.
+`menuContabilidade` mantido separado de propósito — é escopo de
+permissão real (perfil só-leitura), não duplicação de navegação.
+
+**Deploy:** `sytemd-frontend-builder` não tinha rodado havia 8 dias —
+push sozinho não redesenhou o frontend automaticamente (diferente do
+backend, que redeployou certinho via CI/CD). Rebuild manual
+(`docker compose -f docker-compose.prod.yml up -d --build frontend-builder`)
+disparado direto na VPS. Confirmado no bundle real servido
+(`index-DrRPTFNS.js`, `uidsoftware.com.br/sistema/`): string "Margem
+EBITDA" e campo `margem_ebitda` presentes.
+
+**Pendência real, não deste ciclo:** a consolidação estrutural completa
+(1 página só com abas internas tipo `Financeiro.jsx` do UidCore, em vez
+das ~17 rotas atuais) não foi feita — o que foi resolvido aqui é o
+sintoma mais visível (EBITDA invisível + 2 itens de topo redundantes),
+não a arquitetura de página inteira. Se retomar isso: reaproveitar os
+componentes de página já existentes (todos self-contained, ~4100 linhas
+no total em 15 arquivos) como conteúdo de aba, não reescrever a lógica
+de busca/CRUD de cada um do zero.

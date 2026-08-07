@@ -2063,3 +2063,38 @@ aba nova) e "Margem EBITDA" (do ciclo anterior) presentes.
 
 **Build:** 15 páginas + `FinanceiroPage.jsx` novo + `App.jsx` — 0 erros
 no build final, commit `4f37ab6`.
+
+
+---
+
+### [2026-08-07] — Visão Geral reescrita pra seguir fielmente o Resumo do UidCore
+
+Usuário apontou que, mesmo após a consolidação em abas, a aba "Visão
+Geral" continuava sendo a tela antiga — na real era um detalhe de Fluxo
+de Caixa (lançamentos com filtro de mês/conta), sem nenhuma relação com
+o padrão "Resumo" (primeira aba) do `Financeiro.jsx` do UidCore.
+
+**Reescrita completa de `VisaoGeralPage.jsx`** seguindo fielmente a
+estrutura do `ResumoTab` do UidCore:
+- KPIs principais: Saldo Total, Receita (mês), Despesa (mês), Resultado
+- Indicadores CFO: MRR, Margem Líquida %, Runway, Ponto de Equilíbrio
+- Receitas a Vencer / Despesas a Vencer (30 dias), lado a lado
+- Gráfico Receita x Despesa (6 meses), barras
+- Cards colapsáveis Despesas Pagas / Receitas Recebidas, agrupados por
+  mês (últimos 12 meses)
+
+**Backend (`dashboard()`, commit `d151b3d`):** já tinha a maior parte
+dos dados prontos de sessões anteriores — faltava só:
+1. `indicadores` aninhado com margem_liquida/runway_meses/
+   ponto_equilibrio — reaproveita `calcular_indicadores_cfo()` que já
+   existia (usado hoje só pela aba Indicadores CFO separada).
+2. `despesas_pagas_por_mes` / `receitas_recebidas_por_mes` — novo,
+   agrupamento via `TruncMonth` dos últimos 12 meses, mesmo padrão do
+   `dashboard_financeiro()` do UidCore.
+
+**Testado com API real** (`APIClient` autenticado, não só leitura de
+código): 200, `indicadores` com todos os campos populados com dado real
+do banco, 6 meses de histórico nos dois agrupamentos.
+
+**Deploy:** confirmado no bundle real (`index-TOqoP9WT.js`) — strings
+"Ponto de Equilíbrio" e "Receitas Recebidas" presentes.

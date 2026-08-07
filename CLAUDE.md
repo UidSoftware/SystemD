@@ -2133,3 +2133,71 @@ comum em avaliação de pequena empresa.
 
 **Deploy:** confirmado no bundle real (`index-BMjxcyJz.js`) — strings
 "Demonstração por Ano", "Lucro Bruto" e "Não modelado hoje" presentes.
+
+
+---
+
+### [2026-08-07] — Esteira em fila: backend + crons ligados (retoma plano_execucao.md)
+
+Início da implementação do `plano_execucao.md` (planejado 05-06/08,
+retomado hoje). Passos 1-5 completos e testados de verdade — nada
+ficou só desenhado.
+
+**Passo 1 — Modelo de dados (commits `90fbf3d`, `7dbc9a8`, `587e7ed`):**
+`Manutencao` ganhou `etapa` (choices = colunas do Kanban),
+`etapa_atualizada_em`, `bloqueio_motivo`, `bloqueada_em`,
+`tentativas_etapa`. `Artefato` ganhou o tipo `ordem`. Migrations
+escritas à mão (regra: nunca `makemigrations` na VPS), verificadas com
+`--check --dry-run` antes de aplicar: 0 divergência.
+
+**Backfill real, achado no processo:** as 17 Manutenções já concluídas
+(`feito=True`) nasceriam com `etapa=PENDENTE` (default da migration) se
+não fossem migradas — o cron do Planner ia tentar reprocessar tudo como
+se fosse novo. Rodado `Manutencao.objects.filter(feito=True).update(etapa='DEPLOYADO')`
+(17 linhas). Achado extra: `Manutencao(12).caminho` estava vazio no
+banco desde a criação (por isso o script antigo sempre pulava ela com
+"[SKIP] caminho nao existe") — corrigido pra `/var/www/uidcore` (o
+mesmo da OS vinculada). #12 e #14 ficaram como as 2 únicas pendências
+reais, ambas bugs de competência no Balanço do UidCore, já com
+diagnóstico e commit de referência do SystemD prontos na descrição.
+
+**Passo 2 — Comandos no management command (`disparar_hotfix.py`,
+mesmo arquivo histórico):** `--listar-etapa`, `--avancar-etapa`
+(reseta tentativas ao trocar de coluna, fecha o loop com `feito=True`
+quando chega em DEPLOYADO), `--bloquear` (substitui a criação de
+Notificacao IMPEDIMENTO_ESTEIRA — bloqueio agora é estado da própria
+Manutenção), `--incrementar-tentativa` (falha real na mesma etapa, sem
+trocar de coluna).
+
+**Passo 3 — `disparar_etapa.py`** (`/opt/uid-automation/`, novo):
+script único parametrizado por `--etapa=X`, reaproveita
+`processo_ativo_para_caminho()` (mesma trava de 05-06/08). Tentativas
+vivem no BANCO (`tentativas_etapa`), não num JSON local paralelo —
+elimina a classe de bug já documentada (contador efêmero
+dessincronizando do real). Retry inteligente: lê o log JSONL de trás
+pra frente procurando o último `rate_limit_event`; se foi rejeição de
+rate limit, NÃO conta tentativa, só agenda o retry pra depois do
+`resetsAt` real.
+
+**Passo 4 — Teste real, não simulado:** disparado
+`disparar_etapa.py --etapa=PENDENTE` de verdade contra a Manutenção
+#14 (bug real, não fake). Planner rodou, criou a ordem, e avançou
+sozinho pra `ORDEM_CRIADA` via `--avancar-etapa` — confirmado com
+`--status 14` mostrando a etapa nova. A trava de processo duplicado
+também foi validada na prática: a #12 (mesmo `caminho` da #14) foi
+pulada automaticamente enquanto a #14 rodava.
+
+**Passo 5 — Crontab ligado:** o cron antigo (`disparar_hotfix.py`,
+`0 */4 * * *`, orquestração de sessão única) foi **aposentado** —
+continuava usando o filtro velho (`disparada_em__isnull=True`), que
+ia competir com o novo sistema pelas mesmas Manutenções. Substituído
+por 6 entradas de `disparar_etapa.py --etapa=X`, cada uma a cada 15min,
+escalonadas em 2min de diferença uma da outra (`:01,:16,:31,:46` até
+`:11,:26,:41,:56`) pra não competir por recurso no mesmo instante.
+Backup do crontab anterior salvo em `/tmp/crontab_backup_*.txt` antes
+da troca.
+
+**Pendente (próximos passos do plano):** Kanban de Manutenção na UI do
+Office (o resto — tela de Artefatos, autenticação de agents — já
+existe), cron de matrícula automática de projetos órfãos (Studio
+Fluir).

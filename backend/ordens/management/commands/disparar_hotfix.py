@@ -22,7 +22,7 @@ import json
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from ordens.models import EtapaManutencao, Manutencao
+from ordens.models import EtapaManutencao, Manutencao, OS
 from notificacoes.models import Notificacao
 
 
@@ -40,6 +40,12 @@ class Command(BaseCommand):
         parser.add_argument('--bloquear', nargs=2, metavar=('ID', 'MOTIVO'), help='Bloqueia a manutencao (precisa de decisao humana).')
         parser.add_argument('--incrementar-tentativa', type=int, metavar='ID', help='Incrementa tentativas_etapa (falha real na etapa atual, sem trocar de etapa).')
         parser.add_argument('--liberar-bloqueio', type=int, metavar='ID', help='Desbloqueia: etapa volta pra PENDENTE, zera bloqueio_motivo/tentativas.')
+
+        # Matricula automatica de projetos orfaos (secao 5 do plano_execucao.md).
+        parser.add_argument('--listar-os-ativas', action='store_true', help='JSON das OS ativas com caminho_servidor preenchido.')
+        parser.add_argument('--tem-manutencao-aberta', type=int, metavar='OS_ID', help='JSON {tem_aberta: bool} — existe Manutencao ativa e nao-DEPLOYADO pra essa OS?')
+        parser.add_argument('--criar-manutencao-orfa', nargs=2, metavar=('OS_ID', 'DESCRICAO'), help='Cria Manutencao pra uma OS sem nenhuma aberta (achada pelo scan de CLAUDE.md).')
+        parser.add_argument('--bloqueio-motivo-orfa', type=str, metavar='MOTIVO', help='Usado junto com --criar-manutencao-orfa: se presente, a Manutencao ja nasce BLOQUEADA com esse motivo.')
 
     def handle(self, *args, **options):
         if options.get('mark_dispatched'):
@@ -207,6 +213,39 @@ class Command(BaseCommand):
             m.tentativas_etapa = 0
             m.save(update_fields=['etapa', 'bloqueio_motivo', 'bloqueada_em', 'tentativas_etapa', 'etapa_atualizada_em', 'atualizado_em'])
             self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} desbloqueada — etapa voltou pra PENDENTE.'))
+            return
+
+        if options.get('listar_os_ativas'):
+            itens = [
+                {'id': o.id, 'titulo': o.titulo, 'caminho_servidor': o.caminho_servidor}
+                for o in OS.objects.filter(ativo=True).exclude(caminho_servidor='')
+            ]
+            self.stdout.write(json.dumps(itens))
+            return
+
+        if options.get('tem_manutencao_aberta'):
+            tem = Manutencao.objects.filter(
+                os_id=options['tem_manutencao_aberta'], ativo=True,
+            ).exclude(etapa=EtapaManutencao.DEPLOYADO).exists()
+            self.stdout.write(json.dumps({'tem_aberta': tem}))
+            return
+
+        if options.get('criar_manutencao_orfa'):
+            os_id_str, descricao = options['criar_manutencao_orfa']
+            os_obj = OS.objects.filter(id=int(os_id_str), ativo=True).first()
+            if not os_obj:
+                self.stdout.write(self.style.ERROR('OS nao encontrada.'))
+                return
+            motivo = options.get('bloqueio_motivo_orfa')
+            m = Manutencao.objects.create(
+                os=os_obj,
+                descricao=descricao,
+                caminho=os_obj.caminho_servidor,
+                etapa=EtapaManutencao.BLOQUEADA if motivo else EtapaManutencao.PENDENTE,
+                bloqueio_motivo=motivo or '',
+                bloqueada_em=timezone.now() if motivo else None,
+            )
+            self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} criada (matricula automatica) pra OS {os_obj.id} — etapa {m.etapa}.'))
             return
 
         if options.get('list'):

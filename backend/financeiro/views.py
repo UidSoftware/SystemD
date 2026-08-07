@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.db import connection, transaction
 from django.db.models import Count, F, Sum, Q
+from django.db.models.functions import TruncMonth
 from rest_framework import status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -1157,6 +1158,79 @@ def dashboard(request):
         # em exatamente o valor da fatura aberta (achado real 03/08/2026).
         saldo_total = _saldo_total_contas()
 
+        # Indicadores CFO (margem liquida, runway, ponto de equilibrio,
+        # saldo total) — mesma fonte que a tela de Indicadores CFO usa,
+        # aninhado igual ao dashboard do UidCore (data.indicadores.*) em
+        # vez de espalhado solto na raiz do payload. Achado 07/08/2026:
+        # a Visao Geral do SystemD nunca teve isso, so mostrava fluxo de
+        # caixa cru — nao seguia o padrao "Resumo" do UidCore.
+        indicadores = calcular_indicadores_cfo()
+
+        # Despesas pagas / Receitas recebidas dos ultimos 12 meses,
+        # agrupadas por mes — alimenta os cards colapsaveis da Visao
+        # Geral, mesmo padrao do dashboard_financeiro() do UidCore.
+        MESES_NOMES_PT = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+        ]
+        doze_meses_atras = (
+            date(hoje.year - 1, 1, 1) if hoje.month == 1
+            else date(hoje.year - 1, hoje.month, 1)
+        )
+
+        desp_por_mes_qs = (
+            Despesa.objects.filter(
+                is_active=True, status='PAGO', estornado=False,
+                pagamento__gte=doze_meses_atras,
+            )
+            .annotate(mes_ref=TruncMonth('pagamento'))
+            .values('mes_ref').annotate(total=Sum('valor_liquido')).order_by('mes_ref')
+        )
+        despesas_pagas_por_mes = []
+        for row in desp_por_mes_qs:
+            mes_ref = row['mes_ref']
+            itens_qs = list(
+                Despesa.objects.filter(
+                    is_active=True, status='PAGO', estornado=False,
+                    pagamento__year=mes_ref.year, pagamento__month=mes_ref.month,
+                ).values('id', 'descricao', 'valor_liquido', 'pagamento', 'tipo')
+            )
+            despesas_pagas_por_mes.append({
+                'mes': f'{mes_ref.year}-{mes_ref.month:02d}',
+                'label': f'{MESES_NOMES_PT[mes_ref.month - 1]} {mes_ref.year}',
+                'total': float(row['total'] or 0),
+                'itens': [
+                    {'id': i['id'], 'descricao': i['descricao'], 'valor': float(i['valor_liquido']),
+                     'data': i['pagamento'].isoformat() if i['pagamento'] else None, 'tipo': i['tipo']}
+                    for i in itens_qs
+                ],
+            })
+
+        rec_por_mes_qs = (
+            Receita.objects.filter(is_active=True, status='RECEBIDO', recebimento__gte=doze_meses_atras)
+            .annotate(mes_ref=TruncMonth('recebimento'))
+            .values('mes_ref').annotate(total=Sum('valor_liquido')).order_by('mes_ref')
+        )
+        receitas_recebidas_por_mes = []
+        for row in rec_por_mes_qs:
+            mes_ref = row['mes_ref']
+            itens_qs = list(
+                Receita.objects.filter(
+                    is_active=True, status='RECEBIDO',
+                    recebimento__year=mes_ref.year, recebimento__month=mes_ref.month,
+                ).values('id', 'descricao', 'valor_liquido', 'recebimento', 'tipo')
+            )
+            receitas_recebidas_por_mes.append({
+                'mes': f'{mes_ref.year}-{mes_ref.month:02d}',
+                'label': f'{MESES_NOMES_PT[mes_ref.month - 1]} {mes_ref.year}',
+                'total': float(row['total'] or 0),
+                'itens': [
+                    {'id': i['id'], 'descricao': i['descricao'], 'valor': float(i['valor_liquido']),
+                     'data': i['recebimento'].isoformat() if i['recebimento'] else None, 'tipo': i['tipo']}
+                    for i in itens_qs
+                ],
+            })
+
         data.update({
             'receita_mes': receita_mes,
             'despesa_mes': despesa_mes,
@@ -1167,6 +1241,9 @@ def dashboard(request):
             'despesas_vencer': despesas_vencer,
             'grafico_6_meses': grafico,
             'top_clientes': top_clientes,
+            'indicadores': indicadores,
+            'despesas_pagas_por_mes': despesas_pagas_por_mes,
+            'receitas_recebidas_por_mes': receitas_recebidas_por_mes,
             'receitas_atrasadas': Receita.objects.filter(is_active=True, status='ATRASADO').count(),
             'despesas_atrasadas': Despesa.objects.filter(is_active=True, status='ATRASADO').count(),
         })

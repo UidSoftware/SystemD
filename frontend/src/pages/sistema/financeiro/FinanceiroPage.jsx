@@ -4,6 +4,7 @@ import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import VisaoGeralPage from './VisaoGeralPage'
 import FluxoCaixaPage from './FluxoCaixaPage'
 import DREPage from './DREPage'
+import EbitdaPage from './EbitdaPage'
 import BalancoPage from './BalancoPage'
 import IndicadoresPage from './IndicadoresPage'
 import ReceitasPage from './ReceitasPage'
@@ -28,6 +29,7 @@ const ABAS = [
   { path: '/sistema/financeiro/visao-geral',        label: 'Visão Geral',        Componente: VisaoGeralPage },
   { path: '/sistema/financeiro/fluxo-caixa',         label: 'Fluxo de Caixa',      Componente: FluxoCaixaPage },
   { path: '/sistema/financeiro/dre',                 label: 'DRE',                 Componente: DREPage },
+  { path: '/sistema/financeiro/ebitda',               label: 'EBITDA',              Componente: EbitdaPage },
   { path: '/sistema/financeiro/balanco',              label: 'Balanço',             Componente: BalancoPage },
   { path: '/sistema/financeiro/indicadores',          label: 'Indicadores CFO',     Componente: IndicadoresPage },
   { path: '/sistema/financeiro/receitas',             label: 'Contas a Receber',    Componente: ReceitasPage },

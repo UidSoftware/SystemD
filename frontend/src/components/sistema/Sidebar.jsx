@@ -47,6 +47,7 @@ const menuFinanceiro = [
   { label: 'Visao Geral',         path: '/sistema/financeiro/visao-geral',        emoji: '📊' },
   { label: 'Fluxo de Caixa',      path: '/sistema/financeiro/fluxo-caixa',        emoji: '📈' },
   { label: 'DRE',                 path: '/sistema/financeiro/dre',                emoji: '📉' },
+  { label: 'EBITDA',              path: '/sistema/financeiro/ebitda',             emoji: '🎯' },
   { label: 'Balanço Patrimonial', path: '/sistema/financeiro/balanco',            emoji: '⚖️' },
   { label: 'Indicadores CFO',     path: '/sistema/financeiro/indicadores',        emoji: '🧭' },
   { label: 'Contas a Receber',    path: '/sistema/financeiro/receitas',           emoji: '📥' },

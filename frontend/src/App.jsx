@@ -93,6 +93,7 @@ export default function App() {
           <Route path="/sistema/financeiro/conciliacao" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/fluxo-caixa" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/dre" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
+          <Route path="/sistema/financeiro/ebitda" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/por-cliente" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/balanco" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/indicadores" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><FinanceiroPage /></PrivateRoute>} />

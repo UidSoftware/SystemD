@@ -38,6 +38,7 @@ class Command(BaseCommand):
         parser.add_argument('--listar-etapa', type=str, metavar='ETAPA', help='JSON das manutencoes ativas nessa etapa.')
         parser.add_argument('--avancar-etapa', nargs=2, metavar=('ID', 'ETAPA_NOVA'), help='Avanca a etapa da manutencao.')
         parser.add_argument('--bloquear', nargs=2, metavar=('ID', 'MOTIVO'), help='Bloqueia a manutencao (precisa de decisao humana).')
+        parser.add_argument('--incrementar-tentativa', type=int, metavar='ID', help='Incrementa tentativas_etapa (falha real na etapa atual, sem trocar de etapa).')
 
     def handle(self, *args, **options):
         if options.get('mark_dispatched'):
@@ -94,6 +95,8 @@ class Command(BaseCommand):
             self.stdout.write(json.dumps({
                 'encontrada': True,
                 'feito': m.feito,
+                'etapa': m.etapa,
+                'tentativas_etapa': m.tentativas_etapa,
                 'ativo': m.ativo,
                 'disparada_em': m.disparada_em.isoformat() if m.disparada_em else None,
             }))
@@ -175,6 +178,16 @@ class Command(BaseCommand):
             m.bloqueada_em = timezone.now()
             m.save(update_fields=['etapa', 'bloqueio_motivo', 'bloqueada_em', 'etapa_atualizada_em', 'atualizado_em'])
             self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} bloqueada: {motivo}'))
+            return
+
+        if options.get('incrementar_tentativa'):
+            m = Manutencao.objects.filter(id=options['incrementar_tentativa'], ativo=True).first()
+            if not m:
+                self.stdout.write(self.style.ERROR('Manutencao nao encontrada.'))
+                return
+            m.tentativas_etapa += 1
+            m.save(update_fields=['tentativas_etapa', 'atualizado_em'])
+            self.stdout.write(json.dumps({'id': m.id, 'etapa': m.etapa, 'tentativas_etapa': m.tentativas_etapa}))
             return
 
         if options.get('list'):

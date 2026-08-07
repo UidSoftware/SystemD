@@ -2253,3 +2253,75 @@ estágios, Kanban na UI, matrícula automática de órfãos. A esteira agora
 roda como fila cron-driven — sem sessão única orquestrando tudo do
 início ao fim, sem depender de ninguém "vigiar" o processo pra ele
 continuar avançando.
+
+### 07/08/2026 — Limpeza do menu Financeiro, bug "página sumiu" e correção de senha de email
+
+**Contexto:** depois da consolidação do Financeiro em página única com
+abas (mesmo dia, ver acima), o usuário pediu pra limpar a Sidebar —
+"Fluxo de Caixa, DRE, EBITDA já estão dentro de Financeiro, tira o que
+está dentro do menu" — e, num segundo pedido, percebeu que os cards
+colapsáveis "Despesas Pagas"/"Receitas Recebidas" da Visão Geral
+mostravam a mesma informação das abas de mesmo nome, só sem botão de
+editar — redundância real, confirmada comparando os arquivos.
+
+**Fix 1 — Sidebar sem submenu de Financeiro:** removido o array
+`menuFinanceiro` (16 itens) da Sidebar; "Financeiro" virou link direto.
+
+⚠️ **Bug real introduzido por esse fix, reportado pelo usuário ("a
+página finanças sumiu"):** o link apontava pra `/sistema/financeiro`
+(path "pai", sem subpath) — mas só existem rotas com subpath
+(`/financeiro/dre`, `/financeiro/visao-geral` etc.) no `App.jsx`. Com
+submenu, o item pai nunca navegava sozinho (só expandia a lista); virando
+link direto, caiu numa rota inexistente e a página ficou em branco (o
+app não tem página de erro/catch-all). Corrigido: link aponta pra
+`/sistema/financeiro/visao-geral` (rota real), com um novo campo
+`activeMatch: '/sistema/financeiro'` no item de menu pra continuar
+destacado em qualquer aba do Financeiro (o match de "ativo" na Sidebar
+passou a ser calculado à parte do `to` do `NavLink`, não mais pelo
+`isActive` nativo do React Router). Regra geral guardada no
+`~/.claude/CLAUDE.md` (Design/Frontend).
+
+**Fix 2 — edição movida pra dentro da Visão Geral:** os cards
+colapsáveis de Despesas Pagas/Receitas Recebidas ganharam botão ✏️
+(e 🧾 gerar recibo, pra receita) em cada lançamento, buscando o
+registro completo sob demanda (`GET /despesas|receitas/{id}/`, retrieve
+padrão do `ModelViewSet` via router — não precisou de endpoint novo no
+backend). As duas abas antigas (`ReceitasRecebidasPage.jsx`/
+`DespesasPagasPage.jsx`) foram removidas do `FinanceiroPage.jsx` e
+deletadas do repo. As rotas em `App.jsx` foram mantidas de propósito
+(comentário explicando o motivo) — sem página de erro configurada, um
+link salvo antigo cairia em branco se a rota fosse removida; `FinanceiroPage`
+cai pra Visão Geral sozinho quando o path não bate com nenhuma aba.
+
+⚠️ **Achado à parte, no mesmo commit:** o fix do bug acima já tinha sido
+deployado via scp num turno anterior, mas nunca tinha sido commitado —
+só descoberto ao rodar `git status` antes deste commit. Lição geral
+guardada no `~/.claude/CLAUDE.md` (Infraestrutura): fix via scp sempre
+termina com commit+push antes de seguir pra próxima tarefa.
+
+**Investigação separada, mesmo dia — origem de um R$1,63 "ajuste de
+conciliação" na conta CDB Garantia:** usuário pediu explicação de um
+valor lançado numa sessão anterior. Confirmado contra os PDFs reais na
+pasta rclone (`/mnt/dropbox/01 - Contabilidade/Extratos Onvio/Extratos`,
+senha padrão `609393` já hardcoded em `parsers.py`) que as duas
+transações originais (aplicação R$330,00 e liquidação R$119,63 da
+fatura de maio) batem exatas com os extratos do banco — o R$1,63 é
+rendimento do CDB acumulado entre as duas datas, absorvido na liquidação
+automática em vez de aparecer como linha própria. `Receita` id=20
+atualizada com a explicação real (descrição + observações), sem tocar
+no `LivroCaixa` correspondente (imutável por regra).
+
+**Incidente separado — email parou de funcionar após o usuário reiniciar
+o Mailcow:** `contato@uidsoftware.com.br` parou de autenticar (IMAP e
+SMTP). Causa raiz: senha da caixa mudou no Mailcow, e o SystemD guarda
+essa mesma senha em DOIS lugares — `UsuarioEmailConfig` (banco, usada
+pela aba Email) e `SYSTEM_EMAIL_SENHA` no `.env` (usada só pros emails
+automáticos de convite/redefinição de senha). Resetada a senha direto no
+Mailcow (`doveadm pw` + `UPDATE` na tabela `mailbox` do MySQL do
+Mailcow, sem API key configurada) e atualizados os dois lugares no
+SystemD. Achado técnico à parte: `docker compose restart backend` NÃO
+recarregou o `.env` atualizado — precisou `up -d --force-recreate
+backend` pra pegar a env var nova de verdade. As duas lições (credencial
+duplicada, `restart` não recarrega `.env`) guardadas no
+`~/.claude/CLAUDE.md` (Infraestrutura) por serem gerais, não específicas
+do SystemD.

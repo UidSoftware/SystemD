@@ -26,6 +26,12 @@ export default function DREPage() {
     </td>
   )
 
+  const pctCell = (val, cor) => (
+    <td style={{ padding: '8px 12px', textAlign: 'right', color: cor || '#a78bca', fontSize: 12, fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+      {Number(val || 0).toFixed(1)}%
+    </td>
+  )
+
   const headerStyle = { padding: '8px 12px', fontSize: 11, fontWeight: 700, color: '#a78bca', textAlign: 'right', whiteSpace: 'nowrap' }
   const labelCell  = { padding: '8px 12px', fontSize: 13, color: '#a78bca', whiteSpace: 'nowrap' }
   const labelBold  = { ...labelCell, color: '#f1f5f9', fontWeight: 700 }
@@ -74,20 +80,24 @@ export default function DREPage() {
                   { key: 'total_despesas',       label: 'Total Despesas',      cor: '#FF0000', bold: true },
                   { key: null },
                   { key: 'resultado',            label: 'Resultado Líquido',   cor: null,      bold: true, dynamic: true },
+                  { key: 'ebitda',               label: 'EBITDA',              cor: null,      bold: true, dynamic: true, highlight: true },
+                  { key: 'margem_ebitda',        label: 'Margem EBITDA',       cor: '#a78bca', bold: false, pct: true },
                 ].map((linha, i) => {
                   if (!linha.key) return (
                     <tr key={i}><td colSpan={15} style={{ height: 8 }} /></tr>
                   )
                   return (
-                    <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: linha.bold ? 'rgba(6,59,248,0.06)' : 'transparent' }}>
+                    <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: linha.highlight ? 'rgba(16,185,129,0.06)' : (linha.bold ? 'rgba(6,59,248,0.06)' : 'transparent') }}>
                       <td style={linha.bold ? labelBold : labelCell}>{linha.label}</td>
                       {(dados.meses || []).map((m, mi) => {
                         const val = Number(m[linha.key] || 0)
+                        if (linha.pct) return pctCell(val, linha.cor)
                         const cor = linha.dynamic ? (val >= 0 ? '#10b981' : '#FF0000') : linha.cor
                         return cell(val, linha.bold ? cor : undefined)
                       })}
                       {(() => {
                         const val = Number(dados.totais_ano?.[linha.key] || 0)
+                        if (linha.pct) return pctCell(val, '#6b8fff')
                         const cor = linha.dynamic ? (val >= 0 ? '#10b981' : '#FF0000') : (linha.bold ? linha.cor : '#6b8fff')
                         return (
                           <td style={{ padding: '8px 12px', textAlign: 'right', color: cor, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -100,6 +110,36 @@ export default function DREPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!carregando && dados?.totais_ano && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginTop: 20, marginBottom: 24 }}>
+            {(() => {
+              const t = dados.totais_ano
+              const ebitda = Number(t.ebitda || 0)
+              const margem = Number(t.margem_ebitda || 0)
+              const receitaLiq = Number(t.receita_liquida || 0)
+              const resultado = Number(t.resultado || 0)
+              const impostos = Number(t.impostos || 0)
+              const prolabore = Number(t.prolabore || 0)
+              const pctDe = (v) => receitaLiq ? (v / receitaLiq * 100) : 0
+              const kpiCard = (label, valor, sub, cor) => (
+                <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 18px' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#a78bca', margin: 0, textTransform: 'uppercase', letterSpacing: 0.3 }}>{label}</p>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: cor, margin: '6px 0 2px' }}>{valor}</p>
+                  {sub && <p style={{ fontSize: 12, color: '#a78bca', margin: 0 }}>{sub}</p>}
+                </div>
+              )
+              return (
+                <>
+                  {kpiCard('EBITDA (Ano)', formatMoeda(ebitda), `Margem: ${margem.toFixed(1)}% da receita líquida`, ebitda >= 0 ? '#10b981' : '#FF0000')}
+                  {kpiCard('Resultado Líquido', formatMoeda(resultado), `${pctDe(resultado).toFixed(1)}% da receita`, resultado >= 0 ? '#10b981' : '#FF0000')}
+                  {kpiCard('(+) Impostos/DAS', formatMoeda(impostos), `${pctDe(impostos).toFixed(1)}% da receita`, '#f59e0b')}
+                  {kpiCard('(+) Pró-labore', formatMoeda(prolabore), `${pctDe(prolabore).toFixed(1)}% da receita`, '#f59e0b')}
+                </>
+              )
+            })()}
           </div>
         )}
       </div>

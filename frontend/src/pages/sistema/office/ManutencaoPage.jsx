@@ -3,7 +3,23 @@ import SistemaLayout from '../../../components/sistema/SistemaLayout'
 import { osApi } from '../../../services/osApi'
 import { ModalConfirmar } from '../../../components/sistema/FinanceiroTable'
 
-// ──────────────────────────── helpers ────────────────────────────
+// Kanban da esteira em fila (ver /root/SystemD/plano_execucao.md) —
+// cada Manutencao e' um card, coluna = etapa. Substitui a tabela plana
+// que existia antes (07/08/2026): agora da pra ver o estado real da
+// esteira de relance, sem precisar abrir SSH/log pra saber onde cada
+// coisa esta.
+
+const COLUNAS = [
+  { etapa: 'PENDENTE',           label: 'Pendente',              cor: '#a78bca' },
+  { etapa: 'ORDEM_CRIADA',        label: 'Ordem Criada',          cor: '#6b8fff' },
+  { etapa: 'ESPEC_CRIADA',        label: 'Espec. Criada',         cor: '#6b8fff' },
+  { etapa: 'BACKEND_PRONTO',      label: 'Backend Pronto',        cor: '#f59e0b' },
+  { etapa: 'FRONTEND_PRONTO',     label: 'Frontend Pronto',       cor: '#f59e0b' },
+  { etapa: 'SENTINEL_APROVADO',   label: 'Aprovado (Sentinel)',   cor: '#10b981' },
+  { etapa: 'SENTINEL_REPROVADO',  label: 'Reprovado (Sentinel)',  cor: '#f87171' },
+  { etapa: 'DEPLOYADO',           label: 'Deployado',             cor: '#10b981' },
+]
+
 const LABEL = { color: '#6b6b8a', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }
 const INPUT = {
   width: '100%', boxSizing: 'border-box',
@@ -11,27 +27,18 @@ const INPUT = {
   border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: 8, color: '#f1f5f9',
   padding: '9px 12px', fontSize: 13,
-  outline: 'none', transition: 'border-color 0.15s',
+  outline: 'none',
 }
 const BTN_PRIMARY = {
-  background: '#063BF8', color: '#fff',
-  border: 'none', borderRadius: 8,
-  padding: '9px 22px', fontSize: 13, fontWeight: 600,
-  cursor: 'pointer',
+  background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8,
+  padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
 }
 const BTN_GHOST = {
-  background: 'rgba(255,255,255,0.05)',
-  color: '#a78bca',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 8, padding: '9px 16px',
-  fontSize: 13, cursor: 'pointer',
+  background: 'rgba(255,255,255,0.05)', color: '#a78bca',
+  border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+  padding: '9px 16px', fontSize: 13, cursor: 'pointer',
 }
 
-/**
- * Mapa de caminhos conhecidos: titulo_da_os (lowercase parcial) → caminho no servidor.
- * O combobox seleciona a OS e auto-preenche o caminho.
- * Novos projetos devem ser adicionados aqui ou o campo pode ser editado manualmente.
- */
 const CAMINHOS_CONHECIDOS = {
   'systemd':      '/root/SystemD',
   'studio fluir': '/var/www/studio-fluir',
@@ -46,31 +53,68 @@ function inferirCaminho(os) {
   return ''
 }
 
-function statusBadge(item) {
-  if (item.feito)        return { label: 'Concluído',  bg: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'rgba(16,185,129,0.25)' }
-  if (item.disparada_em) return { label: 'Despachada', bg: 'rgba(99,102,241,0.15)', color: '#818cf8', border: 'rgba(99,102,241,0.25)' }
-  return                        { label: 'Pendente',   bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' }
+function tempoDesde(iso) {
+  if (!iso) return '—'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diffMs / 60000)
+  if (min < 60) return `${min}min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
 }
 
-// ──────────────────────────── componente ─────────────────────────
+function Card({ item, onClick }) {
+  const parado = item.etapa !== 'DEPLOYADO' && (Date.now() - new Date(item.etapa_atualizada_em).getTime()) > 4 * 3600 * 1000
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 10, padding: 12, cursor: 'pointer',
+        transition: 'border-color 0.15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(6,59,248,0.4)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+        <span style={{ color: '#6b8fff', fontSize: 11, fontWeight: 700 }}>#{item.id}</span>
+        {item.tentativas_etapa > 0 && (
+          <span style={{ color: '#f59e0b', fontSize: 10, fontWeight: 600 }}>
+            {item.tentativas_etapa}/3 tentativas
+          </span>
+        )}
+      </div>
+      <p style={{ color: '#f1f5f9', fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>{item.os_titulo}</p>
+      <p style={{
+        color: '#a78bca', fontSize: 12, margin: 0,
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+      }}>
+        {item.descricao}
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        <span style={{ color: parado ? '#f87171' : '#6b6b8a', fontSize: 10 }}>
+          {parado ? '⚠ ' : ''}há {tempoDesde(item.etapa_atualizada_em)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function ManutencaoPage() {
   const [itens, setItens] = useState([])
   const [modalConfirmar, setModalConfirmar] = useState(null)
   const [sistemas, setSistemas] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [detalhe, setDetalhe] = useState(null)
+  const [artefatosDetalhe, setArtefatosDetalhe] = useState([])
+  const [carregandoArtefatos, setCarregandoArtefatos] = useState(false)
 
-  // Filtros
-  const [filtroStatus, setFiltroStatus] = useState('') // '' | 'pendente' | 'despachada' | 'concluido'
-
-  // Modal
   const [modal, setModal] = useState(false)
-  const [editando, setEditando] = useState(null)
-  const [form, setForm] = useState({ os: '', descricao: '', caminho: '', feito: false })
+  const [form, setForm] = useState({ os: '', descricao: '', caminho: '' })
   const [salvando, setSalvando] = useState(false)
   const [erroModal, setErroModal] = useState('')
 
-  // ──────── carregamento ────────
   const carregar = useCallback(async () => {
     setCarregando(true)
     setErro('')
@@ -90,27 +134,12 @@ export default function ManutencaoPage() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  // ──────── modal ────────
   const abrirNovo = () => {
-    setEditando(null)
-    setForm({ os: '', descricao: '', caminho: '', feito: false })
+    setForm({ os: '', descricao: '', caminho: '' })
     setErroModal('')
     setModal(true)
   }
-
-  const abrirEditar = (item) => {
-    setEditando(item)
-    setForm({
-      os: item.os,
-      descricao: item.descricao,
-      caminho: item.caminho,
-      feito: item.feito,
-    })
-    setErroModal('')
-    setModal(true)
-  }
-
-  const fecharModal = () => { setModal(false); setEditando(null) }
+  const fecharModal = () => setModal(false)
 
   const handleOsChange = (osId) => {
     const osSelecionada = sistemas.find(s => String(s.id) === String(osId))
@@ -125,383 +154,245 @@ export default function ManutencaoPage() {
     setSalvando(true)
     setErroModal('')
     try {
-      const payload = {
-        os: form.os,
-        descricao: form.descricao,
-        caminho: form.caminho,
-        feito: form.feito,
-      }
-      if (editando) {
-        await osApi.editarManutencao(editando.id, payload)
-      } else {
-        await osApi.criarManutencao(payload)
-      }
+      await osApi.criarManutencao({ os: form.os, descricao: form.descricao, caminho: form.caminho })
       fecharModal()
       carregar()
     } catch (err) {
       const data = err.response?.data
-      if (data && typeof data === 'object') {
-        const msgs = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`).join(' | ')
-        setErroModal(msgs)
-      } else {
-        setErroModal('Erro ao salvar. Tente novamente.')
-      }
+      setErroModal(data && typeof data === 'object'
+        ? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`).join(' | ')
+        : 'Erro ao salvar.')
     } finally {
       setSalvando(false)
     }
   }
 
-  const toggleFeito = async (item) => {
+  const deletar = (item) => setModalConfirmar({
+    msg: `Remover manutenção #${item.id}?`,
+    onConfirm: async () => {
+      try { await osApi.deletarManutencao(item.id); setDetalhe(null); carregar() }
+      catch { alert('Erro ao remover.') }
+    },
+  })
+
+  const abrirDetalhe = async (item) => {
+    setDetalhe(item)
+    setCarregandoArtefatos(true)
+    setArtefatosDetalhe([])
     try {
-      await osApi.editarManutencao(item.id, { feito: !item.feito })
+      const r = await osApi.listarArtefatosDaManutencao(item.id)
+      setArtefatosDetalhe(r.data.results || r.data)
+    } catch {
+      // silencia -- artefatos e' informativo, nao bloqueia o detalhe
+    } finally {
+      setCarregandoArtefatos(false)
+    }
+  }
+
+  const liberarBloqueio = async (item) => {
+    try {
+      await osApi.liberarBloqueio(item.id)
+      setDetalhe(null)
       carregar()
     } catch {
-      // silencia — o estado não muda
+      alert('Erro ao desbloquear.')
     }
   }
 
-  const deletar = (item) => setModalConfirmar({ msg: `Remover manutenção #${item.id}?`, onConfirm: async () => { try { await osApi.deletarManutencao(item.id); carregar() } catch { alert('Erro ao remover.') } } })
-
-  const notificar = async (item) => {
-    try {
-      const res = await osApi.notificarManutencao(item.id)
-      alert(res.data.criada ? 'Notificação criada — já aparece em Notificações pra rodar no terminal.' : 'Já existe uma notificação pendente pra essa manutenção.')
-    } catch {
-      alert('Erro ao criar notificação.')
-    }
-  }
-
-  // ──────── render ────────
-  const itensFiltrados = itens.filter(item => {
-    if (filtroStatus === 'pendente')   return !item.feito && !item.disparada_em
-    if (filtroStatus === 'despachada') return !item.feito && !!item.disparada_em
-    if (filtroStatus === 'concluido')  return item.feito
-    return true
-  })
+  const bloqueadas = itens.filter(i => i.etapa === 'BLOQUEADA' && i.ativo)
+  const itensPorColuna = (etapa) => itens.filter(i => i.etapa === etapa && i.ativo)
 
   return (
     <SistemaLayout titulo="Manutenções">
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ color: '#f1f5f9', fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
-            🔧 Manutenções
-          </h1>
+          <h1 style={{ color: '#f1f5f9', fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>🔧 Manutenções — Kanban</h1>
           <p style={{ color: '#a78bca', fontSize: 13, margin: '4px 0 0' }}>
-            Pedidos de manutenção para o sistema trabalhar sozinho
+            Esteira em fila — cada card avança sozinho pelos crons, coluna por coluna.
           </p>
         </div>
-        <button onClick={abrirNovo} style={BTN_PRIMARY}>
-          + Nova Manutenção
-        </button>
+        <button onClick={abrirNovo} style={BTN_PRIMARY}>+ Nova Manutenção</button>
       </div>
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { label: 'Todos',       value: '' },
-          { label: 'Pendentes',   value: 'pendente' },
-          { label: 'Despachadas', value: 'despachada' },
-          { label: 'Concluídos',  value: 'concluido' },
-        ].map(op => (
-          <button
-            key={op.value}
-            onClick={() => setFiltroStatus(op.value)}
-            style={{
-              padding: '6px 14px', fontSize: 12, borderRadius: 20,
-              border: filtroStatus === op.value ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
-              background: filtroStatus === op.value ? 'rgba(6,59,248,0.15)' : 'transparent',
-              color: filtroStatus === op.value ? '#6b8fff' : '#a78bca',
-              cursor: 'pointer',
-            }}
-          >
-            {op.label}
-          </button>
-        ))}
-      </div>
+      {carregando && <p style={{ color: '#a78bca', textAlign: 'center', padding: 40 }}>Carregando...</p>}
+      {!carregando && erro && <p style={{ color: '#f87171', textAlign: 'center', padding: 20 }}>{erro}</p>}
 
-      {/* Estado de carregamento / erro */}
-      {carregando && (
-        <p style={{ color: '#a78bca', textAlign: 'center', padding: 40 }}>Carregando...</p>
-      )}
-      {!carregando && erro && (
-        <p style={{ color: '#f87171', textAlign: 'center', padding: 20 }}>{erro}</p>
-      )}
-
-      {/* Mobile — cards */}
       {!carregando && !erro && (
-        <div className="md:hidden flex flex-col" style={{ gap: 12 }}>
-          {itensFiltrados.length === 0 && (
-            <p style={{ color: '#a78bca', textAlign: 'center', padding: 40 }}>Nenhuma manutenção encontrada.</p>
-          )}
-          {itensFiltrados.map(item => (
-            <div
-              key={item.id}
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 12, padding: 16,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                <div>
-                  <span style={{ color: '#6b8fff', fontSize: 12, fontWeight: 600 }}>
-                    #{item.id} · {item.os_cliente}
-                  </span>
-                  <p style={{ color: '#f1f5f9', fontWeight: 600, margin: '2px 0 0', fontSize: 14 }}>
-                    {item.os_titulo}
-                  </p>
-                </div>
-                <span style={{
-                  padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                  background: statusBadge(item).bg,
-                  color: statusBadge(item).color,
-                  border: `1px solid ${statusBadge(item).border}`,
-                  flexShrink: 0,
-                }}>
-                  {statusBadge(item).label}
-                </span>
-              </div>
-              <p style={{ color: '#a78bca', fontSize: 13, margin: '0 0 6px' }}>{item.descricao}</p>
-              {item.caminho && (
-                <p style={{ color: '#6b6b8a', fontSize: 11, fontFamily: 'monospace', margin: '0 0 10px' }}>
-                  {item.caminho}
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => toggleFeito(item)}
-                  style={{ ...BTN_GHOST, flex: 1, fontSize: 12 }}
-                >
-                  {item.feito ? '↩ Reabrir' : '✓ Concluir'}
-                </button>
-                {!item.feito && (
-                  <button
-                    onClick={() => notificar(item)}
-                    title="Criar notificação agora, sem esperar o cron"
-                    style={{ ...BTN_GHOST, flex: 1, fontSize: 12 }}
-                  >
-                    🔔 Notificar
-                  </button>
-                )}
-                <button
-                  onClick={() => abrirEditar(item)}
-                  style={{ ...BTN_GHOST, flex: 1, fontSize: 12 }}
-                >
-                  ✏ Editar
-                </button>
-                <button
-                  onClick={() => deletar(item)}
-                  style={{ ...BTN_GHOST, flex: 1, fontSize: 12, color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}
-                >
-                  🗑 Remover
-                </button>
+        <>
+          {/* Faixa de bloqueadas — precisa de decisao humana */}
+          {bloqueadas.length > 0 && (
+            <div style={{
+              background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.25)',
+              borderRadius: 12, padding: 14, marginBottom: 20,
+            }}>
+              <h3 style={{ color: '#f87171', fontSize: 13, fontWeight: 700, margin: '0 0 10px' }}>
+                🔒 Precisam de você ({bloqueadas.length})
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+                {bloqueadas.map(item => (
+                  <div key={item.id} onClick={() => abrirDetalhe(item)} style={{
+                    background: '#1a0a2e', border: '1px solid rgba(248,113,113,0.2)',
+                    borderRadius: 10, padding: 12, cursor: 'pointer',
+                  }}>
+                    <span style={{ color: '#f87171', fontSize: 11, fontWeight: 700 }}>#{item.id} · {item.os_titulo}</span>
+                    <p style={{ color: '#e2d9f3', fontSize: 12, margin: '4px 0 0' }}>{item.bloqueio_motivo}</p>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Board */}
+          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>
+            {COLUNAS.map(col => {
+              const cardsColuna = itensPorColuna(col.etapa)
+              return (
+                <div key={col.etapa} style={{ minWidth: 240, flex: '0 0 240px' }}>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '8px 4px', borderBottom: `2px solid ${col.cor}`, marginBottom: 10,
+                  }}>
+                    <span style={{ color: col.cor, fontSize: 12, fontWeight: 700 }}>{col.label}</span>
+                    <span style={{ color: '#6b6b8a', fontSize: 11 }}>{cardsColuna.length}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {cardsColuna.map(item => (
+                      <Card key={item.id} item={item} onClick={() => abrirDetalhe(item)} />
+                    ))}
+                    {cardsColuna.length === 0 && (
+                      <p style={{ color: '#4a4a5e', fontSize: 11, textAlign: 'center', padding: '12px 0' }}>vazio</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
-      {/* Desktop — tabela */}
-      {!carregando && !erro && (
-        <div className="hidden md:block">
+      {/* Modal de detalhe */}
+      {detalhe && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 300,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          backdropFilter: 'blur(4px)',
+        }} onClick={() => setDetalhe(null)}>
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 12, overflow: 'hidden',
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  {['#', 'Sistema', 'Descrição', 'Caminho', 'Status', 'Ações'].map(h => (
-                    <th key={h} style={{
-                      padding: '12px 16px', textAlign: 'left',
-                      fontSize: 11, fontWeight: 600,
-                      color: '#6b6b8a', textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}>{h}</th>
+            background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
+            padding: 28, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <h2 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, margin: 0 }}>
+                  #{detalhe.id} · {detalhe.os_titulo}
+                </h2>
+                <p style={{ color: '#6b6b8a', fontSize: 12, margin: '4px 0 0' }}>{detalhe.os_cliente}</p>
+              </div>
+              <span style={{
+                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: 'rgba(107,143,255,0.15)', color: '#6b8fff',
+              }}>
+                {detalhe.etapa_display}
+              </span>
+            </div>
+
+            <p style={{ color: '#e2d9f3', fontSize: 13, whiteSpace: 'pre-wrap', margin: '0 0 16px', lineHeight: 1.5 }}>
+              {detalhe.descricao}
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16, fontSize: 12 }}>
+              <div><span style={LABEL}>Caminho</span><span style={{ color: '#a78bca', fontFamily: 'monospace', fontSize: 11 }}>{detalhe.caminho || '—'}</span></div>
+              <div><span style={LABEL}>Etapa atualizada</span><span style={{ color: '#a78bca' }}>há {tempoDesde(detalhe.etapa_atualizada_em)}</span></div>
+              <div><span style={LABEL}>Tentativas na etapa</span><span style={{ color: '#a78bca' }}>{detalhe.tentativas_etapa}/3</span></div>
+              <div><span style={LABEL}>Criada em</span><span style={{ color: '#a78bca' }}>{new Date(detalhe.criado_em).toLocaleDateString('pt-BR')}</span></div>
+            </div>
+
+            {detalhe.etapa === 'BLOQUEADA' && (
+              <div style={{
+                background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
+                borderRadius: 10, padding: 14, marginBottom: 16,
+              }}>
+                <p style={{ color: '#f87171', fontSize: 12, fontWeight: 700, margin: '0 0 6px' }}>🔒 Bloqueada — precisa de você</p>
+                <p style={{ color: '#e2d9f3', fontSize: 13, margin: '0 0 12px' }}>{detalhe.bloqueio_motivo}</p>
+                <button onClick={() => liberarBloqueio(detalhe)} style={{ ...BTN_PRIMARY, background: '#10b981' }}>
+                  ✓ Aprovar e liberar
+                </button>
+              </div>
+            )}
+
+            {/* Artefatos vinculados */}
+            <div style={{ marginBottom: 16 }}>
+              <span style={LABEL}>Artefatos gerados</span>
+              {carregandoArtefatos && <p style={{ color: '#6b6b8a', fontSize: 12 }}>Carregando...</p>}
+              {!carregandoArtefatos && artefatosDetalhe.length === 0 && (
+                <p style={{ color: '#6b6b8a', fontSize: 12 }}>Nenhum artefato registrado ainda.</p>
+              )}
+              {!carregandoArtefatos && artefatosDetalhe.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                  {artefatosDetalhe.map(a => (
+                    <a key={a.id} href="/sistema/office/artefatos" style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8,
+                      textDecoration: 'none',
+                    }}>
+                      <span style={{ color: '#e2d9f3', fontSize: 12 }}>{a.titulo}</span>
+                      <span style={{ color: '#6b6b8a', fontSize: 10 }}>{a.agente}</span>
+                    </a>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {itensFiltrados.length === 0 && (
-                  <tr>
-                    <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#6b6b8a', fontSize: 13 }}>
-                      Nenhuma manutenção encontrada.
-                    </td>
-                  </tr>
-                )}
-                {itens.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}
-                  >
-                    <td style={{ padding: '12px 16px', color: '#6b6b8a', fontSize: 13 }}>#{item.id}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ color: '#f1f5f9', fontSize: 13, fontWeight: 500 }}>{item.os_titulo}</span>
-                      <br />
-                      <span style={{ color: '#6b6b8a', fontSize: 11 }}>{item.os_cliente}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#a78bca', fontSize: 13, maxWidth: 280 }}>
-                      <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {item.descricao}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#6b6b8a', fontSize: 11, fontFamily: 'monospace' }}>
-                      {item.caminho || '—'}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{
-                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                        background: statusBadge(item).bg,
-                        color: statusBadge(item).color,
-                        border: `1px solid ${statusBadge(item).border}`,
-                      }}>
-                        {statusBadge(item).label}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={() => toggleFeito(item)}
-                          title={item.feito ? 'Reabrir' : 'Marcar concluído'}
-                          style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#a78bca', fontSize: 12, cursor: 'pointer' }}
-                        >
-                          {item.feito ? '↩' : '✓'}
-                        </button>
-                        {!item.feito && (
-                          <button
-                            onClick={() => notificar(item)}
-                            title="Notificar agora (sem esperar o cron)"
-                            style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#f59e0b', fontSize: 12, cursor: 'pointer' }}
-                          >
-                            🔔
-                          </button>
-                        )}
-                        <button
-                          onClick={() => abrirEditar(item)}
-                          title="Editar"
-                          style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#6b8fff', fontSize: 12, cursor: 'pointer' }}
-                        >
-                          ✏
-                        </button>
-                        <button
-                          onClick={() => deletar(item)}
-                          title="Remover"
-                          style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.2)', background: 'transparent', color: '#f87171', fontSize: 12, cursor: 'pointer' }}
-                        >
-                          🗑
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+              <button onClick={() => deletar(detalhe)} style={{ ...BTN_GHOST, color: '#f87171', borderColor: 'rgba(248,113,113,0.2)' }}>
+                🗑 Remover
+              </button>
+              <button onClick={() => setDetalhe(null)} style={BTN_GHOST}>Fechar</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal criar / editar */}
+      {/* Modal criar */}
       {modal && (
         <div style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.72)',
-          zIndex: 300,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 20,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 300,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
           backdropFilter: 'blur(4px)',
         }}>
           <div style={{
-            background: '#1a0a2e',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16, padding: 28,
-            width: '100%', maxWidth: 480,
-            boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+            background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
+            padding: 28, width: '100%', maxWidth: 480, boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
           }}>
-            <h2 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, margin: '0 0 20px' }}>
-              {editando ? '✏ Editar Manutenção' : '🔧 Nova Manutenção'}
-            </h2>
-
+            <h2 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, margin: '0 0 20px' }}>🔧 Nova Manutenção</h2>
             {erroModal && (
-              <p style={{
-                color: '#f87171', fontSize: 12, marginBottom: 14,
-                padding: '8px 12px',
-                background: 'rgba(248,113,113,0.08)',
-                borderRadius: 7, border: '1px solid rgba(248,113,113,0.15)',
-              }}>
+              <p style={{ color: '#f87171', fontSize: 12, marginBottom: 14, padding: '8px 12px', background: 'rgba(248,113,113,0.08)', borderRadius: 7 }}>
                 {erroModal}
               </p>
             )}
-
             <form onSubmit={salvar}>
-              {/* Sistema */}
               <div style={{ marginBottom: 16 }}>
                 <label style={LABEL}>Sistema</label>
-                <select
-                  value={form.os}
-                  onChange={e => handleOsChange(e.target.value)}
-                  style={{ ...INPUT }}
-                  onFocus={e => { e.target.style.borderColor = '#063BF8' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
-                >
+                <select value={form.os} onChange={e => handleOsChange(e.target.value)} style={INPUT}>
                   <option value="">Selecione...</option>
-                  {sistemas.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.titulo} — {s.cliente_nome}
-                    </option>
-                  ))}
+                  {sistemas.map(s => <option key={s.id} value={s.id}>{s.titulo} — {s.cliente_nome}</option>)}
                 </select>
               </div>
-
-              {/* Descrição */}
               <div style={{ marginBottom: 16 }}>
                 <label style={LABEL}>Descrição</label>
-                <textarea
-                  rows={4}
-                  value={form.descricao}
-                  onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-                  placeholder="Descreva o que deve ser feito..."
-                  style={{ ...INPUT, resize: 'vertical', minHeight: 80 }}
-                  onFocus={e => { e.target.style.borderColor = '#063BF8' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
-                />
+                <textarea rows={5} value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+                  placeholder="Descreva o que deve ser feito..." style={{ ...INPUT, resize: 'vertical', minHeight: 100 }} />
               </div>
-
-              {/* Caminho */}
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 24 }}>
                 <label style={LABEL}>Caminho no servidor</label>
-                <input
-                  type="text"
-                  value={form.caminho}
-                  onChange={e => setForm(f => ({ ...f, caminho: e.target.value }))}
-                  placeholder="Ex: /root/SystemD (preenchido automaticamente)"
-                  style={{ ...INPUT, fontFamily: 'monospace', fontSize: 12 }}
-                  onFocus={e => { e.target.style.borderColor = '#063BF8' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
-                />
+                <input type="text" value={form.caminho} onChange={e => setForm(f => ({ ...f, caminho: e.target.value }))}
+                  placeholder="Preenchido automaticamente" style={{ ...INPUT, fontFamily: 'monospace', fontSize: 12 }} />
               </div>
-
-              {/* Status */}
-              <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input
-                  type="checkbox"
-                  id="feito"
-                  checked={form.feito}
-                  onChange={e => setForm(f => ({ ...f, feito: e.target.checked }))}
-                  style={{ width: 16, height: 16, accentColor: '#063BF8' }}
-                />
-                <label htmlFor="feito" style={{ color: '#a78bca', fontSize: 13, cursor: 'pointer' }}>
-                  Marcar como concluído
-                </label>
-              </div>
-
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button type="button" onClick={fecharModal} style={BTN_GHOST} disabled={salvando}>
-                  Cancelar
-                </button>
+                <button type="button" onClick={fecharModal} style={BTN_GHOST} disabled={salvando}>Cancelar</button>
                 <button type="submit" style={{ ...BTN_PRIMARY, opacity: salvando ? 0.7 : 1 }} disabled={salvando}>
-                  {salvando ? 'Salvando...' : '💾 Salvar'}
+                  {salvando ? 'Salvando...' : '💾 Criar (entra em PENDENTE)'}
                 </button>
               </div>
             </form>

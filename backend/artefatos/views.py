@@ -20,7 +20,17 @@ class ArtefatoViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'put', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        return Artefato.objects.filter(ativo=True).select_related('content_type')
+        qs = Artefato.objects.filter(ativo=True).select_related('content_type')
+        # Atalho pro Kanban de Manutencao (esteira em fila) -- evita o
+        # frontend ter que hardcodar o content_type id de Manutencao pra
+        # filtrar por ?content_type=X&object_id=Y.
+        manutencao_id = self.request.query_params.get('manutencao')
+        if manutencao_id:
+            from django.contrib.contenttypes.models import ContentType
+            from ordens.models import Manutencao
+            ct = ContentType.objects.get_for_model(Manutencao)
+            qs = qs.filter(content_type=ct, object_id=manutencao_id)
+        return qs
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

@@ -99,7 +99,7 @@ const menuPorPerfil = {
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
     { label: 'Contratos',     path: '/sistema/contratos',                               emoji: '📄' },
     { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
-    { label: 'Financeiro',    path: '/sistema/financeiro',    emoji: '💰' },
+    { label: 'Financeiro',    path: '/sistema/financeiro/visao-geral', activeMatch: '/sistema/financeiro', emoji: '💰' },
     { label: 'Email',         path: '/sistema/email',         emoji: '📧' },
     { label: 'Usuarios',      path: '/sistema/usuarios',      emoji: '👤' },
     { label: 'Configuracoes', path: '/sistema/configuracoes', emoji: '⚙️' },
@@ -117,7 +117,7 @@ const menuPorPerfil = {
   ],
   FINANCEIRO: [
     { label: 'Dashboard',  path: '/sistema/',            emoji: '🏠' },
-    { label: 'Financeiro', path: '/sistema/financeiro',  emoji: '💰' },
+    { label: 'Financeiro', path: '/sistema/financeiro/visao-geral', activeMatch: '/sistema/financeiro', emoji: '💰' },
     { label: 'Email',      path: '/sistema/email',       emoji: '📧' },
   ],
   CLIENTE: [
@@ -133,8 +133,13 @@ const menuPorPerfil = {
 }
 
 function NavItem({ item, onClose, location, badge }) {
-  const isActive = item.path !== '/sistema/'
-    ? location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+  // activeMatch: prefixo usado só pra destacar o item no menu — pode ser
+  // mais amplo que o path de navegação (ex: "Financeiro" navega pra
+  // /financeiro/visao-geral, mas continua destacado em qualquer aba
+  // /financeiro/*, já que todas renderizam a mesma FinanceiroPage).
+  const matchPath = item.activeMatch || item.path
+  const isActive = matchPath !== '/sistema/'
+    ? location.pathname === matchPath || location.pathname.startsWith(matchPath + '/')
     : location.pathname === '/sistema/'
 
   const linkStyle = {
@@ -168,22 +173,22 @@ function NavItem({ item, onClose, location, badge }) {
       to={item.path}
       end={item.path === '/sistema/'}
       onClick={onClose}
-      style={({ isActive: a }) => ({
+      style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '9px 16px',
         fontSize: '0.825rem',
         fontWeight: 500,
-        color: a ? '#f1f5f9' : 'var(--color-text-muted)',
+        color: isActive ? '#f1f5f9' : 'var(--color-text-muted)',
         textDecoration: 'none',
         borderRadius: 8,
         margin: '1px 8px',
-        backgroundColor: a ? 'var(--sidebar-item-active-bg)' : 'transparent',
-        borderLeft: a ? '2px solid var(--color-brand-blue)' : '2px solid transparent',
+        backgroundColor: isActive ? 'var(--sidebar-item-active-bg)' : 'transparent',
+        borderLeft: isActive ? '2px solid var(--color-brand-blue)' : '2px solid transparent',
         transition: 'all 0.15s ease',
         cursor: 'pointer',
-      })}
+      }}
       onMouseEnter={e => {
         if (!isActive) {
           e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'

@@ -83,6 +83,11 @@ export default function App() {
           {/* Financeiro */}
           <Route path="/sistema/financeiro/visao-geral" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/receitas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
+          {/* receitas-recebidas/despesas-pagas: removidas das abas (07/08/2026,
+              redundantes com Visão Geral), rota mantida de propósito — sem
+              catch-all/404 no app, um bookmark antigo pra cá cairia em tela
+              branca se a rota fosse removida; FinanceiroPage cai pra Visão
+              Geral sozinho quando o path não bate com nenhuma aba. */}
           <Route path="/sistema/financeiro/receitas-recebidas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/despesas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />
           <Route path="/sistema/financeiro/despesas-pagas" element={<PrivateRoute perfisPermitidos={FIN}><FinanceiroPage /></PrivateRoute>} />

@@ -8,9 +8,7 @@ import EbitdaPage from './EbitdaPage'
 import BalancoPage from './BalancoPage'
 import IndicadoresPage from './IndicadoresPage'
 import ReceitasPage from './ReceitasPage'
-import ReceitasRecebidasPage from './ReceitasRecebidasPage'
 import DespesasPage from './DespesasPage'
-import DespesasPagasPage from './DespesasPagasPage'
 import AportesPage from './AportesPage'
 import ContasPage from './ContasPage'
 import ConciliacaoPage from './ConciliacaoPage'
@@ -25,6 +23,12 @@ import PorClientePage from './PorClientePage'
 // FIN/FIN_LEITURA é checada por rota em App.jsx, isso não muda), só que
 // agora todas montam este mesmo componente — a aba ativa é derivada do
 // path da URL, então links/bookmarks antigos continuam funcionando.
+//
+// Receitas Recebidas / Despesas Pagas removidas das abas no mesmo dia
+// (07/08/2026) — redundantes com os cards colapsáveis de baixo da Visão
+// Geral, que já mostram os mesmos lançamentos por mês. A capacidade de
+// editar (e gerar recibo, no caso de receita) foi movida pra dentro
+// desses cards em VisaoGeralPage.jsx em vez de duplicada aqui.
 const ABAS = [
   { path: '/sistema/financeiro/visao-geral',        label: 'Visão Geral',        Componente: VisaoGeralPage },
   { path: '/sistema/financeiro/fluxo-caixa',         label: 'Fluxo de Caixa',      Componente: FluxoCaixaPage },
@@ -33,9 +37,7 @@ const ABAS = [
   { path: '/sistema/financeiro/balanco',              label: 'Balanço',             Componente: BalancoPage },
   { path: '/sistema/financeiro/indicadores',          label: 'Indicadores CFO',     Componente: IndicadoresPage },
   { path: '/sistema/financeiro/receitas',             label: 'Contas a Receber',    Componente: ReceitasPage },
-  { path: '/sistema/financeiro/receitas-recebidas',   label: 'Receitas Recebidas',  Componente: ReceitasRecebidasPage },
   { path: '/sistema/financeiro/despesas',             label: 'Contas a Pagar',      Componente: DespesasPage },
-  { path: '/sistema/financeiro/despesas-pagas',       label: 'Despesas Pagas',      Componente: DespesasPagasPage },
   { path: '/sistema/financeiro/aportes',              label: 'Aportes',             Componente: AportesPage },
   { path: '/sistema/financeiro/contas',               label: 'Contas Bancárias',    Componente: ContasPage },
   { path: '/sistema/financeiro/conciliacao',          label: 'Conciliação',         Componente: ConciliacaoPage },

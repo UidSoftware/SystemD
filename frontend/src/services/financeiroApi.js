@@ -26,6 +26,7 @@ export const financeiroApi = {
 
   // Receitas
   listarReceitas:        (p) => f('/receitas/', p),
+  buscarReceita:         (id) => f(`/receitas/${id}/`),
   criarReceita:          (d) => post('/receitas/', d),
   editarReceita:         (id, d) => patch(`/receitas/${id}/`, d),
   deletarReceita:        (id) => del(`/receitas/${id}/`),
@@ -35,6 +36,7 @@ export const financeiroApi = {
 
   // Despesas
   listarDespesas:        (p) => f('/despesas/', p),
+  buscarDespesa:         (id) => f(`/despesas/${id}/`),
   criarDespesa:          (d) => post('/despesas/', d),
   editarDespesa:         (id, d) => patch(`/despesas/${id}/`, d),
   deletarDespesa:        (id) => del(`/despesas/${id}/`),

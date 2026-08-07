@@ -136,14 +136,21 @@ class ManutencaoSerializer(serializers.ModelSerializer):
     os_titulo = serializers.CharField(source='os.titulo', read_only=True)
     os_cliente = serializers.CharField(source='os.cliente.nome_empresa', read_only=True)
 
+    etapa_display = serializers.CharField(source='get_etapa_display', read_only=True)
+
     class Meta:
         model = Manutencao
         fields = [
             'id', 'os', 'os_titulo', 'os_cliente',
             'descricao', 'caminho', 'feito', 'disparada_em',
+            'etapa', 'etapa_display', 'etapa_atualizada_em',
+            'bloqueio_motivo', 'bloqueada_em', 'tentativas_etapa',
             'ativo', 'criado_em', 'atualizado_em',
         ]
-        read_only_fields = ['criado_em', 'atualizado_em', 'disparada_em']
+        read_only_fields = [
+            'criado_em', 'atualizado_em', 'disparada_em',
+            'etapa_atualizada_em', 'tentativas_etapa',
+        ]
 
 
 class OSParaManutencaoSerializer(serializers.ModelSerializer):

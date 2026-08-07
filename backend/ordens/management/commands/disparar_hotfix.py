@@ -39,6 +39,7 @@ class Command(BaseCommand):
         parser.add_argument('--avancar-etapa', nargs=2, metavar=('ID', 'ETAPA_NOVA'), help='Avanca a etapa da manutencao.')
         parser.add_argument('--bloquear', nargs=2, metavar=('ID', 'MOTIVO'), help='Bloqueia a manutencao (precisa de decisao humana).')
         parser.add_argument('--incrementar-tentativa', type=int, metavar='ID', help='Incrementa tentativas_etapa (falha real na etapa atual, sem trocar de etapa).')
+        parser.add_argument('--liberar-bloqueio', type=int, metavar='ID', help='Desbloqueia: etapa volta pra PENDENTE, zera bloqueio_motivo/tentativas.')
 
     def handle(self, *args, **options):
         if options.get('mark_dispatched'):
@@ -188,6 +189,24 @@ class Command(BaseCommand):
             m.tentativas_etapa += 1
             m.save(update_fields=['tentativas_etapa', 'atualizado_em'])
             self.stdout.write(json.dumps({'id': m.id, 'etapa': m.etapa, 'tentativas_etapa': m.tentativas_etapa}))
+            return
+
+        if options.get('liberar_bloqueio'):
+            m = Manutencao.objects.filter(id=options['liberar_bloqueio'], ativo=True).first()
+            if not m:
+                self.stdout.write(self.style.ERROR('Manutencao nao encontrada.'))
+                return
+            # Volta pra PENDENTE (nao pra etapa anterior ao bloqueio -- nao
+            # guardamos esse historico) — sem perda real: o trabalho ja
+            # commitado continua no repo, o Planner confere `git log` antes
+            # de agir (padrao ja estabelecido em todos os skills) e pula
+            # direto pro que falta de verdade.
+            m.etapa = EtapaManutencao.PENDENTE
+            m.bloqueio_motivo = ''
+            m.bloqueada_em = None
+            m.tentativas_etapa = 0
+            m.save(update_fields=['etapa', 'bloqueio_motivo', 'bloqueada_em', 'tentativas_etapa', 'etapa_atualizada_em', 'atualizado_em'])
+            self.stdout.write(self.style.SUCCESS(f'Manutencao {m.id} desbloqueada — etapa voltou pra PENDENTE.'))
             return
 
         if options.get('list'):

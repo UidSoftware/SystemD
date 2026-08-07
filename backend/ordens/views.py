@@ -6,7 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS, Entrevista, ArquiteturaTecnica, Manutencao
+from .models import OS, FaseOS, Contrato, Chamado, MensagemChamado, StatusOS, Entrevista, ArquiteturaTecnica, Manutencao, EtapaManutencao
 from .serializers import (
     OSListSerializer, OSDetailSerializer, OSCreateSerializer,
     ContratoSerializer, ChamadoSerializer, MensagemChamadoSerializer,
@@ -376,6 +376,26 @@ class ManutencaoViewSet(viewsets.ModelViewSet):
             referencia=referencia,
         )
         return Response({'detail': 'Notificação criada.', 'criada': True})
+
+    @action(detail=True, methods=['post'])
+    def liberar_bloqueio(self, request, pk=None):
+        """
+        Desbloqueia uma Manutencao BLOQUEADA (etapa volta pra PENDENTE,
+        zera bloqueio_motivo/tentativas_etapa) — usado pelo botao "Aprovar
+        e liberar" do Kanban quando a decisao humana pendente foi resolvida.
+        Nao perde trabalho ja commitado: o Planner confere git log antes
+        de agir (padrao ja estabelecido em todos os skills) e pula direto
+        pro que falta de verdade, nao refaz do zero.
+        """
+        manutencao = self.get_object()
+        if manutencao.etapa != EtapaManutencao.BLOQUEADA:
+            return Response({'detail': 'Manutenção não está bloqueada.'}, status=status.HTTP_400_BAD_REQUEST)
+        manutencao.etapa = EtapaManutencao.PENDENTE
+        manutencao.bloqueio_motivo = ''
+        manutencao.bloqueada_em = None
+        manutencao.tentativas_etapa = 0
+        manutencao.save(update_fields=['etapa', 'bloqueio_motivo', 'bloqueada_em', 'tentativas_etapa', 'etapa_atualizada_em', 'atualizado_em'])
+        return Response(ManutencaoSerializer(manutencao).data)
 
 
 class SistemasParaManutencaoViewSet(viewsets.ReadOnlyModelViewSet):

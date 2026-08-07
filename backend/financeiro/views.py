@@ -770,7 +770,7 @@ def dre(request):
         'receita_liquida': Decimal('0'), 'despesas_fixas': Decimal('0'),
         'despesas_variaveis': Decimal('0'), 'prolabore': Decimal('0'),
         'impostos': Decimal('0'), 'total_despesas': Decimal('0'),
-        'resultado': Decimal('0'),
+        'resultado': Decimal('0'), 'ebitda': Decimal('0'),
     }
 
     for mes in range(1, 13):
@@ -804,6 +804,16 @@ def dre(request):
         total_desp = fixas + variaveis + prolabore + impostos + outros
         resultado  = receita_liq - total_desp
 
+        # EBITDA = resultado + impostos + prolabore (sem D&A modelado) —
+        # mesma formula ja usada em indicadores_cfo()/_calcular_dre_mes(),
+        # so que ali so cobria o mes atual; aqui passa a existir tambem na
+        # serie anual completa do DRE, que e onde a tela realmente mostra
+        # a evolucao mes a mes (achado 07/08/2026: EBITDA nunca aparecia
+        # na tabela do DRE nem no total do ano, so no card avulso de
+        # Indicadores CFO do mes corrente).
+        ebitda = resultado + impostos + prolabore
+        margem_ebitda = (ebitda / receita_liq * 100) if receita_liq else Decimal('0')
+
         dados_mes = {
             'mes': f'{mes:02d}/{ano}',
             'receita_operacional': receita_operacional,
@@ -818,11 +828,21 @@ def dre(request):
             'outros':           outros,
             'total_despesas':   total_desp,
             'resultado':        resultado,
+            'ebitda':           ebitda,
+            'margem_ebitda':    round(margem_ebitda, 2),
         }
         meses.append(dados_mes)
 
         for k in totais:
             totais[k] += dados_mes.get(k, Decimal('0'))
+
+    # Margem do ano precisa ser recalculada sobre os totais somados, nunca
+    # como media simples das margens mensais (mes com receita 0 e margem 0
+    # distorceria a media pra baixo mesmo sem representar isso de verdade).
+    totais['margem_ebitda'] = round(
+        (totais['ebitda'] / totais['receita_liquida'] * 100) if totais['receita_liquida'] else Decimal('0'),
+        2,
+    )
 
     return Response({'ano': ano, 'meses': meses, 'totais_ano': totais})
 

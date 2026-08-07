@@ -1910,3 +1910,49 @@ SystemD portou). Como UidCore segue o pipeline normal (nunca editado
 direto, mesmo sendo o mesmo dono/sessão) — criada **Manutenção #12**
 (vinculada à OS "UidCore") com o diff exato já validado no SystemD como
 referência, pra Hotfix→Planner→Forge/Loom→Sentinel→Pilot replicarem lá.
+
+
+---
+
+### [2026-08-05/06] — Retrospectiva da esteira + plano pra fila real (Manutenção-Kanban)
+
+**Contexto:** sessão de correção ao vivo do módulo PDV do UidCore
+(Manutenções #15, #21-#24) expôs 3 problemas estruturais da esteira
+atual (orquestração por sessão única do Planner):
+1. Cada troca de agente é sessão de topo isolada — 1.469.219 tokens em
+   "cache creation" num único dia só de releitura de CLAUDE.md/contexto.
+2. Sessão única viva do início ao fim é vulnerável a rate limit matando
+   a cadeia INTEIRA — 3x no mesmo dia, um processo Pilot ficou 7h preso
+   (`terminal_reason: completed` no log, mas o processo do SO nunca
+   morreu — matado manualmente).
+3. Cron e disparo manual não se enxergam — cron rodou Planner completo
+   em paralelo com correção manual em andamento (Manutenções #23 e #24),
+   $4,40 em trabalho redundante.
+
+**Fix imediato aplicado (mesmo dia):** `disparar_hotfix.py`
+(`/opt/uid-automation/`) ganhou `processo_ativo_para_caminho()` — varre
+`/proc/*/comm` + `/proc/*/cwd` antes de disparar, pula se já existir
+sessão `claude` rodando pro mesmo projeto. Documentado no CLAUDE.md
+global (seção "Cron pode duplicar trabalho que já está sendo feito na
+mão").
+
+**Decisão maior, pra implementar a partir de 07/08/2026:** quebrar
+Planner→Analista→Forge→Loom→Sentinel→Pilot em 6 estágios cron-driven
+independentes — cada Manutenção vira card de um Kanban real (campo
+`etapa` novo no model), cada estágio só processa manutenções na sua
+coluna e morre (nada fica esperando horas). Plano completo, incluindo
+migration, os 6 crons, retry que distingue rate limit de falha real, e
+scan automático que matricula projetos legados (Studio Fluir — órfão do
+sistema de Manutenção desde sempre, mesmo sendo o sistema fundador que
+existia antes da própria esteira) — ver **`plano_execucao.md`** na raiz
+deste repo, mesmo padrão dos `Instrucao_Claude_Code_FaseX.md`.
+
+**Achado que evitou retrabalho:** ao revisar este CLAUDE.md antes de
+escrever o plano, confirmado que o módulo `Artefatos`
+(`backend/artefatos/`, GenericForeignKey já aceitando `Manutencao`, tela
+`ArtefatosPage.jsx`, autenticação via `ARTEFATOS_API_TOKEN`) **já existe**
+desde a sessão de 05-07/07/2026 — o plano inicial ia recriar isso do
+zero. Corrigido antes de começar a implementação.
+
+**Nada foi implementado ainda nesta sessão** (só o fix pontual do
+`processo_ativo_para_caminho()`) — é plano pra retomar.

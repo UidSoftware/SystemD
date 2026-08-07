@@ -95,34 +95,46 @@ sentido antigo — quem importa agora é `etapa` + `etapa_atualizada_em`
 (serve pro watchdog de "silêncio prolongado" também: etapa parada há
 muito tempo sem avançar = sinal de alerta).
 
-### 2.2 `Artefato` — novo model
+### 2.2 `Artefato` — NÃO É NOVO, JÁ EXISTE (correção importante)
+
+**Achado ao revisar o CLAUDE.md do SystemD antes de começar (06/08/2026):**
+o módulo Artefatos já foi construído na sessão de 05-07/07/2026
+(`backend/artefatos/`, ver entrada "novo módulo Artefatos (Office)" no
+Registro de Ciclos). NÃO criar um model novo — reaproveitar o que já
+existe:
 
 ```python
-class TipoArtefato(models.TextChoices):
-    ORDEM           = 'ORDEM', 'Ordem (Planner)'
-    ESPEC_FUNCIONAL = 'ESPEC_FUNCIONAL', 'Especificação funcional (Analista)'
-    ESPEC_UI        = 'ESPEC_UI', 'Especificação de UI (Brush)'
-    RELATORIO_QA    = 'RELATORIO_QA', 'Relatório de QA (Sentinel)'
-    RELATORIO_DEPLOY = 'RELATORIO_DEPLOY', 'Relatório de deploy (Pilot)'
-
+# backend/artefatos/models.py — JÁ EXISTE, real, em produção
 class Artefato(models.Model):
-    manutencao  = models.ForeignKey(Manutencao, on_delete=CASCADE, related_name='artefatos')
-    tipo        = models.CharField(max_length=20, choices=TipoArtefato.choices)
-    conteudo    = models.TextField()       # markdown, mesmo conteudo que hoje vai pro
-                                            # Especificacao_Hotfix.md etc — aqui fica no banco
-                                            # tambem, pra nao depender so do arquivo no repo
-    caminho_arquivo = models.CharField(max_length=500, blank=True)  # path no repo, se salvo la tambem
-    criado_por  = models.CharField(max_length=20)  # nome do agente que gerou
-    criado_em   = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['criado_em']
+    tipo         = models.CharField(max_length=30, choices=TIPO)   # 17 tipos, ja inclui
+                                                                     # especificacao_hotfix,
+                                                                     # especificacao_ui_hotfix,
+                                                                     # relatorio_qa, deploy_info
+    agente       = models.CharField(max_length=20, choices=AGENTE) # 11 agentes, ja inclui
+                                                                     # planner/analista/forge/
+                                                                     # loom/sentinel/pilot
+    titulo       = models.CharField(max_length=200)
+    conteudo     = models.TextField(blank=True)
+    commit_hash  = models.CharField(max_length=40, blank=True)
+    deploy_url   = models.URLField(blank=True)
+    status       = models.CharField(max_length=30, blank=True)
+    content_type = models.ForeignKey(ContentType, ...)   # GenericForeignKey
+    object_id    = models.PositiveIntegerField(...)
+    vinculo      = GenericForeignKey('content_type', 'object_id')  # JA aceita Manutencao
 ```
 
-Continuar salvando os arquivos `.md` no repo do projeto (já é assim,
-não quebrar esse padrão — Forge/Loom leem de lá) — o model `Artefato`
-é a versão *consultável* dos mesmos artefatos pro Kanban mostrar sem
-precisar dar `git show`/SSH toda vez.
+**O que falta de verdade (pequeno, não é criar do zero):**
+- Adicionar `'ordem'` como novo `TIPO` (migration de 1 linha) — hoje não
+  existe um tipo pra "ordem do Planner", só pra especificações/QA/deploy.
+- Endpoint `/api/artefatos/` já aceita `ServiceTokenAuthentication` via
+  `ARTEFATOS_API_TOKEN` — os 6 crons novos (seção 3) usam o MESMO
+  mecanismo que os agents já usam pra registrar (curl com o token, já
+  configurado em `/root/.claude/settings.json`), não precisa inventar
+  autenticação nova.
+- Continuar salvando os `.md` no repo do projeto (já é assim, Forge/Loom
+  leem de lá) — o registro em `Artefato` é só a cópia *consultável* pro
+  Kanban mostrar sem SSH, exatamente como já funciona hoje pros outros
+  agents.
 
 ### 2.3 `Notificacao` — não morre, mas encolhe de escopo
 
@@ -212,9 +224,12 @@ Dentro do Office, deixar só duas telas:
    Artefatos vinculados, histórico de mudança de etapa, motivo de
    bloqueio (se houver), botão de ação só quando `BLOQUEADA` (ex:
    "Aprovar e liberar").
-2. **Artefatos** — lista/busca de todos os Artefatos gerados, filtrável
-   por Manutenção/tipo/agente. Serve de auditoria e de "o que cada
-   agente realmente produziu" sem precisar abrir SSH.
+2. **Artefatos** — JÁ EXISTE (`frontend/.../office/ArtefatosPage.jsx`,
+   sessão 05-07/07/2026) — lista com filtro por tipo/agente/busca,
+   viewer markdown, modal de diagrama Mermaid. Não precisa construir,
+   só confirmar que o `vinculo` (GenericForeignKey) consegue filtrar por
+   Manutencao especifica quando aberta a partir de um card do Kanban
+   (provavelmente já dá, é só passar o filtro certo na URL).
 
 Tela de Notificações atual (a parte que hoje é só IMPEDIMENTO_ESTEIRA)
 pode sair do Office — mescla no Kanban via `BLOQUEADA`.
@@ -224,26 +239,32 @@ pode sair do Office — mescla no Kanban via `BLOQUEADA`.
 ## 7. Ordem de implementação sugerida (amanhã)
 
 ```
-1. Migration: campos novos em Manutencao (etapa, etapa_atualizada_em,
-   bloqueio_motivo, bloqueada_em, tentativas_etapa) + model Artefato novo.
-   Rodar makemigrations LOCAL (nunca na VPS, regra padrao).
+1. Migration pequena: campos novos em Manutencao (etapa,
+   etapa_atualizada_em, bloqueio_motivo, bloqueada_em, tentativas_etapa)
+   + 1 choice nova ('ordem') no TIPO de Artefato (que ja existe, so
+   falta esse tipo). Rodar makemigrations LOCAL (nunca na VPS, regra
+   padrao).
 2. Estender disparar_hotfix.py (management command) com:
    --listar-etapa <etapa>  (substitui --list, filtra por etapa em vez
                              de feito/disparada_em)
    --avancar-etapa <id> <etapa_nova>
    --bloquear <id> "<motivo>"
-   --salvar-artefato <id> --tipo=X --conteudo=@arquivo
+   (registro de Artefato usa o endpoint /api/artefatos/ que ja existe,
+   via curl com ARTEFATOS_API_TOKEN — nao precisa de comando novo)
 3. Escrever disparar_etapa.py (script novo em /opt/uid-automation/),
    parametrizado por --etapa, reaproveitando processo_ativo_para_caminho()
    e a logica de reconciliacao/retry ja existente em disparar_hotfix.py
    (extrair pra um modulo comum se fizer sentido, evitar duplicar).
 4. Testar com 1 Manutencao de mentira ponta a ponta, etapa por etapa,
-   ANTES de ligar os 6 crons de verdade — validar cada estagio isolado.
+   ANTES de ligar os 6 crons de verdade — validar cada estagio isolado,
+   confirmando que o Artefato de cada etapa aparece certo em
+   Office > Artefatos (tela ja existe, so validar o vinculo).
 5. Ligar os 6 crons no crontab (15 em 15 min cada, staggered pra nao
    competir por recurso: :00,:15,:30,:45 escalonado entre os 6).
 6. Cron de retry inteligente (secao 4) — pode vir junto do passo 3,
    e' a mesma logica de reconciliacao.
-7. So DEPOIS de 1-6 estarem rodando estavel: UI do Kanban (secao 6).
+7. So DEPOIS de 1-6 estarem rodando estavel: Kanban de Manutencao na UI
+   (secao 6) — essa parte SIM e nova, a tela de Artefatos ja existe.
 8. So DEPOIS disso: cron de matricula automatica de projetos orfaos
    (secao 5) — depende do Kanban existir pra fazer sentido visualmente.
 ```

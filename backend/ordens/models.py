@@ -259,6 +259,26 @@ class ArquiteturaTecnica(models.Model):
         return f'{self.projeto} v{self.versao}'
 
 
+class EtapaManutencao(models.TextChoices):
+    """Coluna do Kanban da esteira em fila (ver plano_execucao.md).
+
+    disparada_em/feito continuam existindo por compatibilidade (nada
+    que ja usa esses campos quebra) -- etapa e' o novo estado principal,
+    avancado por 6 crons independentes (um por estagio), cada um
+    responsavel por so uma transicao. Reprovacao do Sentinel NAO cria
+    etapa nova, volta pra ESPEC_CRIADA (Forge/Loom recebem o relatorio
+    como parte do proximo disparo)."""
+    PENDENTE           = 'PENDENTE', 'Pendente'
+    ORDEM_CRIADA        = 'ORDEM_CRIADA', 'Ordem criada (Planner)'
+    ESPEC_CRIADA         = 'ESPEC_CRIADA', 'Especificação criada (Analista)'
+    BACKEND_PRONTO       = 'BACKEND_PRONTO', 'Backend pronto (Forge)'
+    FRONTEND_PRONTO      = 'FRONTEND_PRONTO', 'Frontend pronto (Loom)'
+    SENTINEL_APROVADO    = 'SENTINEL_APROVADO', 'Aprovado pelo Sentinel'
+    SENTINEL_REPROVADO   = 'SENTINEL_REPROVADO', 'Reprovado pelo Sentinel'
+    DEPLOYADO            = 'DEPLOYADO', 'Deployado (Pilot)'
+    BLOQUEADA            = 'BLOQUEADA', 'Bloqueada — precisa de decisão humana'
+
+
 class Manutencao(models.Model):
     """Pedido de manutenção vinculado a um sistema (OS) existente.
 
@@ -285,6 +305,24 @@ class Manutencao(models.Model):
         help_text='Preenchido automaticamente pelo disparar_hotfix.',
     )
     feito        = models.BooleanField(default=False, verbose_name='Concluído')
+    etapa        = models.CharField(
+        max_length=20, choices=EtapaManutencao.choices,
+        default=EtapaManutencao.PENDENTE, verbose_name='Etapa',
+        help_text='Coluna do Kanban — avançada pelos crons de disparar_etapa.py.',
+    )
+    etapa_atualizada_em = models.DateTimeField(
+        auto_now=True, verbose_name='Etapa atualizada em',
+        help_text='Sinal de silêncio prolongado — etapa parada há muito tempo sem avançar.',
+    )
+    bloqueio_motivo = models.TextField(
+        blank=True, verbose_name='Motivo do bloqueio',
+        help_text='Preenchido quando etapa=BLOQUEADA (ex: "aguardando aprovação comercial").',
+    )
+    bloqueada_em = models.DateTimeField(null=True, blank=True, verbose_name='Bloqueada em')
+    tentativas_etapa = models.PositiveSmallIntegerField(
+        default=0, verbose_name='Tentativas na etapa atual',
+        help_text='Reseta a cada troca de etapa — retry de rate limit não conta como tentativa.',
+    )
     ativo        = models.BooleanField(default=True)
     criado_em    = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

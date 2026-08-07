@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class Artefato(models.Model):
     TIPO = [
+        ('ordem', 'Ordem (Planner)'),
         ('levantamento_requisitos', 'Levantamento de Requisitos'),
         ('uml_usecase', 'UML — Casos de Uso'),
         ('uml_classes', 'UML — Classes'),

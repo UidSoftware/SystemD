@@ -2197,7 +2197,59 @@ escalonadas em 2min de diferença uma da outra (`:01,:16,:31,:46` até
 Backup do crontab anterior salvo em `/tmp/crontab_backup_*.txt` antes
 da troca.
 
-**Pendente (próximos passos do plano):** Kanban de Manutenção na UI do
-Office (o resto — tela de Artefatos, autenticação de agents — já
-existe), cron de matrícula automática de projetos órfãos (Studio
-Fluir).
+**Passo 6 — Kanban de Manutenção na UI (Office):** `ManutencaoPage.jsx`
+reescrita do zero — de tabela plana pra board de verdade, uma coluna
+por `EtapaManutencao`, card com número/sistema/descrição, faixa
+"Precisam de você" pras `BLOQUEADA` (destaque visual, motivo do
+bloqueio visível sem abrir nada), modal de detalhe ao clicar no card
+com a lista de Artefatos daquela Manutenção (endpoint
+`artefatos/?manutencao=<id>`, resolve `ContentType` no backend) e botão
+"Aprovar e liberar" (`POST manutencoes/{id}/liberar_bloqueio/`, novo
+action no `ManutencaoViewSet`). Testado de verdade: build limpo, board
+carregou as 25 Manutenções reais nas colunas certas, clique no card
+#25 (Studio Fluir) abriu o modal com o motivo de bloqueio extraído do
+CLAUDE.md do projeto.
+
+**Passo 7 — Matrícula automática de projetos órfãos (era o motivador
+original — Studio Fluir sem ninguém olhando):** script novo
+`/opt/uid-automation/auditar_projetos_orfaos.py`, roda 1x/dia
+(`0 8 * * *`), lê o `CLAUDE.md` de cada OS ativa procurando uma seção
+"Próximo Passo Planejado" — se achar e a OS não tiver nenhuma
+Manutenção aberta, cria uma sozinho (idempotente, não duplica em
+reruns). Se o trecho mencionar "aguardando" (reunião/decisão/
+aprovação), a Manutenção já nasce `BLOQUEADA` com esse trecho como
+motivo — não faz sentido o Planner tentar rodar algo que o próprio
+texto já diz que está esperando um humano. Comandos novos no
+`disparar_hotfix.py`: `--listar-os-ativas`, `--tem-manutencao-aberta`,
+`--criar-manutencao-orfa` (+ `--bloqueio-motivo-orfa`).
+
+Teste real, não simulado — rodado contra o caso que motivou tudo isso:
+achou a seção no CLAUDE.md do Studio Fluir, tentou criar a Manutenção e
+bateu um bug real de banco: `IntegrityError: duplicate key value
+violates unique constraint "ordens_manutencao_pkey" (id)=(23) already
+exists`. Causa raiz: mais cedo no mesmo dia, duas `Manutencao.objects.
+create(id=22, ...)`/`id=23` explícitas (feitas pra manter numeração
+consistente com o que Forge/Loom já tinham se autodenominado) pularam
+a sequence do Postgres — o próximo insert automático colidiu. Fix:
+`SELECT setval('ordens_manutencao_id_seq', (SELECT MAX(id) FROM
+ordens_manutencao))`. Rerun criou a Manutenção **#25** de verdade pra
+Studio Fluir (OS #4), `etapa=BLOQUEADA`, motivo extraído certinho:
+"aguardando reunião com Giulia e Tássia". Corrigido também um resíduo
+cosmético (`**` de markdown sobrando no motivo salvo) — regex de limpeza
+ajustado em `motivo_aguardando()` pra próximas execuções. Cron diário
+ligado.
+
+**Lição registrada:** `id=` explícito em `.objects.create()` no
+Postgres bypassa a sequence — nunca fazer isso fora de fixture/seed
+controlado; se precisar bookkeeping de numeração alinhada a um rótulo
+externo (ex: "Forge chamou isso de Manutenção #22"), corrigir a
+sequence com `setval` logo depois, não deixar pra descobrir só quando
+o próximo insert automático colidir.
+
+**plano_execucao.md concluído — todos os 7 passos em produção,
+testados contra dados/casos reais (não simulação):** modelo+migrations
+(0011/0012), management commands, `disparar_etapa.py` + crontab de 6
+estágios, Kanban na UI, matrícula automática de órfãos. A esteira agora
+roda como fila cron-driven — sem sessão única orquestrando tudo do
+início ao fim, sem depender de ninguém "vigiar" o processo pra ele
+continuar avançando.

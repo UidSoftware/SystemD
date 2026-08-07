@@ -2013,3 +2013,53 @@ não a arquitetura de página inteira. Se retomar isso: reaproveitar os
 componentes de página já existentes (todos self-contained, ~4100 linhas
 no total em 15 arquivos) como conteúdo de aba, não reescrever a lógica
 de busca/CRUD de cada um do zero.
+
+
+---
+
+### [2026-08-07] — Financeiro consolidado de vez: 15 páginas → 1 com abas
+
+**Completa a pendência deixada aberta no ciclo anterior deste mesmo dia**
+("EBITDA com margem/breakdown + consolidação do menu Financeiro").
+
+As 15 páginas de `pages/sistema/financeiro/` (cada uma antes com seu
+próprio `<SistemaLayout>`, logo sua própria sidebar+header renderizada
+por rota) foram consolidadas numa única `FinanceiroPage.jsx` com abas
+internas — mesmo padrão do `Financeiro.jsx` do UidCore. As 15 rotas em
+`App.jsx` continuam existindo com a mesma permissão por rota
+(`FIN`/`FIN_LEITURA`, isso NÃO mudou), só que todas agora montam
+`FinanceiroPage`, que deriva a aba ativa do path da URL — links e
+favoritos antigos continuam funcionando exatamente iguais.
+
+**Transformação aplicada em cada uma das 15 páginas:** removido o
+wrapper `<SistemaLayout>` (senão duplicava sidebar/header dentro da
+página nova), conteúdo envolvido num `<>...</>` onde havia múltiplos
+elementos irmãos no topo do `return` (ex: `<div>` principal + modal
+condicional renderizado ao lado).
+
+**Armadilha real do processo (documentar pra próxima vez que fizer
+transformação em lote assim):** um script de transformação automática
+(regex "primeira ocorrência de `return (`" pra abrir o Fragment e
+"última ocorrência de fechamento" pra fechar) quebrou em qualquer
+arquivo que tivesse uma FUNÇÃO AUXILIAR definida antes do componente
+principal (ou dentro dele, antes do próprio JSX final) usando a palavra
+literal `return` — o script pegava o `return` errado pra abrir o
+Fragment, deixando o componente principal sem abertura e a auxiliar com
+abertura órfã sem fechamento. Afetou 4 dos 15 arquivos
+(`IndicadoresPage.jsx`: `Kpi`/`DeltaArrow`; `BalancoPage.jsx`: `Linha`;
+`ConciliacaoPage.jsx`: `badge status`; `DespesasPage.jsx`:
+`previewRecorrencia`). Corrigido um por um comparando contra o erro
+real do build (`npm run build`), não por mais regex — build error de
+verdade (esbuild) é mais confiável que heurística de contagem de linhas
+pra achar esse tipo de problema estrutural de JSX.
+
+**Deploy:** confirmado igual da vez anterior — push sozinho NÃO
+redesenha o frontend (o `sytemd-frontend-builder` não é gatilho
+automático de CI/CD aqui). Rebuild manual
+(`docker compose -f docker-compose.prod.yml build --no-cache
+frontend-builder && ... up -d frontend-builder`), confirmado no bundle
+real servido (`index-D50qoI-q.js`): strings "Contas Bancárias" (label de
+aba nova) e "Margem EBITDA" (do ciclo anterior) presentes.
+
+**Build:** 15 páginas + `FinanceiroPage.jsx` novo + `App.jsx` — 0 erros
+no build final, commit `4f37ab6`.

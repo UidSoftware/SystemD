@@ -2098,3 +2098,38 @@ do banco, 6 meses de histórico nos dois agrupamentos.
 
 **Deploy:** confirmado no bundle real (`index-TOqoP9WT.js`) — strings
 "Ponto de Equilíbrio" e "Receitas Recebidas" presentes.
+
+
+---
+
+### [2026-08-07] — Botão EBITDA próprio: demonstração clássica por ano
+
+Usuário pediu, com referência visual de um modelo padrão de planilha
+financeira: não só uma linha de EBITDA na tabela do DRE, mas uma
+**página própria** seguindo a sequência clássica de demonstração —
+Receita Bruta → Deduções → Receita Líquida → CMV/CSP → Lucro Bruto →
+Despesas Operacionais → Outras Receitas → **EBITDA** → D&A → **EBIT** →
+Pró-labore → Impostos → **Lucro Líquido** — com % de cada linha sobre a
+receita líquida.
+
+**Nova página `EbitdaPage.jsx`**, nova aba "EBITDA" no `FinanceiroPage`,
+nova rota `/sistema/financeiro/ebitda` (mesma permissão `FIN_LEITURA`
+do DRE), novo item no Sidebar. Reaproveita o mesmo endpoint `/dre/`
+já validado (nenhum endpoint novo) — a soma bate exatamente com o
+EBITDA/Resultado que a aba DRE mostra.
+
+**Decisão de honestidade dos dados (relevante pra manter sempre que
+mexer nisso):** a Uid não rastreia hoje CMV/CSP, separação Vendas&Marketing
+vs G&A, Depreciação/Amortização, nem separação IRPJ/CSLL de outros
+impostos como linhas próprias. Em vez de fabricar número pra preencher
+a estrutura clássica por completo, essas linhas aparecem explicitamente
+como "Não modelado hoje" com R$ 0,00 e itálico — nunca um valor
+estimado ou zerado silenciosamente sem explicação. Pró-labore aparece
+como linha própria abaixo do EBITDA (não dentro de "Despesas
+Operacionais" acima dele) porque é assim que a Uid já trata isso em
+toda a esteira (EBITDA = Resultado + Impostos + Pró-labore, ver Módulo
+Financeiro do CLAUDE.md global) — normalização de propósito, prática
+comum em avaliação de pequena empresa.
+
+**Deploy:** confirmado no bundle real (`index-BMjxcyJz.js`) — strings
+"Demonstração por Ano", "Lucro Bruto" e "Não modelado hoje" presentes.

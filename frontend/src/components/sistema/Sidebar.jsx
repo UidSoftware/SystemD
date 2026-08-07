@@ -32,20 +32,38 @@ const icons = {
   logout:     ['M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
 }
 
-const menuRelatorios = [
-  { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa',     emoji: '📈' },
-  { label: 'DRE',            path: '/sistema/financeiro/dre',              emoji: '📉' },
-  { label: 'Balanço Patrimonial', path: '/sistema/financeiro/balanco',    emoji: '⚖️' },
-  { label: 'Indicadores CFO', path: '/sistema/financeiro/indicadores',   emoji: '🧭' },
-  { label: 'Receitas',       path: '/sistema/relatorios/receitas',         emoji: '💵' },
-  { label: 'Despesas',       path: '/sistema/relatorios/despesas',         emoji: '💸' },
-  { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente',      emoji: '👥' },
+// Consolidado 07/08/2026: existiam 3 arrays de submenu financeiro
+// (menuRelatorios, menuContabilidade, menuFinanceiro) com DRE/Balanço/
+// Indicadores/Fluxo de Caixa repetidos entre eles, e ADMIN/FINANCEIRO
+// mostravam "Financeiro" e "Relatorios" como DOIS itens de topo
+// separados apontando pro mesmo domínio — sensação de sistema
+// fragmentado/desatualizado comparado ao menu único e enxuto do
+// UidCore. Fundido num só array; "Relatorios" deixou de existir como
+// item de topo pra ADMIN/FINANCEIRO (tudo entra em "Financeiro" agora).
+// menuContabilidade continua separado — é escopo de PERMISSÃO real
+// (perfil só-leitura, sem Contas a Receber/Pagar editáveis), não
+// duplicação de navegação.
+const menuFinanceiro = [
+  { label: 'Visao Geral',         path: '/sistema/financeiro/visao-geral',        emoji: '📊' },
+  { label: 'Fluxo de Caixa',      path: '/sistema/financeiro/fluxo-caixa',        emoji: '📈' },
+  { label: 'DRE',                 path: '/sistema/financeiro/dre',                emoji: '📉' },
+  { label: 'Balanço Patrimonial', path: '/sistema/financeiro/balanco',            emoji: '⚖️' },
+  { label: 'Indicadores CFO',     path: '/sistema/financeiro/indicadores',        emoji: '🧭' },
+  { label: 'Contas a Receber',    path: '/sistema/financeiro/receitas',           emoji: '📥' },
+  { label: 'Receitas Recebidas',  path: '/sistema/financeiro/receitas-recebidas', emoji: '✅' },
+  { label: 'Contas a Pagar',      path: '/sistema/financeiro/despesas',           emoji: '📤' },
+  { label: 'Despesas Pagas',      path: '/sistema/financeiro/despesas-pagas',     emoji: '💳' },
+  { label: 'Aportes',             path: '/sistema/financeiro/aportes',            emoji: '💰' },
+  { label: 'Contas Bancarias',    path: '/sistema/financeiro/contas',             emoji: '🏦' },
+  { label: 'Conciliação',         path: '/sistema/financeiro/conciliacao',        emoji: '🔄' },
+  { label: 'Livro Caixa',         path: '/sistema/financeiro/livro-caixa',        emoji: '📒' },
+  { label: 'Fornecedores',        path: '/sistema/financeiro/fornecedores',       emoji: '🤝' },
+  { label: 'Por Cliente',         path: '/sistema/financeiro/por-cliente',        emoji: '👥' },
 ]
 
-// So relatorio (leitura) -- mesmas telas do menuRelatorios + Livro Caixa +
-// Aportes, nada de lancamento/edicao (Receitas, Despesas, Contas ficam de
-// fora). Aportes liberado pra visualizacao em 03/08/2026 (backend ja
-// restringe create/update/delete a ADMIN via AporteViewSet.get_permissions).
+// So relatorio (leitura) -- Aportes liberado pra visualizacao em
+// 03/08/2026 (backend ja restringe create/update/delete a ADMIN via
+// AporteViewSet.get_permissions).
 const menuContabilidade = [
   { label: 'Fluxo de Caixa', path: '/sistema/financeiro/fluxo-caixa', emoji: '📈' },
   { label: 'DRE',            path: '/sistema/financeiro/dre',         emoji: '📉' },
@@ -56,19 +74,6 @@ const menuContabilidade = [
   { label: 'Por Cliente',    path: '/sistema/financeiro/por-cliente', emoji: '👥' },
   { label: 'Receitas',       path: '/sistema/relatorios/receitas',    emoji: '💵' },
   { label: 'Despesas',       path: '/sistema/relatorios/despesas',    emoji: '💸' },
-]
-
-const menuFinanceiro = [
-  { label: 'Visao Geral',         path: '/sistema/financeiro/visao-geral',        emoji: '📊' },
-  { label: 'Contas a Receber',    path: '/sistema/financeiro/receitas',            emoji: '📥' },
-  { label: 'Receitas Recebidas',  path: '/sistema/financeiro/receitas-recebidas', emoji: '✅' },
-  { label: 'Contas a Pagar',      path: '/sistema/financeiro/despesas',            emoji: '📤' },
-  { label: 'Despesas Pagas',      path: '/sistema/financeiro/despesas-pagas',      emoji: '💳' },
-  { label: 'Aportes',             path: '/sistema/financeiro/aportes',             emoji: '💰' },
-  { label: 'Contas Bancarias',    path: '/sistema/financeiro/contas',              emoji: '🏦' },
-  { label: 'Conciliação',          path: '/sistema/financeiro/conciliacao',          emoji: '🔄' },
-  { label: 'Livro Caixa',         path: '/sistema/financeiro/livro-caixa',         emoji: '📒' },
-  { label: 'Fornecedores',        path: '/sistema/financeiro/fornecedores',        emoji: '🤝' },
 ]
 
 
@@ -103,7 +108,6 @@ const menuPorPerfil = {
     { label: 'Contratos',     path: '/sistema/contratos',                               emoji: '📄' },
     { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
     { label: 'Financeiro',    path: '/sistema/financeiro',    emoji: '💰', submenu: menuFinanceiro },
-    { label: 'Relatorios',    path: '/sistema/relatorios',    emoji: '📊', submenu: menuRelatorios },
     { label: 'Email',         path: '/sistema/email',         emoji: '📧' },
     { label: 'Usuarios',      path: '/sistema/usuarios',      emoji: '👤' },
     { label: 'Configuracoes', path: '/sistema/configuracoes', emoji: '⚙️' },
@@ -122,7 +126,6 @@ const menuPorPerfil = {
   FINANCEIRO: [
     { label: 'Dashboard',  path: '/sistema/',            emoji: '🏠' },
     { label: 'Financeiro', path: '/sistema/financeiro',  emoji: '💰', submenu: menuFinanceiro },
-    { label: 'Relatorios', path: '/sistema/relatorios',  emoji: '📊', submenu: menuRelatorios },
     { label: 'Email',      path: '/sistema/email',       emoji: '📧' },
   ],
   CLIENTE: [

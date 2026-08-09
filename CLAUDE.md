@@ -1561,7 +1561,40 @@ VPS, fora do repo SystemD, não versionada em `main`. Backups em
 
 ---
 
-*Última atualização: 2026-07-18 (fix disparo automático de Manutenções — lookup dinâmico via Empire API)*
+*Última atualização: 2026-08-09 (simplificação menu Office — só Artefatos e Manutenções)*
+
+---
+
+### [2026-08-09] — Menu Office simplificado: apenas Artefatos e Manutenções (Manutenção #26)
+
+**Tarefas executadas:**
+- Removidos 4 itens sem conteúdo real do submenu Office na `Sidebar.jsx`: Escritório, Board, Agents, Activity Feed
+- Restam apenas as duas páginas funcionais: Artefatos e Manutenções
+
+**Arquivos alterados:**
+- `frontend/src/components/sistema/Sidebar.jsx` — `menuOffice` reduzido de 6 para 2 itens
+
+**Commits:**
+- `14d0f08` — feat(sidebar): remove itens sem conteudo do menu Office — manter so Artefatos e Manutencoes
+
+**Deploy:**
+- Data: 2026-08-09
+- Push: `git push origin main` → CI/CD GitHub Actions disparado automaticamente
+- URL: https://uidsoftware.com.br
+- Status: ✅ Em produção (após frontend-builder — ver nota abaixo)
+
+**⚠️ Frontend-builder — 3 comandos obrigatórios na VPS:**
+Alteração de Sidebar.jsx exige rebuild manual do frontend (o CI/CD do backend não reconstrói o bundle React automaticamente):
+```bash
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+```
+
+**Sentinel:**
+- Mudança restrita a `Sidebar.jsx` — remoção de itens de menu (`menuOffice` 6→2 itens)
+- Nenhum endpoint novo, sem alteração de backend
+- Resultado: APROVADO
 
 ---
 

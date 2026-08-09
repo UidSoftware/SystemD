@@ -78,13 +78,12 @@ const menuNovoProjeto = [
   { label: 'Contratos',           path: '/sistema/contratos',                                emoji: '📄' },
 ]
 
+// Simplificado em 09/08/2026 (Manutencao #26): removidos itens sem
+// conteúdo real (Escritório, Board, Agents, Activity Feed) — sobram
+// apenas as duas páginas funcionais do menu Office.
 const menuOffice = [
-  { label: 'Escritorio',    path: '/sistema/office/escritorio',   emoji: '🖥️' },
-  { label: 'Board',         path: '/sistema/office/board',        emoji: '📌' },
-  { label: 'Agents',        path: '/sistema/office/agents',       emoji: '🤖' },
-  { label: 'Artefatos',     path: '/sistema/office/artefatos',    emoji: '📦' },
-  { label: 'Activity Feed', path: '/sistema/office/activity',     emoji: '📡' },
-  { label: 'Manutencoes',   path: '/sistema/office/manutencoes',  emoji: '🔧' },
+  { label: 'Artefatos',   path: '/sistema/office/artefatos',   emoji: '📦' },
+  { label: 'Manutencoes', path: '/sistema/office/manutencoes', emoji: '🔧' },
 ]
 
 const menuPorPerfil = {

@@ -63,9 +63,10 @@ export default function DespesasPage() {
   const [formEstorno, setFormEstorno]         = useState({ data_estorno: '', conta: '', motivo: '', observacoes: '' })
   const [editando, setEditando]               = useState(null)
   const [form, setForm]                       = useState(formVazio)
-  const [formPag, setFormPag]                 = useState({ pagamento: '', conta: '', forma_pagamento: '' })
+  const [formPag, setFormPag]                 = useState({ pagamento: '', conta: '', forma_pagamento: '', tipoDesconto: 'none', desconto_valor: '', desconto_percentual: '' })
   const [salvando, setSalvando]               = useState(false)
   const [erro, setErro]                       = useState('')
+  const [erroPag, setErroPag]                 = useState('')
   const [filtros, setFiltros]                 = useState({ status: '', tipo: '', data_inicio: '', data_fim: '' })
   const [busca, setBusca]                       = useState('')
   const [novaCategoria, setNovaCategoria]     = useState('')
@@ -201,15 +202,23 @@ export default function DespesasPage() {
 
   const handleMarcarPago = async (e) => {
     e.preventDefault()
-    setSalvando(true)
+    setSalvando(true); setErroPag('')
+    const payload = {
+      pagamento: formPag.pagamento || new Date().toISOString().slice(0, 10),
+      conta: formPag.conta || modalPagar.conta,
+      forma_pagamento: formPag.forma_pagamento,
+    }
+    if (formPag.tipoDesconto === 'valor' && formPag.desconto_valor) {
+      payload.desconto_valor = formPag.desconto_valor
+    } else if (formPag.tipoDesconto === 'percentual' && formPag.desconto_percentual) {
+      payload.desconto_percentual = formPag.desconto_percentual
+    }
     try {
-      await financeiroApi.marcarPago(modalPagar.id, {
-        pagamento: formPag.pagamento || new Date().toISOString().slice(0, 10),
-        conta: formPag.conta || modalPagar.conta,
-        forma_pagamento: formPag.forma_pagamento,
-      })
+      await financeiroApi.marcarPago(modalPagar.id, payload)
       setModalPagar(null); carregar()
-    } catch { } finally { setSalvando(false) }
+    } catch (err) {
+      setErroPag(err.response?.data ? Object.values(err.response.data).flat().join(' ') : 'Erro ao confirmar pagamento.')
+    } finally { setSalvando(false) }
   }
 
   const cancelar = (d) => setModalConfirmar({ msg: `Cancelar despesa "${d.descricao}"?`, onConfirm: async () => { await financeiroApi.editarDespesa(d.id, { status: 'CANCELADO' }); carregar() } })
@@ -246,7 +255,7 @@ export default function DespesasPage() {
             <button
               style={{ ...btnAcao('#063BF8'), border: '1px solid #063BF8' }}
               title="Confirmar pagamento"
-              onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '' }) }}>
+              onClick={() => { setModalPagar(r); setFormPag({ pagamento: '', conta: r.conta, forma_pagamento: '', tipoDesconto: 'none', desconto_valor: '', desconto_percentual: '' }); setErroPag('') }}>
               $
             </button>
           )}
@@ -270,6 +279,16 @@ export default function DespesasPage() {
       </div>
     )
   }
+
+  // Preview de desconto no modal Confirmar Pagamento
+  const valorBrutoModal     = parseFloat(modalPagar?.valor_bruto || modalPagar?.valor_liquido || 0)
+  const descontoPreview     = !modalPagar ? 0
+    : formPag.tipoDesconto === 'valor'
+      ? Math.min(parseFloat(formPag.desconto_valor || 0), valorBrutoModal)
+      : formPag.tipoDesconto === 'percentual'
+        ? (valorBrutoModal * Math.min(Math.max(parseFloat(formPag.desconto_percentual || 0), 0), 100) / 100)
+        : 0
+  const valorFinalPreview   = valorBrutoModal - descontoPreview
 
   // Agrupar por mes de vencimento (ordem crescente — proximos vencimentos primeiro)
   const dadosFiltrados = busca.trim()
@@ -569,7 +588,7 @@ export default function DespesasPage() {
       )}
 
       {modalPagar && (
-        <ModalBase titulo="Confirmar Pagamento" onClose={() => setModalPagar(null)} maxW="max-w-md">
+        <ModalBase titulo="Confirmar Pagamento" onClose={() => { setModalPagar(null); setErroPag('') }} maxW="max-w-md">
           <form onSubmit={handleMarcarPago} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <p style={{ fontSize: 14, color: '#a78bca' }}>{modalPagar.descricao} — {formatMoeda(modalPagar.valor_liquido)}</p>
             <div>
@@ -589,7 +608,90 @@ export default function DespesasPage() {
                 {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </div>
-            <BotoesModal onCancel={() => setModalPagar(null)} salvando={salvando} labelConfirmar="Confirmar Pagamento" />
+
+            {/* Desconto no momento do pagamento (antecipacao, renegociacao etc.) */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12 }}>
+              <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 8 }}>Desconto</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {[
+                  { val: 'none',       label: 'Sem desconto' },
+                  { val: 'valor',      label: 'Por valor (R$)' },
+                  { val: 'percentual', label: 'Por % (%)' },
+                ].map(opt => (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setFormPag(f => ({ ...f, tipoDesconto: opt.val, desconto_valor: '', desconto_percentual: '' }))}
+                    style={{
+                      padding: '5px 12px', fontSize: 12, borderRadius: 8, cursor: 'pointer',
+                      border: formPag.tipoDesconto === opt.val ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.12)',
+                      background: formPag.tipoDesconto === opt.val ? 'rgba(6,59,248,0.2)' : 'rgba(255,255,255,0.04)',
+                      color: formPag.tipoDesconto === opt.val ? '#6b8fff' : '#a78bca',
+                      fontWeight: formPag.tipoDesconto === opt.val ? 600 : 400,
+                      transition: 'all 0.15s',
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {formPag.tipoDesconto === 'valor' && (
+                <div style={{ marginTop: 10 }}>
+                  <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Valor do desconto (R$)</label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={valorBrutoModal}
+                    placeholder="Ex: 10.00"
+                    value={formPag.desconto_valor}
+                    onChange={e => setFormPag(f => ({ ...f, desconto_valor: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+              )}
+              {formPag.tipoDesconto === 'percentual' && (
+                <div style={{ marginTop: 10 }}>
+                  <label style={{ fontSize: 12, color: '#a78bca', display: 'block', marginBottom: 4 }}>Percentual de desconto (%)</label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    placeholder="Ex: 5.00"
+                    value={formPag.desconto_percentual}
+                    onChange={e => setFormPag(f => ({ ...f, desconto_percentual: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Preview do valor final a pagar */}
+            {descontoPreview > 0 && (
+              <div style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#a78bca', marginBottom: 6 }}>
+                  <span>Valor bruto</span>
+                  <span>{formatMoeda(valorBrutoModal)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#10b981', marginBottom: 6 }}>
+                  <span>
+                    Desconto{formPag.tipoDesconto === 'percentual' && formPag.desconto_percentual
+                      ? ` (${formPag.desconto_percentual}%)`
+                      : ''}
+                  </span>
+                  <span>−{formatMoeda(descontoPreview)}</span>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, color: '#10b981' }}>
+                  <span>Valor a pagar</span>
+                  <span>{formatMoeda(valorFinalPreview)}</span>
+                </div>
+              </div>
+            )}
+
+            {erroPag && <p style={{ color: '#f87171', fontSize: 13 }}>{erroPag}</p>}
+            <BotoesModal onCancel={() => { setModalPagar(null); setErroPag('') }} salvando={salvando} labelConfirmar="Confirmar Pagamento" />
           </form>
         </ModalBase>
       )}

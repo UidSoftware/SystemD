@@ -205,6 +205,47 @@ class DespesaPagarTest(APITestCase):
         res = self.client.patch(self._url(), {'conta': 9999}, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_pagar_com_desconto_valor(self):
+        """Pagamento antecipado com desconto por valor absoluto."""
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(self._url(), {'desconto_valor': '10.00'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.despesa.refresh_from_db()
+        self.assertEqual(self.despesa.desconto, Decimal('10.00'))
+        self.assertEqual(self.despesa.valor_liquido, Decimal('40.00'))  # 50 - 10
+        # LivroCaixa deve registrar o valor líquido (com desconto)
+        lc = LivroCaixa.objects.get(conta=self.conta, origem='DESPESA', origem_id=self.despesa.id)
+        self.assertEqual(lc.valor, Decimal('40.00'))
+
+    def test_pagar_com_desconto_percentual(self):
+        """Pagamento antecipado com desconto por percentual."""
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(self._url(), {'desconto_percentual': '10'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.despesa.refresh_from_db()
+        self.assertEqual(self.despesa.desconto, Decimal('5.00'))   # 10% de 50
+        self.assertEqual(self.despesa.valor_liquido, Decimal('45.00'))
+
+    def test_pagar_desconto_valor_maior_que_bruto_retorna_400(self):
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(self._url(), {'desconto_valor': '999.00'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_pagar_desconto_percentual_fora_intervalo_retorna_400(self):
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(self._url(), {'desconto_percentual': '150'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_pagar_ambos_desconto_retorna_400(self):
+        """Fornecer desconto_valor E desconto_percentual ao mesmo tempo é inválido."""
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(
+            self._url(),
+            {'desconto_valor': '5.00', 'desconto_percentual': '10'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Despesa — endpoint /estornar/

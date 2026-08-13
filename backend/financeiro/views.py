@@ -399,19 +399,61 @@ class DespesaViewSet(AuditMixin, ModelViewSet):
     @action(detail=True, methods=['patch'], url_path='pagar', permission_classes=[IsAdminOrFinanceiro])
     def marcar_pago(self, request, pk=None):
         despesa = self.get_object()
-        pagamento = request.data.get('pagamento') or date.today().isoformat()
-        conta_id  = request.data.get('conta')
-        forma_pagamento = request.data.get('forma_pagamento', '')
+        pagamento           = request.data.get('pagamento') or date.today().isoformat()
+        conta_id            = request.data.get('conta')
+        forma_pagamento     = request.data.get('forma_pagamento', '')
+        desconto_valor      = request.data.get('desconto_valor')
+        desconto_percentual = request.data.get('desconto_percentual')
+
         if conta_id:
             try:
                 despesa.conta = Conta.objects.get(id=conta_id)
             except Conta.DoesNotExist:
                 return Response({'conta': 'Conta não encontrada.'}, status=400)
+
         if forma_pagamento and forma_pagamento not in FormaPagamento.values:
             return Response({'forma_pagamento': 'Forma de pagamento inválida.'}, status=400)
-        despesa.pagamento = pagamento
+
+        # Desconto no momento do pagamento (antecipação, renegociação etc.)
+        # Apenas um dos dois campos pode ser informado por vez.
+        if desconto_valor is not None and desconto_percentual is not None:
+            return Response(
+                {'desconto': 'Informe desconto_valor OU desconto_percentual, não ambos.'},
+                status=400,
+            )
+
+        if desconto_valor is not None:
+            try:
+                desconto_valor = Decimal(str(desconto_valor))
+            except Exception:
+                return Response({'desconto_valor': 'Valor de desconto inválido.'}, status=400)
+            if desconto_valor < 0:
+                return Response({'desconto_valor': 'Desconto não pode ser negativo.'}, status=400)
+            if desconto_valor > despesa.valor_bruto:
+                return Response(
+                    {'desconto_valor': 'Desconto não pode ser maior que o valor bruto.'},
+                    status=400,
+                )
+            despesa.desconto = desconto_valor
+
+        elif desconto_percentual is not None:
+            try:
+                pct = Decimal(str(desconto_percentual))
+            except Exception:
+                return Response({'desconto_percentual': 'Percentual de desconto inválido.'}, status=400)
+            if pct < 0 or pct > 100:
+                return Response(
+                    {'desconto_percentual': 'Percentual deve ser entre 0 e 100.'},
+                    status=400,
+                )
+            # Arredonda para 2 casas decimais (padrão monetário)
+            despesa.desconto = (despesa.valor_bruto * pct / Decimal('100')).quantize(Decimal('0.01'))
+
+        despesa.pagamento       = pagamento
         despesa.forma_pagamento = forma_pagamento
-        despesa.status = 'PAGO'
+        despesa.status          = 'PAGO'
+        # save() recalcula valor_liquido = valor_bruto - desconto;
+        # o signal despesa_para_livro_caixa usa valor_liquido como saída no LC.
         despesa.save()
         return Response(DespesaSerializer(despesa).data)
 

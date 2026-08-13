@@ -2358,3 +2358,41 @@ backend` pra pegar a env var nova de verdade. As duas lições (credencial
 duplicada, `restart` não recarrega `.env`) guardadas no
 `~/.claude/CLAUDE.md` (Infraestrutura) por serem gerais, não específicas
 do SystemD.
+
+---
+
+### [2026-08-12] — Desconto por valor e percentual no Confirmar Pagamento (Manutenção #30)
+
+**Tarefas executadas:**
+- Campos de desconto no modal Confirmar Pagamento de Contas a Pagar:
+  - `desconto_valor` (DecimalField) — desconto em R$
+  - `desconto_percentual` (DecimalField) — desconto em %, calcula `desconto_valor` automaticamente
+  - Campos sincronizados no frontend: digitar % preenche R$, e vice-versa
+- Backend (`/api/financeiro/despesas/{id}/pagar/`): aceita `desconto_valor` e `desconto_percentual`, recalcula `valor_liquido` antes de gerar o LivroCaixa
+- 2 novos testes no `financeiro/tests.py` cobrindo desconto por valor e por percentual
+
+**Arquivos alterados:**
+- `backend/financeiro/views.py` — endpoint `/pagar/` recalcula `valor_liquido` com desconto
+- `backend/financeiro/tests.py` — 2 testes novos (desconto por valor e por percentual)
+- `frontend/src/pages/sistema/financeiro/DespesasPage.jsx` — campos `desconto_valor`/`desconto_percentual` com sincronização automática
+
+**Commits:**
+- `df5995c` — feat(financeiro): desconto por valor e percentual no confirmar pagamento
+- `c4625db` — feat(despesas): desconto por valor e percentual no confirmar pagamento
+
+**Deploy:**
+- Data: 2026-08-12
+- Push: `git push origin main` → `bf0b35c..c4625db` — CI/CD GitHub Actions disparado
+- URL: https://uidsoftware.com.br
+- Status: ✅ Aprovado por Sentinel
+
+**⚠️ Rebuild frontend obrigatório na VPS (DespesasPage.jsx alterado):**
+```bash
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+```
+
+**Sentinel:**
+- Testes passando (backend + frontend validados)
+- Resultado: APROVADO

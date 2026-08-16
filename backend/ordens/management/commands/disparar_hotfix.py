@@ -63,8 +63,27 @@ class Command(BaseCommand):
             if not m:
                 self.stdout.write(self.style.ERROR('Manutencao nao encontrada.'))
                 return
+            # Sincroniza o card do Kanban com a conclusao real -- ate
+            # 16/08/2026 --concluir so tocava 'feito', nunca 'etapa'. Isso
+            # deixava o card preso na coluna antiga (normalmente PENDENTE
+            # ou BLOQUEADA) pra sempre, mesmo com a manutencao 100% pronta
+            # e deployada -- achado real em producao nas Manutencoes
+            # #32/#33/#34 (UidCore e SystemD), todas concluidas de verdade
+            # pelo modelo de sessao unica (disparar_hotfix.py), que nunca
+            # passa pela esteira em fila e por isso nunca chama
+            # --avancar-etapa. --concluir e o unico sinal canonico de
+            # "terminou de verdade" desse caminho, entao ele precisa
+            # espelhar o mesmo estado final que --avancar-etapa ...
+            # DEPLOYADO ja produz.
             m.feito = True
-            m.save(update_fields=['feito', 'atualizado_em'])
+            m.etapa = EtapaManutencao.DEPLOYADO
+            m.bloqueio_motivo = ''
+            m.bloqueada_em = None
+            m.tentativas_etapa = 0
+            m.save(update_fields=[
+                'feito', 'etapa', 'bloqueio_motivo', 'bloqueada_em',
+                'tentativas_etapa', 'atualizado_em',
+            ])
 
             # Fecha o loop com Notificacoes: '--concluir' e o sinal canonico de
             # que a manutencao terminou de verdade (Sentinel validou, Pilot

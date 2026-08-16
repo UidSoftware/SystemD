@@ -118,6 +118,79 @@ function MesColapsavel({ mes, cor, tipo, onEditar, onRecibo, carregandoId, geran
   )
 }
 
+const CORES_PIZZA = [
+  '#063BF8', // brand blue
+  '#a78bca', // roxo texto secundário (já usado na página)
+  '#3d0361', // roxo escuro de marca
+  '#6b8fff', // azul claro (já usado em KPIs neutros)
+  '#FF0000', // brand red
+  '#10b981', // verde (já usado para receita)
+  '#f59e0b', // amarelo/atenção
+  '#8b5cf6', // roxo violeta (complementa a família #3d0361/#a78bca)
+]
+
+function polarToCartesian(cx, cy, r, angleDeg) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+function fatiaPath(cx, cy, r, anguloInicio, anguloFim) {
+  const inicio = polarToCartesian(cx, cy, r, anguloFim)
+  const fim = polarToCartesian(cx, cy, r, anguloInicio)
+  const largeArc = anguloFim - anguloInicio > 180 ? 1 : 0
+  return `M ${cx} ${cy} L ${inicio.x} ${inicio.y} A ${r} ${r} 0 ${largeArc} 0 ${fim.x} ${fim.y} Z`
+}
+
+function GraficoPizzaCategorias({ dados }) {
+  if (!dados || dados.length === 0) {
+    return <p style={{ fontSize: 13, color: '#6b6b8a', margin: 0 }}>Nenhuma despesa registrada.</p>
+  }
+
+  let anguloAtual = 0
+  const fatias = dados.map((item, i) => {
+    const anguloInicio = anguloAtual
+    const anguloFim = anguloAtual + (Number(item.percentual) / 100) * 360
+    anguloAtual = anguloFim
+    return { ...item, cor: CORES_PIZZA[i % CORES_PIZZA.length], anguloInicio, anguloFim }
+  })
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-4">
+      <svg width={140} height={140} viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+        {fatias.length === 1 ? (
+          <circle cx={50} cy={50} r={40} fill={fatias[0].cor}>
+            <title>{fatias[0].nome}: {formatMoeda(fatias[0].total)}</title>
+          </circle>
+        ) : (
+          fatias.map((f, i) => (
+            <path
+              key={i}
+              d={fatiaPath(50, 50, 40, f.anguloInicio, f.anguloFim)}
+              fill={f.cor}
+              stroke="#1a0a2e"
+              strokeWidth="1"
+            >
+              <title>{f.nome}: {formatMoeda(f.total)}</title>
+            </path>
+          ))
+        )}
+      </svg>
+      <div className="flex flex-col gap-2 w-full" style={{ fontSize: 12 }}>
+        {fatias.map((f, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: f.cor, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ color: '#e2d9f3', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {f.nome}
+            </span>
+            <span style={{ color: '#a78bca', fontSize: 11, whiteSpace: 'nowrap' }}>{f.percentual}%</span>
+            <span style={{ color: '#f1f5f9', fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 4 }}>{formatMoeda(f.total)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const formDespesaVazio = {
   tipo: 'FIXA', descricao: '', fornecedor: '',
   categoria: '', valor_bruto: '', desconto: '0', conta: '',
@@ -360,29 +433,36 @@ export default function VisaoGeralPage() {
           </div>
         </div>
 
-        {/* Grafico 6 meses */}
+        {/* Grafico 6 meses + Gastos por Categoria (pizza) */}
         {dados.grafico_6_meses && (
-          <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 18, marginBottom: 16 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: '#a78bca', margin: '0 0 14px' }}>Receita x Despesa (6 meses)</h3>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 160 }}>
-              {dados.grafico_6_meses.map((m) => {
-                const max = Math.max(...dados.grafico_6_meses.map(x => Math.max(Number(x.receita), Number(x.despesa), 1)))
-                const hRec = (Number(m.receita) / max) * 100
-                const hDes = (Number(m.despesa) / max) * 100
-                return (
-                  <div key={m.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 128, width: '100%', justifyContent: 'center' }}>
-                      <div style={{ width: 12, background: '#10b981', borderRadius: '4px 4px 0 0', height: `${hRec}%` }} title={formatMoeda(m.receita)} />
-                      <div style={{ width: 12, background: '#FF0000', borderRadius: '4px 4px 0 0', height: `${hDes}%` }} title={formatMoeda(m.despesa)} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 18 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#a78bca', margin: '0 0 14px' }}>Receita x Despesa (6 meses)</h3>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 160 }}>
+                {dados.grafico_6_meses.map((m) => {
+                  const max = Math.max(...dados.grafico_6_meses.map(x => Math.max(Number(x.receita), Number(x.despesa), 1)))
+                  const hRec = (Number(m.receita) / max) * 100
+                  const hDes = (Number(m.despesa) / max) * 100
+                  return (
+                    <div key={m.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 128, width: '100%', justifyContent: 'center' }}>
+                        <div style={{ width: 12, background: '#10b981', borderRadius: '4px 4px 0 0', height: `${hRec}%` }} title={formatMoeda(m.receita)} />
+                        <div style={{ width: 12, background: '#FF0000', borderRadius: '4px 4px 0 0', height: `${hDes}%` }} title={formatMoeda(m.despesa)} />
+                      </div>
+                      <span style={{ fontSize: 10, color: '#6b6b8a' }}>{m.label}</span>
                     </div>
-                    <span style={{ fontSize: 10, color: '#6b6b8a' }}>{m.label}</span>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 11, color: '#a78bca' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#10b981', display: 'inline-block' }} />Receita</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#FF0000', display: 'inline-block' }} />Despesa</span>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 11, color: '#a78bca' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#10b981', display: 'inline-block' }} />Receita</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#FF0000', display: 'inline-block' }} />Despesa</span>
+
+            <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 18 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#a78bca', margin: '0 0 14px' }}>Gastos por Categoria</h3>
+              <GraficoPizzaCategorias dados={dados.despesas_por_categoria} />
             </div>
           </div>
         )}

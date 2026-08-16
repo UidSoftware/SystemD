@@ -2439,3 +2439,53 @@ docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 34
 - 6/6 critérios de aceite passando
 - Resultado: APROVADO
 - Resultado: APROVADO
+
+---
+
+### [2026-08-16] — Gráfico de pizza "Gastos por Categoria" na Visão Geral (Manutenção #35)
+
+**Tarefas executadas:**
+- Backend: novo campo `despesas_por_categoria` no endpoint `/api/financeiro/dashboard/` — agrega despesas pagas do mês por categoria para alimentar o gráfico
+- Frontend (`VisaoGeralPage.jsx`): gráfico de pizza "Gastos por Categoria" adicionado ao lado do gráfico de barras de 6 meses já existente
+
+**Arquivos alterados:**
+- `backend/financeiro/views.py` — `despesas_por_categoria` no `dashboard()`
+- `frontend/src/pages/sistema/financeiro/VisaoGeralPage.jsx` — pizza de gastos por categoria
+- arquivo de teste diagnóstico de permissão de escrita do Loom (incluído por precaução, sem impacto funcional)
+
+**Commits:**
+- `5932db0` — feat(financeiro): adicionar despesas_por_categoria no endpoint dashboard
+- `a4b92aa` — test(loom): arquivo de teste de permissao de escrita do Loom
+- `be862d7` — feat(financeiro): exibir pizza de gastos por categoria ao lado do grafico de 6 meses
+
+**Deploy:**
+- Data: 2026-08-16
+- Push: `git push origin main` → `8732e77..be862d7` — CI/CD GitHub Actions do backend disparado automaticamente
+- Health check backend: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Backend em produção via CI/CD. Frontend com deploy **pendente** (ver abaixo)
+
+**⚠️ Pendente — fora do escopo do Pilot, requer execução manual no host da VPS:**
+Esta alteração inclui frontend (`VisaoGeralPage.jsx`) — o rebuild do bundle React não é
+automático via CI/CD (ver seção "Deploy frontend — 3 comandos obrigatórios" acima).
+O Pilot está proibido de rodar comandos Docker (regra absoluta do próprio agente —
+"ÚNICO deploy permitido: git push origin main"; mesma limitação já registrada nos
+ciclos de 02/06/2026 e 16/08/2026 #34). Os passos abaixo precisam ser executados por
+alguém com acesso direto ao host da VPS:
+
+```bash
+# 1. Rebuild do frontend (obrigatório — VisaoGeralPage.jsx alterado)
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+
+# 2. Confirmar que a string 'Gastos por Categoria' está presente no bundle servido
+curl -s https://uidsoftware.com.br/sistema/ | grep -o 'index-[^"]*\.js' | head -1
+# depois: curl -s https://uidsoftware.com.br/assets/<arquivo-acima> | grep -o 'Gastos por Categoria'
+
+# 3. Concluir a Manutenção #35 no Kanban (etapa → DEPLOYADO)
+docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 35
+```
+
+**Sentinel:**
+- Resultado: APROVADO (relatório prévio à execução deste deploy)

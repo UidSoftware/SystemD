@@ -1136,6 +1136,30 @@ def dashboard(request):
             referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
         ).aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
 
+        # Despesas pagas do mes corrente agrupadas por categoria -- alimenta
+        # o card "Gastos por Categoria" (pizza SVG) na Visao Geral. Mesma
+        # base de despesa_mes acima (referencia_mes = competencia, nao
+        # pagamento/caixa) para a soma bater exatamente com o KPI.
+        despesas_categoria_qs = (
+            Despesa.objects.filter(
+                is_active=True, estornado=False, status='PAGO',
+                referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
+            )
+            .values('categoria__nome')
+            .annotate(total=Sum('valor_liquido'))
+            .order_by('-total')
+        )
+        despesas_por_categoria = []
+        for row in despesas_categoria_qs:
+            nome = row['categoria__nome'] or 'Sem categoria'
+            total = row['total'] or Decimal('0')
+            percentual = float((total / despesa_mes) * 100) if despesa_mes else 0.0
+            despesas_por_categoria.append({
+                'nome': nome,
+                'total': total,
+                'percentual': round(percentual, 1),
+            })
+
         mrr = Receita.objects.filter(
             is_active=True, tipo='MENSALIDADE', status='RECEBIDO',
             referencia_mes__gte=primeiro_dia, referencia_mes__lte=ultimo_dia,
@@ -1286,6 +1310,7 @@ def dashboard(request):
             'indicadores': indicadores,
             'despesas_pagas_por_mes': despesas_pagas_por_mes,
             'receitas_recebidas_por_mes': receitas_recebidas_por_mes,
+            'despesas_por_categoria': despesas_por_categoria,
             'receitas_atrasadas': Receita.objects.filter(is_active=True, status='ATRASADO').count(),
             'despesas_atrasadas': Despesa.objects.filter(is_active=True, status='ATRASADO').count(),
         })

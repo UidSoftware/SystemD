@@ -2395,4 +2395,47 @@ docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
 
 **Sentinel:**
 - Testes passando (backend + frontend validados)
+
+---
+
+### [2026-08-16] — Remoção do item Notificações do menu Sidebar (Manutenção #34)
+
+**Tarefas executadas:**
+- Remoção do item "Notificações" do menu lateral (`Sidebar.jsx`), visível para perfis ADMIN/OPERACIONAL
+
+**Arquivos alterados:**
+- `frontend/src/components/sistema/Sidebar.jsx`
+
+**Commits:**
+- `220288b` — fix(sidebar): remove item Notificacoes do menu lateral (ADMIN/OPERACIONAL)
+
+**Deploy:**
+- Data: 2026-08-16
+- Push: `git push origin main` → `79ae4c2..220288b` — CI/CD GitHub Actions disparado
+- Health check backend: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Aprovado por Sentinel (6/6 critérios)
+
+**⚠️ Pendente — fora do escopo do Pilot, requer execução manual no host da VPS:**
+Esta alteração é só de frontend (`Sidebar.jsx`) — o rebuild do bundle React não é
+automático via CI/CD (ver seção "Deploy frontend — 3 comandos obrigatórios" acima).
+O Pilot está proibido de rodar comandos Docker (regra absoluta do próprio agente —
+"ÚNICO deploy permitido: git push origin main"; mesma limitação já registrada no
+ciclo de 02/06/2026, "Pilot bloqueado no sandbox: sem Docker-in-Docker no container
+do Boss CLI"). Os dois passos abaixo precisam ser executados por alguém com acesso
+direto ao host da VPS:
+
+```bash
+# 1. Rebuild do frontend (obrigatório — Sidebar.jsx alterado)
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+
+# 2. Concluir a Manutenção #34 no Kanban (etapa → DEPLOYADO)
+docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 34
+```
+
+**Sentinel:**
+- 6/6 critérios de aceite passando
+- Resultado: APROVADO
 - Resultado: APROVADO

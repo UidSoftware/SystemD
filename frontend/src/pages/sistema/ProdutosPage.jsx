@@ -74,6 +74,15 @@ export default function ProdutosPage() {
   const [salvando, setSalvando]         = useState(false)
   const [erro, setErro]                 = useState('')
 
+  // Combos
+  const [combos, setCombos]             = useState([])
+  const [carregandoCombos, setCarregandoCombos] = useState(true)
+  const [produtosCombo, setProdutosCombo] = useState([])
+  const [modalCombo, setModalCombo]     = useState(null)
+  const [editandoComboId, setEditandoComboId] = useState(null)
+  const [salvandoCombo, setSalvandoCombo] = useState(false)
+  const [erroCombo, setErroCombo]       = useState('')
+
   const carregar = useCallback(async (pag = 1, tipo = filtroTipo, q = busca) => {
     setCarregando(true)
     try {
@@ -87,7 +96,7 @@ export default function ProdutosPage() {
     } finally { setCarregando(false) }
   }, [filtroTipo, busca])
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => { carregar(); carregarCombos() }, [])
 
   const abrirNovo = () => { setEditandoId(null); setModal({ ...FORM_VAZIO }); setErro('') }
 
@@ -125,6 +134,101 @@ export default function ProdutosPage() {
 
   const set = (k, v) => setModal(m => ({ ...m, [k]: v }))
 
+  // ---------- Combos ----------
+
+  const carregarCombos = useCallback(async () => {
+    setCarregandoCombos(true)
+    try {
+      let pag = 1, all = []
+      while (true) {
+        const res = await api.get('/combos/', { params: { page: pag } })
+        all = all.concat(res.data.results)
+        if (!res.data.next) break
+        pag++
+      }
+      setCombos(all)
+    } finally { setCarregandoCombos(false) }
+  }, [])
+
+  const carregarProdutosParaCombo = async () => {
+    let pag = 1, all = []
+    while (true) {
+      const res = await api.get('/produtos/', { params: { page: pag } })
+      all = all.concat(res.data.results)
+      if (!res.data.next) break
+      pag++
+    }
+    setProdutosCombo(all)
+  }
+
+  const abrirNovoCombo = () => {
+    setEditandoComboId(null)
+    setModalCombo({ nome: '', descricao: '', itens: [] })
+    setErroCombo('')
+    if (produtosCombo.length === 0) carregarProdutosParaCombo()
+  }
+
+  const abrirEditarCombo = (c) => {
+    setEditandoComboId(c.id)
+    setModalCombo({
+      nome: c.nome || '',
+      descricao: c.descricao || '',
+      itens: (c.itens || []).map(it => ({ produto: it.produto, quantidade: it.quantidade, valor_unitario: it.valor_unitario })),
+    })
+    setErroCombo('')
+    if (produtosCombo.length === 0) carregarProdutosParaCombo()
+  }
+
+  const adicionarItem = () => setModalCombo(m => ({ ...m, itens: [...m.itens, { produto: '', quantidade: '1', valor_unitario: '' }] }))
+
+  const removerItem = (i) => setModalCombo(m => ({ ...m, itens: m.itens.filter((_, idx) => idx !== i) }))
+
+  const atualizarItem = (i, campo, valor) => {
+    setModalCombo(m => {
+      const itens = [...m.itens]
+      itens[i] = { ...itens[i], [campo]: valor }
+      if (campo === 'produto') {
+        const p = produtosCombo.find(pr => String(pr.id) === String(valor))
+        if (p) itens[i].valor_unitario = p.preco_padrao
+      }
+      return { ...m, itens }
+    })
+  }
+
+  const valorTotalItens = (itens) => (itens || []).reduce(
+    (acc, it) => acc + (parseFloat(it.quantidade) || 0) * (parseFloat(it.valor_unitario) || 0), 0,
+  )
+
+  const excluirCombo = (id) => {
+    setModalConfirmar({ msg: 'Desativar este combo?', onConfirm: async () => { await api.delete('/combos/' + id + '/'); carregarCombos() } })
+  }
+
+  const salvarCombo = async () => {
+    if (!modalCombo.nome) { setErroCombo('Preencha o nome do combo.'); return }
+    if (!modalCombo.itens.length) { setErroCombo('Adicione pelo menos 1 produto ao combo.'); return }
+    for (const it of modalCombo.itens) {
+      if (!it.produto) { setErroCombo('Selecione um produto em todas as linhas.'); return }
+      if (!(parseFloat(it.quantidade) > 0)) { setErroCombo('Quantidade de cada item deve ser maior que zero.'); return }
+    }
+    setSalvandoCombo(true); setErroCombo('')
+    try {
+      const payload = {
+        nome: modalCombo.nome,
+        descricao: modalCombo.descricao,
+        itens: modalCombo.itens.map(it => ({
+          produto: it.produto,
+          quantidade: it.quantidade,
+          valor_unitario: it.valor_unitario || 0,
+        })),
+      }
+      if (editandoComboId) await api.patch('/combos/' + editandoComboId + '/', payload)
+      else                 await api.post('/combos/', payload)
+      setModalCombo(null); carregarCombos()
+    } catch (e) {
+      setErroCombo(e.response?.data?.detail || JSON.stringify(e.response?.data) || 'Erro ao salvar combo.')
+    } finally { setSalvandoCombo(false) }
+  }
+
   const salvar = async () => {
     if (!modal.nome)         { setErro('Preencha o nome.'); return }
     if (!modal.preco_padrao) { setErro('Preencha o preço padrão.'); return }
@@ -151,10 +255,16 @@ export default function ProdutosPage() {
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Produtos e Serviços</h1>
             <p style={{ fontSize: 13, color: '#a78bca', marginTop: 4 }}>{total} item{total !== 1 ? 'ns' : ''} no catálogo</p>
           </div>
-          <button onClick={abrirNovo}
-            style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            + Novo Item
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button onClick={abrirNovo}
+              style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              + Novo Item
+            </button>
+            <button onClick={abrirNovoCombo}
+              style={{ background: 'transparent', border: '1px solid #063BF8', color: '#6b8fff', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              🎁 Combo
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -250,6 +360,79 @@ export default function ProdutosPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Combos */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '32px 0 16px' }}>
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Combos</h2>
+            <p style={{ fontSize: 13, color: '#a78bca', marginTop: 4 }}>{combos.length} combo{combos.length !== 1 ? 's' : ''} cadastrado{combos.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+
+        {/* Combos — desktop */}
+        <div style={card} className="hidden md:block">
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Data', 'Nome', 'Valor', 'Ações'].map(h => (
+                  <th key={h} style={thS}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {carregandoCombos ? (
+                <tr><td colSpan={4} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</td></tr>
+              ) : combos.length === 0 ? (
+                <tr><td colSpan={4} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhum combo cadastrado</td></tr>
+              ) : combos.map(c => (
+                <tr key={c.id}
+                  onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(6,59,248,0.05)'}
+                  onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
+                  <td style={{ ...tdS, color: '#94a3b8' }}>{new Date(c.criado_em).toLocaleDateString('pt-BR')}</td>
+                  <td style={{ ...tdS, fontWeight: 600 }}>{c.nome}</td>
+                  <td style={{ ...tdS, fontWeight: 600, color: '#34d399' }}>{fmt(c.valor_total)}</td>
+                  <td style={tdS}>
+                    <button onClick={() => abrirEditarCombo(c)}
+                      style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
+                      ✏️ Editar
+                    </button>
+                    <button onClick={() => excluirCombo(c.id)}
+                      style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+                      🗑️ Desativar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Combos — mobile */}
+        <div className="md:hidden flex flex-col gap-3">
+          {carregandoCombos ? (
+            <p style={{ textAlign: 'center', color: '#a78bca', padding: 24 }}>Carregando...</p>
+          ) : combos.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#a78bca', padding: 24 }}>Nenhum combo cadastrado</p>
+          ) : combos.map(c => (
+            <div key={c.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <span style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 14 }}>{c.nome}</span>
+                <span style={{ fontWeight: 700, color: '#34d399', fontSize: 14 }}>{fmt(c.valor_total)}</span>
+              </div>
+              <div style={{ color: '#a78bca', fontSize: 11, marginTop: 4 }}>{new Date(c.criado_em).toLocaleDateString('pt-BR')}</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button onClick={() => abrirEditarCombo(c)}
+                  style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>
+                  ✏️ Editar
+                </button>
+                <button onClick={() => excluirCombo(c.id)}
+                  style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', fontSize: 12, cursor: 'pointer' }}>
+                  🗑️ Desativar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -381,6 +564,82 @@ export default function ProdutosPage() {
               <button onClick={salvarEntrada}
                 style={{ background: '#34d399', color: '#052e1b', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 Registrar entrada
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal — Combo */}
+      {modalCombo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 205, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 620, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
+              {editandoComboId ? 'Editar Combo' : 'Novo Combo'}
+            </h2>
+
+            {erroCombo && <div style={{ background: 'rgba(248,71,71,0.1)', border: '1px solid rgba(248,71,71,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#f87171', fontSize: 13 }}>{erroCombo}</div>}
+
+            <Fld label="Nome do Combo" required>
+              <input style={IS} value={modalCombo.nome} onChange={e => setModalCombo(m => ({ ...m, nome: e.target.value }))}
+                placeholder="ex: Combo Site + Hospedagem + Manutenção 1 ano" />
+            </Fld>
+
+            <Fld label="Descrição">
+              <textarea rows={2} style={{ ...IS, resize: 'vertical', lineHeight: 1.6 }}
+                value={modalCombo.descricao} onChange={e => setModalCombo(m => ({ ...m, descricao: e.target.value }))}
+                placeholder="Detalhes que aparecem no orçamento (opcional)" />
+            </Fld>
+
+            <label style={{ display: 'block', fontSize: 11, color: '#a78bca', marginBottom: 8, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Itens do Combo
+            </label>
+
+            {modalCombo.itens.length === 0 && (
+              <p style={{ color: '#a78bca', fontSize: 12, textAlign: 'center', padding: '12px 0' }}>Adicione pelo menos 1 produto ao combo</p>
+            )}
+
+            {modalCombo.itens.map((it, i) => (
+              <div key={i} style={{ marginBottom: 10 }}>
+                <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-end">
+                  <select style={IS} value={it.produto} onChange={e => atualizarItem(i, 'produto', e.target.value)}>
+                    <option value="">Selecione um produto...</option>
+                    {produtosCombo.map(p => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                  <input type="number" step="0.001" min="0.001" style={IS} value={it.quantidade}
+                    onChange={e => atualizarItem(i, 'quantidade', e.target.value)} placeholder="1" />
+                  <input type="number" step="0.01" min="0" style={IS} value={it.valor_unitario}
+                    onChange={e => atualizarItem(i, 'valor_unitario', e.target.value)} placeholder="0,00" />
+                  <button onClick={() => removerItem(i)} title="Remover item"
+                    style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: 'none', borderRadius: 6, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    🗑️
+                  </button>
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: 11, textAlign: 'right', marginTop: 2 }}>
+                  {fmt((parseFloat(it.quantidade) || 0) * (parseFloat(it.valor_unitario) || 0))}
+                </div>
+              </div>
+            ))}
+
+            <button onClick={adicionarItem}
+              style={{ width: '100%', background: 'transparent', border: '1px dashed rgba(107,143,255,0.4)', color: '#6b8fff', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+              + Adicionar item
+            </button>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <span style={{ color: '#a78bca', fontSize: 13, fontWeight: 600 }}>Valor total do combo</span>
+              <span style={{ color: '#34d399', fontSize: 20, fontWeight: 700 }}>{fmt(valorTotalItens(modalCombo.itens))}</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button onClick={() => setModalCombo(null)}
+                style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={salvarCombo} disabled={salvandoCombo}
+                style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvandoCombo ? 0.7 : 1 }}>
+                {salvandoCombo ? 'Salvando...' : editandoComboId ? 'Salvar alterações' : 'Criar Combo'}
               </button>
             </div>
           </div>

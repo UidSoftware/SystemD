@@ -108,3 +108,43 @@ class EntradaEstoque(models.Model):
 
     def __str__(self):
         return f'Entrada {self.quantidade} {self.unidade} — {self.produto.nome}'
+
+
+class Combo(models.Model):
+    nome          = models.CharField(max_length=200)
+    descricao     = models.TextField(blank=True)
+    ativo         = models.BooleanField(default=True)
+    criado_por    = models.ForeignKey('usuarios.Usuario', on_delete=models.SET_NULL, null=True, related_name='combos_criados')
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+        verbose_name = 'Combo'
+        verbose_name_plural = 'Combos'
+
+    @property
+    def valor_total(self):
+        return sum((item.subtotal for item in self.itens.all()), Decimal('0.00'))
+
+    def __str__(self):
+        return self.nome
+
+
+class ItemCombo(models.Model):
+    combo          = models.ForeignKey(Combo, on_delete=models.CASCADE, related_name='itens')
+    produto        = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name='combo_itens')
+    quantidade     = models.DecimalField(max_digits=12, decimal_places=3, default=1)
+    valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    # snapshot no momento de salvar — nao referencia Produto.preco_padrao dinamicamente (RN05)
+
+    class Meta:
+        verbose_name = 'Item do Combo'
+        verbose_name_plural = 'Itens do Combo'
+
+    @property
+    def subtotal(self):
+        return self.quantidade * self.valor_unitario
+
+    def __str__(self):
+        return f'{self.combo.nome} — {self.produto.nome} x{self.quantidade}'

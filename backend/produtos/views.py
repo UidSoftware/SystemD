@@ -2,8 +2,8 @@ from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from usuarios.permissions import IsAdminOrOperacional
-from .models import ConversaoUnidade, EntradaEstoque, Produto
-from .serializers import ConversaoUnidadeSerializer, EntradaEstoqueSerializer, ProdutoSerializer
+from .models import Combo, ConversaoUnidade, EntradaEstoque, Produto
+from .serializers import ComboSerializer, ConversaoUnidadeSerializer, EntradaEstoqueSerializer, ProdutoSerializer
 
 
 class ProdutoViewSet(viewsets.ModelViewSet):
@@ -22,6 +22,28 @@ class ProdutoViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get('todos') == '1':
             qs = Produto.objects.all()
         return qs
+
+    def perform_create(self, serializer):
+        serializer.save(criado_por=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.ativo = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ComboViewSet(viewsets.ModelViewSet):
+    serializer_class = ComboSerializer
+    filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields    = ['nome']
+    ordering_fields  = ['nome', 'criado_em']
+
+    def get_permissions(self):
+        return [IsAdminOrOperacional()]
+
+    def get_queryset(self):
+        return Combo.objects.filter(ativo=True).prefetch_related('itens__produto')
 
     def perform_create(self, serializer):
         serializer.save(criado_por=self.request.user)

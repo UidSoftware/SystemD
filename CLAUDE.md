@@ -2489,3 +2489,54 @@ docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 35
 
 **Sentinel:**
 - Resultado: APROVADO (relatório prévio à execução deste deploy)
+
+---
+
+### [2026-08-21] — Combo de Produtos (Manutenção #46)
+
+**Tarefas executadas:**
+- Backend (`produtos/`): model `Combo` + `ItemCombo`, migration `0003_combo_itemcombo`, `ComboSerializer`, `ComboViewSet`
+- Frontend (`ProdutosPage.jsx`): seção Combos com botão "+ Combo", tabela desktop, cards mobile e modal criar/editar, integrada com `/api/combos/`
+- 13 testes novos em `produtos.tests.ComboAPITest` cobrindo RF01/RF02/RF07/RN01/RN02/RN03/RN05/RN06 + permissões por perfil (ADMIN/OPERACIONAL/FINANCEIRO/CLIENTE/anônimo)
+
+**Arquivos alterados:**
+- `backend/produtos/models.py`
+- `backend/produtos/migrations/0003_combo_itemcombo.py`
+- `backend/produtos/serializers.py`
+- `backend/produtos/views.py`
+- `backend/produtos/tests.py`
+- `frontend/src/pages/sistema/ProdutosPage.jsx`
+
+**Commits:**
+- `d359289` — feat(produtos): Combo de Produtos — model + migration + serializer + viewset (Manutenção #46)
+- `4a75c6f` — feat(produtos): Combo de Produtos — botao, tabela e modal (Manutencao #46)
+
+**Deploy:**
+- Data: 2026-08-21
+- Push: `git push origin main` → `13db022..4a75c6f` — CI/CD GitHub Actions do backend disparado automaticamente
+- Health check backend: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Backend em produção via CI/CD. Frontend com deploy **pendente** (ver abaixo)
+
+**⚠️ Pendente — fora do escopo do Pilot, requer execução manual no host da VPS:**
+Esta alteração inclui frontend (`ProdutosPage.jsx`) — o rebuild do bundle React não é
+automático via CI/CD (ver seção "Deploy frontend — 3 comandos obrigatórios" acima).
+O Pilot está proibido de rodar comandos Docker (regra absoluta do próprio agente —
+"ÚNICO deploy permitido: git push origin main"; mesma limitação já registrada nos
+ciclos de 02/06/2026, 16/08/2026 #34 e #35). Os passos abaixo precisam ser executados
+por alguém com acesso direto ao host da VPS:
+
+```bash
+# 1. Rebuild do frontend (obrigatório — ProdutosPage.jsx alterado)
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+
+# 2. Concluir a Manutenção #46 no Kanban (etapa → DEPLOYADO)
+docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 46
+```
+
+**Sentinel:**
+- 113/113 testes passando (13 novos em `ComboAPITest`), 0 falhas, 0 erros
+- `makemigrations produtos --check --dry-run` → "No changes detected"
+- Resultado: APROVADO

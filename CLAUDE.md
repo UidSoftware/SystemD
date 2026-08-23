@@ -2540,3 +2540,38 @@ docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 46
 - 113/113 testes passando (13 novos em `ComboAPITest`), 0 falhas, 0 erros
 - `makemigrations produtos --check --dry-run` → "No changes detected"
 - Resultado: APROVADO
+
+---
+
+### [2026-08-23] — Parcela 12x no modal de Combo (Manutenção #47)
+
+**Tarefas executadas:**
+- Modal de Combo (Novo e Editar, mesmo state `modalCombo`) em `ProdutosPage.jsx` agora exibe "Parcelado em 12x de R$ X,XX/mês" abaixo do valor total do combo, calculado em tempo real a partir de `valorTotalItens(itens) / 12`
+
+**Arquivos alterados:**
+- `frontend/src/pages/sistema/ProdutosPage.jsx` (5 linhas adicionadas, único arquivo alterado, zero mudança de backend)
+
+**Commits:**
+- `3798635` — feat(produtos): exibir parcela 12x no modal de Combo (Manutencao 47)
+
+**Deploy:**
+- Data: 2026-08-23
+- Push: `git push origin main` → `cfa9eb1..3798635` — CI/CD GitHub Actions disparado automaticamente
+- Health check backend: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Push em produção via CI/CD. Frontend com deploy **pendente** (ver abaixo) — mudança é 100% frontend, sem código de backend afetado
+
+**⚠️ Pendente — fora do escopo do Pilot, requer execução manual no host da VPS:**
+Esta alteração é só de frontend (`ProdutosPage.jsx`) — o rebuild do bundle React não é
+automático via CI/CD (ver seção "Deploy frontend — 3 comandos obrigatórios" acima).
+O Pilot está proibido de rodar comandos Docker (regra absoluta do próprio agente —
+"ÚNICO deploy permitido: git push origin main"; mesma limitação já registrada nos
+ciclos de 02/06/2026, 16/08/2026 #34/#35 e 21/08/2026 #46). Os passos abaixo precisam
+ser executados por alguém com acesso direto ao host da VPS (comandos consultar seção
+"Deploy frontend — 3 comandos obrigatórios" no topo deste arquivo, e concluir a
+Manutenção #47 no Kanban via `disparar_hotfix --concluir 47`).
+
+**Sentinel:**
+- `npm run build` limpo (0 erros)
+- Testes backend `produtos.tests.ComboAPITest`: 13/13 passando (sem regressão — mudança não toca backend)
+- Resultado: APROVADO

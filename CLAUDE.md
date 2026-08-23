@@ -2622,3 +2622,40 @@ docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 48
 - `npm run build` limpo (0 erros), 10/10 critérios aprovados
 - Testes backend: sem regressão (mudança não toca backend)
 - Resultado: APROVADO
+
+---
+
+### [2026-08-23] — Parcela 12x no modal de Orçamento (Manutenção #49)
+
+**Contexto:** disparo automático via cron morreu por rate limit de sessão
+antes de qualquer implementação (spec do Analista já existia de uma
+tentativa anterior, reaproveitada aqui — ver `Especificacao_Hotfix.md`).
+Implementação e deploy conduzidos diretamente por Claude (autorização
+explícita do usuário na sessão, aproveitando a exceção de pipeline do
+próprio SystemD documentada no CLAUDE.md global).
+
+**Tarefas executadas:**
+- Modal de Orçamento (`OrcamentosPage.jsx`), bloco de Totais: nova linha
+  "12x de {valor}/mês" logo abaixo do Subtotal (calculada sobre `sub/12`)
+  e outra logo abaixo do Total (calculada sobre `totalG/12`) — cálculo
+  100% client-side, sem novo estado, sem chamada de rede
+
+**Arquivos alterados:**
+- `frontend/src/pages/sistema/OrcamentosPage.jsx` (7 linhas adicionadas, único arquivo alterado, zero mudança de backend)
+
+**Commits:**
+- `4520787` — feat(orcamentos): parcela 12x do subtotal e do total no modal de Orcamento (Manutencao 49)
+
+**Deploy:**
+- Data: 2026-08-23
+- Push: `git push origin main` → `aac4e5e..4520787` — CI/CD GitHub Actions do backend disparado automaticamente
+- Rebuild manual do frontend executado na hora (build --no-cache frontend-builder + cópia pro volume + restart nginx)
+- Bundle servido confirmado: `index-CU7wUh5q.js` (build 21:59 UTC), contém a string "12x de"
+- Health check backend: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Deployado e confirmado ao vivo em produção — Kanban concluído (`--concluir 49`)
+
+**Sentinel:**
+- `npm run build` limpo (0 erros)
+- Sem mudança de backend — health check `GET /api/` 200 OK confirma ausência de regressão
+- Resultado: APROVADO

@@ -123,6 +123,69 @@ function ModalCatalogo({ onSelecionar, onFechar }) {
   )
 }
 
+// ── Modal Combos ─────────────────────────────────────────────────────────
+function ModalCombos({ onSelecionar, onFechar }) {
+  const [lista, setLista]           = useState([])
+  const [busca, setBusca]           = useState('')
+  const [carregando, setCarregando] = useState(false)
+
+  const buscar = useCallback(async (q = busca) => {
+    setCarregando(true)
+    try {
+      const params = {}
+      if (q) params.search = q
+      const res = await api.get('/combos/', { params })
+      setLista(res.data.results || [])
+    } finally { setCarregando(false) }
+  }, [busca])
+
+  useEffect(() => { buscar('') }, [])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, width: '100%', maxWidth: 640, padding: 24, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, margin: 0 }}>Selecionar Combo</h3>
+          <button onClick={onFechar} style={{ background: 'none', border: 'none', color: '#a78bca', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <input
+            placeholder="Buscar combo..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && buscar(busca)}
+            style={{ ...inputStyle, flex: 1, padding: '5px 10px', fontSize: 12 }}
+          />
+        </div>
+
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {carregando ? (
+            <p style={{ color: '#a78bca', textAlign: 'center', padding: 24 }}>Carregando...</p>
+          ) : lista.length === 0 ? (
+            <p style={{ color: '#a78bca', textAlign: 'center', padding: 24 }}>Nenhum combo encontrado</p>
+          ) : lista.map(c => (
+            <div key={c.id}
+              onClick={() => onSelecionar(c)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', marginBottom: 4, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', transition: 'background 0.1s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(6,59,248,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, color: '#f1f5f9', fontWeight: 600 }}>{c.nome}</div>
+                {c.descricao && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{c.descricao.slice(0, 80)}{c.descricao.length > 80 ? '…' : ''}</div>}
+                <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{c.itens?.length || 0} ite{c.itens?.length === 1 ? 'm' : 'ns'}</div>
+              </div>
+              <div style={{ textAlign: 'right', marginLeft: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#34d399' }}>{fmt(c.valor_total)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Página principal ───────────────────────────────────────────────────────
 export default function OrcamentosPage() {
   const [orcamentos, setOrcamentos]     = useState([])
@@ -139,6 +202,8 @@ export default function OrcamentosPage() {
   const [erro, setErro]                 = useState('')
   const [syncInfo, setSyncInfo]         = useState(null)
   const [showCatalogo, setShowCatalogo] = useState(false)
+  const [showCombos, setShowCombos]         = useState(false)
+  const [produtosLookup, setProdutosLookup] = useState(null) // null = ainda não carregado
   const [modalConfirmar, setModalConfirmar] = useState(null)
 
   const carregar = useCallback(async (pag = 1, status = filtroStatus) => {
@@ -223,6 +288,41 @@ export default function OrcamentosPage() {
       ],
     }))
     setShowCatalogo(false)
+  }
+
+  const carregarProdutosLookup = async () => {
+    let pag = 1, all = {}
+    while (true) {
+      const res = await api.get('/produtos/', { params: { page: pag } })
+      for (const p of res.data.results) all[p.id] = p.unidade
+      if (!res.data.next) break
+      pag++
+    }
+    return all
+  }
+
+  const addCombo = async (combo) => {
+    let lookup = produtosLookup
+    if (!lookup) {
+      lookup = await carregarProdutosLookup()
+      setProdutosLookup(lookup)
+    }
+
+    const itensExpandidos = (combo.itens || []).map((it) => ({
+      produto:        it.produto,
+      ordem:          0, // recalculado abaixo
+      descricao:      it.produto_nome,
+      quantidade:     String(it.quantidade),
+      unidade:        lookup[it.produto] || 'UN', // RN04
+      valor_unitario: String(it.valor_unitario),  // RN03 — snapshot do combo, nunca preco_padrao atual
+    }))
+
+    setModal(m => {
+      const base = m.itens.filter(i => i.descricao.trim() || i.valor_unitario) // RN01
+      const combinados = [...base, ...itensExpandidos].map((it, i) => ({ ...it, ordem: i + 1 })) // RN02
+      return { ...m, itens: combinados.length ? combinados : [{ ...ITEM_VAZIO }] }
+    })
+    setShowCombos(false) // RF06
   }
 
   const removeItem = (idx) => setModal(m => {
@@ -365,6 +465,10 @@ export default function OrcamentosPage() {
       {showCatalogo && (
         <ModalCatalogo onSelecionar={addDoCatalogo} onFechar={() => setShowCatalogo(false)} />
       )}
+      {/* Modal combos */}
+      {showCombos && (
+        <ModalCombos onSelecionar={addCombo} onFechar={() => setShowCombos(false)} />
+      )}
 
       {/* Modal orçamento */}
       {modal && (
@@ -438,6 +542,10 @@ export default function OrcamentosPage() {
                   <button onClick={() => setShowCatalogo(true)}
                     style={{ background: 'rgba(167,139,202,0.15)', color: '#a78bca', border: '1px solid rgba(167,139,202,0.3)', borderRadius: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>
                     📦 Do catálogo
+                  </button>
+                  <button onClick={() => setShowCombos(true)}
+                    style={{ background: 'rgba(167,139,202,0.15)', color: '#a78bca', border: '1px solid rgba(167,139,202,0.3)', borderRadius: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>
+                    🎁 Combos
                   </button>
                   <button onClick={addItem}
                     style={{ background: 'rgba(6,59,248,0.2)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>

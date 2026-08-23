@@ -2575,3 +2575,50 @@ Manutenção #47 no Kanban via `disparar_hotfix --concluir 47`).
 - `npm run build` limpo (0 erros)
 - Testes backend `produtos.tests.ComboAPITest`: 13/13 passando (sem regressão — mudança não toca backend)
 - Resultado: APROVADO
+
+---
+
+### [2026-08-23] — Botão Combos no modal de Orçamentos (Manutenção #48)
+
+**Tarefas executadas:**
+- Botão "Combos" no modal de Orçamentos (`OrcamentosPage.jsx`): ao clicar, expande os itens do combo selecionado como linhas individuais no orçamento, com descrição, quantidade e valor unitário de cada produto componente
+
+**Arquivos alterados:**
+- `frontend/src/pages/sistema/OrcamentosPage.jsx` (único arquivo alterado, zero mudança de backend, zero migration)
+
+**Commits:**
+- `b663359` — feat(orcamentos): botao Combos no modal — expande itens combo em linhas individuais (Manutencao 48)
+
+**Deploy:**
+- Data: 2026-08-23
+- Push: `git push origin main` → `839c1a6..b663359` — CI/CD GitHub Actions disparado automaticamente
+- Health check backend: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Push em produção via CI/CD. Frontend com deploy **pendente** (ver abaixo) — mudança é 100% frontend, sem código de backend afetado
+
+**⚠️ Pendente — fora do escopo do Pilot, requer execução manual no host da VPS:**
+Esta alteração é só de frontend (`OrcamentosPage.jsx`) — o rebuild do bundle React não é
+automático via CI/CD (ver seção "Deploy frontend — 3 comandos obrigatórios" acima).
+O Pilot está proibido de rodar comandos Docker (regra absoluta do próprio agente —
+"ÚNICO deploy permitido: git push origin main"; mesma limitação já registrada nos
+ciclos de 02/06/2026, 16/08/2026 #34/#35, 21/08/2026 #46 e 23/08/2026 #47).
+Os passos abaixo precisam ser executados por alguém com acesso direto ao host da VPS:
+
+```bash
+# 1. Rebuild do frontend (obrigatório — OrcamentosPage.jsx alterado)
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+
+# 2. Verificar bundle real servido (confirmar string 'Combos' no bundle)
+# curl -s https://uidsoftware.com.br/sistema/ | grep -o 'index-[^"]*\.js' | head -1
+# depois: curl -s https://uidsoftware.com.br/assets/<arquivo-acima> | grep -o 'Combos'
+
+# 3. Concluir a Manutenção #48 no Kanban (etapa → DEPLOYADO)
+docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 48
+```
+
+**Sentinel:**
+- `npm run build` limpo (0 erros), 10/10 critérios aprovados
+- Testes backend: sem regressão (mudança não toca backend)
+- Resultado: APROVADO

@@ -2659,3 +2659,40 @@ próprio SystemD documentada no CLAUDE.md global).
 - `npm run build` limpo (0 erros)
 - Sem mudança de backend — health check `GET /api/` 200 OK confirma ausência de regressão
 - Resultado: APROVADO
+
+---
+
+### [2026-08-23] — Desconto (%) no modal de Orçamento (Manutenção #50)
+
+**Contexto:** pedido direto em sessão de terminal já aberta (não veio do
+cron/matrícula automática) — registrado como Manutenção formal no SystemD
+antes de implementar, pra não repetir o achado de 31/07/2026 (pedido
+informal virando trabalho sem rastro no banco). Implementação e deploy
+conduzidos diretamente por Claude, mesma exceção de pipeline do SystemD
+usada na Manutenção #49.
+
+**Tarefas executadas:**
+- Novo campo `desconto_percentual` no model `Orcamento` (`orcamentos/models.py`) — combina com o `desconto` (R$) já existente, nunca substitui
+- `total_geral` recalculado como `subtotal - desconto - (subtotal * desconto_percentual / 100)`
+- Modal de Orçamento (`OrcamentosPage.jsx`): novo input "Desconto (%)" logo abaixo de "Desconto (R$)" no bloco de Totais, populando/salvando junto com o resto do formulário
+
+**Arquivos alterados:**
+- `backend/orcamentos/models.py`
+- `backend/orcamentos/migrations/0006_orcamento_desconto_percentual.py`
+- `frontend/src/pages/sistema/OrcamentosPage.jsx`
+
+**Commits:**
+- `7907fa9` — feat(orcamentos): campo desconto_percentual no modelo Orcamento (Manutencao 50)
+- `e659438` — feat(orcamentos): campo Desconto (%) no modal, combinado com Desconto (R$) (Manutencao 50)
+
+**Deploy:**
+- Backend: `docker compose build backend` + `migrate` (aplicado direto contra o banco de produção, migration 0006 confirmada em `django_migrations`) + `up -d --force-recreate backend`. Health check `GET /api/` → 200 OK
+- Frontend: rebuild manual do bundle (3 comandos obrigatórios) + restart nginx. Bundle servido confirmado: `index-C0nLshGf.js`, contém a string "Desconto (%)"
+- URL: https://uidsoftware.com.br
+- Status: ✅ Deployado e confirmado ao vivo em produção (backend + frontend) — Kanban concluído (`--concluir 50`)
+
+**Sentinel:**
+- `npm run build` limpo (0 erros)
+- Teste funcional real: `Orcamento` criado com item de R$ 1.000,00 + desconto R$ 100,00 + 10% → `total_geral` = R$ 800,00 (bate com o cálculo esperado), registro de teste removido em seguida
+- Health check backend pós-recreate: `GET /api/` → 200 OK
+- Resultado: APROVADO

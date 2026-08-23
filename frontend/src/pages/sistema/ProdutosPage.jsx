@@ -631,6 +631,11 @@ export default function ProdutosPage() {
               <span style={{ color: '#a78bca', fontSize: 13, fontWeight: 600 }}>Valor total do combo</span>
               <span style={{ color: '#34d399', fontSize: 20, fontWeight: 700 }}>{fmt(valorTotalItens(modalCombo.itens))}</span>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+              <span style={{ color: '#a78bca', fontSize: 12 }}>
+                Parcelado em 12x de {fmt(valorTotalItens(modalCombo.itens) / 12)}/mês
+              </span>
+            </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
               <button onClick={() => setModalCombo(null)}

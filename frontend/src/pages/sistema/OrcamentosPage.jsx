@@ -609,8 +609,11 @@ export default function OrcamentosPage() {
             {/* Totais */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
               <div style={{ width: 280, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: '#a78bca' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: '#a78bca' }}>
                   <span>Subtotal</span><span style={{ color: '#e2e8f0' }}>{fmt(sub)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, fontSize: 11, color: '#6b6b8a', fontStyle: 'italic' }}>
+                  12x de {fmt(sub / 12)}/mês
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, color: '#a78bca' }}>Desconto (R$)</span>
@@ -620,6 +623,9 @@ export default function OrcamentosPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, fontSize: 15, fontWeight: 700 }}>
                   <span style={{ color: '#f1f5f9' }}>Total</span>
                   <span style={{ color: '#34d399' }}>{fmt(totalG)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4, fontSize: 11, color: '#6b6b8a', fontStyle: 'italic' }}>
+                  12x de {fmt(totalG / 12)}/mês
                 </div>
               </div>
             </div>

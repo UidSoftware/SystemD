@@ -20,6 +20,7 @@ class Orcamento(models.Model):
     valido_ate      = models.DateField()
     status          = models.CharField(max_length=20, choices=STATUS, default='rascunho')
     desconto        = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    desconto_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
     forma_pagamento = models.CharField(max_length=200, blank=True)
     observacoes     = models.TextField(blank=True)
 
@@ -37,7 +38,8 @@ class Orcamento(models.Model):
 
     @property
     def total_geral(self):
-        return self.subtotal - self.desconto
+        subtotal = self.subtotal
+        return subtotal - self.desconto - (subtotal * self.desconto_percentual / Decimal('100'))
 
     def save(self, *args, **kwargs):
         if not self.pk:

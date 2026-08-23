@@ -38,7 +38,7 @@ const ITEM_VAZIO = { produto: null, ordem: 1, descricao: '', quantidade: '1', un
 const hoje = () => new Date().toISOString().slice(0, 10)
 const FORM_VAZIO = {
   tipoVinculo: 'cliente', cliente: '', prospecto: '',
-  emitido_em: hoje(), valido_ate: '', status: 'rascunho', desconto: '0',
+  emitido_em: hoje(), valido_ate: '', status: 'rascunho', desconto: '0', desconto_percentual: '0',
   forma_pagamento: '', observacoes: '', itens: [{ ...ITEM_VAZIO }],
 }
 
@@ -241,6 +241,7 @@ export default function OrcamentosPage() {
       valido_ate:      o.valido_ate || '',
       status:          o.status,
       desconto:        o.desconto   || '0',
+      desconto_percentual: o.desconto_percentual || '0',
       forma_pagamento: o.forma_pagamento || '',
       observacoes:     o.observacoes || '',
       itens: o.itens && o.itens.length
@@ -343,6 +344,7 @@ export default function OrcamentosPage() {
         valido_ate:      modal.valido_ate,
         status:          modal.status,
         desconto:        modal.desconto,
+        desconto_percentual: modal.desconto_percentual,
         forma_pagamento: modal.forma_pagamento,
         observacoes:     modal.observacoes,
         itens:           modal.itens.filter(i => i.descricao.trim()),
@@ -363,9 +365,10 @@ export default function OrcamentosPage() {
   const tdS = { padding: '10px 14px', fontSize: 13, color: '#e2e8f0', borderBottom: '1px solid rgba(255,255,255,0.04)' }
   const card = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }
 
-  const sub    = modal ? subtotalItens(modal.itens) : 0
-  const desc   = modal ? (parseFloat(modal.desconto) || 0) : 0
-  const totalG = sub - desc
+  const sub      = modal ? subtotalItens(modal.itens) : 0
+  const desc     = modal ? (parseFloat(modal.desconto) || 0) : 0
+  const descPct  = modal ? (parseFloat(modal.desconto_percentual) || 0) : 0
+  const totalG   = sub - desc - (sub * descPct / 100)
 
   const tabBtn = (tipo) => ({
     background:   modal?.tipoVinculo === tipo ? '#063BF8' : 'rgba(255,255,255,0.06)',
@@ -618,6 +621,11 @@ export default function OrcamentosPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, color: '#a78bca' }}>Desconto (R$)</span>
                   <input type="number" value={modal.desconto} onChange={e => setModal(m => ({ ...m, desconto: e.target.value }))}
+                    style={{ ...inputStyle, width: 110, padding: '4px 8px', fontSize: 13, textAlign: 'right' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: '#a78bca' }}>Desconto (%)</span>
+                  <input type="number" value={modal.desconto_percentual} onChange={e => setModal(m => ({ ...m, desconto_percentual: e.target.value }))}
                     style={{ ...inputStyle, width: 110, padding: '4px 8px', fontSize: 13, textAlign: 'right' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, fontSize: 15, fontWeight: 700 }}>

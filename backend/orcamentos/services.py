@@ -55,6 +55,7 @@ def sync_to_contratid(orcamento):
             'cliente_cidade':   origem.cidade if origem else '',
             'cliente_estado':   origem.estado if origem else '',
             'desconto':         str(orcamento.desconto),
+            'desconto_percentual': str(orcamento.desconto_percentual),
             'forma_pagamento':  orcamento.forma_pagamento,
             'observacoes':      orcamento.observacoes,
             'itens': [

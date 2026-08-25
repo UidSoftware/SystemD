@@ -2696,3 +2696,50 @@ usada na Manutenção #49.
 - Teste funcional real: `Orcamento` criado com item de R$ 1.000,00 + desconto R$ 100,00 + 10% → `total_geral` = R$ 800,00 (bate com o cálculo esperado), registro de teste removido em seguida
 - Health check backend pós-recreate: `GET /api/` → 200 OK
 - Resultado: APROVADO
+
+---
+
+### [2026-08-25] — Fix: desconto_percentual faltando no sync com ContratID (Manutenção #51)
+
+**Contexto:** achado ao investigar por que o desconto (%) da Manutenção
+#50 não refletia nos contratos gerados no ContratID. `sync_to_contratid()`
+monta o payload à mão (não usa o `OrcamentoSerializer`), então o campo
+novo não foi propagado automaticamente quando a Manutenção #50 foi
+implementada.
+
+**Tarefas executadas:**
+- Adicionado `desconto_percentual` no payload de `sync_to_contratid()` (`orcamentos/services.py`)
+
+**Nota importante:** esse fix sozinho não resolve o problema fim-a-fim —
+o ContratID (sistema separado, `/var/www/contratid`) ainda não tem campo
+nenhum pra receber/usar esse valor (model, migration, serializer e
+`total_geral` de lá precisam do mesmo tratamento). Isso foi registrado
+como Manutenção própria pra rodar pela esteira normal do ContratID
+(Hotfix→Planner→Forge/Loom→Sentinel→Pilot) — SystemD não tem exceção de
+pipeline pra outros sistemas.
+
+**Achado extra (mesma investigação, fora do escopo desta Manutenção):**
+`apps/autentique/service.py::consultar_documento()` no ContratID está
+com a query GraphQL desatualizada contra o schema atual da Autentique —
+usa campos que não existem mais (`status` no `Document`, `refused` em vez
+de `rejected`, `link` sem sub-seleção). Não trava o fluxo normal (que
+depende só do webhook), mas significa que não há como reconciliar o
+status manualmente se um webhook falhar silenciosamente. Também vai pra
+Manutenção própria do ContratID.
+
+**Arquivos alterados:**
+- `backend/orcamentos/services.py`
+
+**Commits:**
+- `10b2bb6` — fix(orcamentos): incluir desconto_percentual no payload de sync com ContratID (Manutencao 51)
+
+**Deploy:**
+- Push: `git push origin main` → `1848846..10b2bb6` — CI/CD GitHub Actions recriou o backend automaticamente
+- Health check backend pós-recreate: `GET /api/` → 200 OK
+- Confirmado ao vivo: `desconto_percentual` presente no `services.py` rodando no container
+- Status: ✅ Deployado e confirmado em produção — Kanban concluído (`--concluir 51`)
+
+**Sentinel:**
+- Mudança de 1 linha, sem lógica nova além de incluir o campo já existente no model
+- Health check backend 200 OK, sem regressão
+- Resultado: APROVADO

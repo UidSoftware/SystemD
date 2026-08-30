@@ -302,9 +302,11 @@ export default function LeadsPage() {
                   {lead.mensagem.length > 80 ? lead.mensagem.slice(0, 80) + '…' : lead.mensagem}
                 </div>
               )}
-              {lead.convertido && (
+              {lead.qtd_prospectos > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10 }}>Convertido</span>
+                  <span style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10 }}>
+                    {lead.qtd_prospectos} prospecto{lead.qtd_prospectos > 1 ? 's' : ''} vinculado{lead.qtd_prospectos > 1 ? 's' : ''}
+                  </span>
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
@@ -312,12 +314,10 @@ export default function LeadsPage() {
                   style={{ flex: 1, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
                   Ver
                 </button>
-                {!lead.convertido && (
-                  <button onClick={() => abrirConverter(lead)}
-                    style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
-                    🔄 Converter
-                  </button>
-                )}
+                <button onClick={() => abrirConverter(lead)}
+                  style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>
+                  🔗 Prospectar
+                </button>
               </div>
             </div>
           ))}
@@ -372,19 +372,17 @@ export default function LeadsPage() {
                     <span style={{ background: lead.lido ? badge.LIDO.bg : badge.NAO_LIDO.bg, color: lead.lido ? badge.LIDO.color : badge.NAO_LIDO.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
                       {lead.lido ? 'Lido' : 'Não lido'}
                     </span>
-                    {lead.convertido && <span style={{ display: 'block', marginTop: 4, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10, width: 'fit-content' }}>Convertido</span>}
+                    {lead.qtd_prospectos > 0 && <span style={{ display: 'block', marginTop: 4, background: 'rgba(6,59,248,0.15)', color: '#6b8fff', borderRadius: 20, padding: '2px 8px', fontSize: 10, width: 'fit-content' }}>{lead.qtd_prospectos} prospecto{lead.qtd_prospectos > 1 ? 's' : ''}</span>}
                   </td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => setModalLead({ ...lead })}
                       style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
                       Ver
                     </button>
-                    {!lead.convertido && (
-                      <button onClick={() => abrirConverter(lead)}
-                        style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
-                        🔄 Converter
-                      </button>
-                    )}
+                    <button onClick={() => abrirConverter(lead)}
+                      style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+                      🔗 Prospectar
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -445,12 +443,10 @@ export default function LeadsPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              {!modalLead.convertido && (
-                <button onClick={() => abrirConverter(modalLead)}
-                  style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
-                  Converter em Prospecto
-                </button>
-              )}
+              <button onClick={() => abrirConverter(modalLead)}
+                style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
+                🔗 Criar Prospecto
+              </button>
               <button onClick={() => setModalLead(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>
                 ❌ Cancelar
@@ -468,8 +464,8 @@ export default function LeadsPage() {
       {modalConverter && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#0f0020', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28 }}>
-            <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Converter em Prospecto</h2>
-            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>Revise os dados antes de confirmar</p>
+            <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Criar Prospecto a partir deste Lead</h2>
+            <p style={{ color: '#a78bca', fontSize: 13, marginBottom: 20 }}>Revise os dados antes de confirmar. O Lead continua ativo — este vínculo é só informativo.</p>
 
             {[
               { label: 'Nome da empresa *', field: 'nome_empresa' },
@@ -504,7 +500,7 @@ export default function LeadsPage() {
               </button>
               <button onClick={confirmarConverter} disabled={salvando}
                 style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: salvando ? 0.7 : 1 }}>
-                {salvando ? 'Convertendo...' : '✅ Confirmar conversão'}
+                {salvando ? 'Criando...' : '✅ Criar Prospecto'}
               </button>
             </div>
           </div>

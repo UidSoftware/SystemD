@@ -110,14 +110,22 @@ class LeadGestaoTest(TestCase):
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.lead.refresh_from_db()
-        self.assertTrue(self.lead.convertido)
+        self.assertTrue(self.lead.lido)
+        self.assertTrue(self.lead.prospectos.exists())
 
-    def test_converter_lead_ja_convertido_retorna_400(self):
-        self.lead.convertido = True
-        self.lead.save()
+    def test_converter_lead_nao_consome_o_lead(self):
+        """Lead (inbound) e Prospecto (outbound) são origens diferentes, não
+        estágios sequenciais — criar um Prospecto a partir de um Lead nunca
+        bloqueia nem marca esse Lead como 'convertido/finalizado'."""
         self.client.force_authenticate(self.admin)
         url = reverse('leads-converter', args=[self.lead.id])
-        res = self.client.post(url, {
-            'nome_empresa': 'X', 'nome_contato': 'X', 'email': 'x@x.com'
-        }, format='json')
-        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        payload = {'nome_empresa': 'X', 'nome_contato': 'X', 'email': 'x@x.com'}
+
+        res1 = self.client.post(url, payload, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+        self.lead.refresh_from_db()
+        self.assertFalse(self.lead.convertido)
+
+        res2 = self.client.post(url, payload, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.lead.prospectos.count(), 2)

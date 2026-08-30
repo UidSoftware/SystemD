@@ -9,6 +9,11 @@ class LeadSerializer(serializers.ModelSerializer):
 
 
 class LeadGestaoSerializer(serializers.ModelSerializer):
+    qtd_prospectos = serializers.SerializerMethodField()
+
+    def get_qtd_prospectos(self, obj):
+        return obj.prospectos.count()
+
     class Meta:
         model = Lead
         fields = '__all__'

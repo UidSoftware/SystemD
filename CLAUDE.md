@@ -204,7 +204,7 @@ backend/
 ├── usuarios/       ← Usuario + Setor + Perfil + UsuarioEmailConfig + permissions.py
 ├── clientes/       ← CRUD clientes + tem_entregas + enviar-acesso/ (cria usuário CLIENTE + email)
 ├── vitrine/        ← leads da landing page pública + gestão de Leads
-├── prospectos/     ← Prospecto (Lead qualificado) + converter → Cliente
+├── prospectos/     ← Prospecto (prospecção ativa/outbound) + converter → Cliente
 ├── entregas/       ← Unidade + Entrega multi-tenant + confirmação CLIENTE + export PDF/Excel
 ├── email_client/   ← webmail IMAP/SMTP (sem models — só services/views)
 ├── ordens/         ← OS + FaseOS + Contrato + Chamado + MensagemChamado
@@ -223,12 +223,13 @@ src/
 │   ├── SistemaLayout.jsx        ← layout base com Sidebar + Header (main overflow-y-auto)
 │   ├── Sidebar.jsx              ← dinâmica por perfil + submenu Financeiro + modal alterar-senha
 │   │                              Menu ADMIN: Office → Novo Projeto (top-level) → Clientes → OS → ...
-│   │                              Novo Projeto: Leads → Prospectos → Entrevista → Arq.Técnica → Orçamentos → Contratos
+│   │                              Novo Projeto: Prospectos → Entrevista → Arq.Técnica → Orçamentos → Contratos
+│   │                              (Leads é captação inbound separada, não pré-requisito — ver nota 30/08/2026)
 │   ├── PrivateRoute.jsx         ← aceita perfisPermitidos[]
 │   └── FinanceiroTable.jsx      ← tabela, modais, badges, formatadores reutilizáveis
 ├── pages/sistema/
 │   ├── DashboardPage.jsx
-│   ├── LeadsPage.jsx            ← listagem + mensagem na tabela + ao vivo (polling 30s) + converter → Prospecto
+│   ├── LeadsPage.jsx            ← listagem + mensagem na tabela + ao vivo (polling 30s) + vincula → Prospecto (não consome o Lead)
 │   ├── ProspectosPage.jsx       ← CRUD + converter → Cliente (só ADMIN)
 │   ├── EntregasPage.jsx         ← multi-tenant + Solicitante/Unidade/De/Para/Motoboy + editar/excluir por linha + botão ⊡ Unidades (modal CRUD inline) + exportar PDF/Excel
 │   ├── UnidadesPage.jsx         ← rota existe (/sistema/unidades) mas sem item no menu — gestão via modal dentro de EntregasPage
@@ -350,8 +351,18 @@ class Lead(models.Model):
     nome, email, telefone, empresa, mensagem, origem, criado_em
     lido                = BooleanField(default=False)
     observacoes_internas = TextField(blank=True)   # ← preenchido internamente
-    convertido          = BooleanField(default=False)  # ← True após converter → Prospecto
+    convertido          = BooleanField(default=False)  # ← LEGADO, não é mais setado (30/08/2026)
 ```
+⚠️ **Lead ≠ estágio anterior a Prospecto — são origens diferentes (30/08/2026,
+consulta com marketing).** `Lead` é captação **inbound** (formulário do site/
+vitrine, campanha). `Prospecto` é alvo de **prospecção ativa/outbound** (a Uid
+foi atrás) — pode nascer sem nunca ter sido Lead (`Prospecto.lead` é
+`null=True` de propósito). `POST leads/{id}/converter/` cria um Prospecto
+vinculado ao Lead só para rastrear a origem, mas **não consome nem bloqueia
+o Lead** — o campo `convertido` fica de fora dessa ação a partir de agora,
+é histórico de antes da correção. Estado real de vínculo: use
+`lead.prospectos.count()` (serializer expõe `qtd_prospectos`), nunca o campo
+`convertido`.
 
 ### Prospecto + SocioProspecto (`prospectos/models.py`)
 ```python
@@ -627,7 +638,7 @@ Filtros: `?status=`, `?page=`
 | `POST leads/` | AllowAny | Form público da vitrine |
 | `GET leads/` | ADMIN, OPERACIONAL | Lista + filtros (data, lido, origem) |
 | `PATCH leads/{id}/` | ADMIN, OPERACIONAL | Editar / marcar como lido |
-| `POST leads/{id}/converter/` | ADMIN, OPERACIONAL | Cria Prospecto e marca `convertido=True` |
+| `POST leads/{id}/converter/` | ADMIN, OPERACIONAL | Cria Prospecto vinculado ao Lead (não consome/bloqueia o Lead) |
 
 ### Prospectos (`/api/prospectos/`)
 | Endpoint | Permissão | Descrição |
@@ -856,7 +867,7 @@ Office  (logo após Dashboard — somente ADMIN)
 ├── Activity Feed   → log de eventos (em breve)
 └── Novo Projeto    → fluxo completo de aquisição
     ├── Leads               → LeadsPage (leads do banco)
-    ├── Prospectos          → ProspectosPage (lead qualificado)
+    ├── Prospectos          → ProspectosPage (prospecção ativa/outbound)
     ├── Entrevista          → levantamento de requisitos (em breve)
     └── Arquitetura Técnica → form → salva em ordens_arquiteturatecnica
 ```
@@ -864,9 +875,9 @@ Office  (logo após Dashboard — somente ADMIN)
 **Fluxo de aquisição completo (fonte de verdade: PlannerSKILL.md / AnalistaSKILL.md em /opt/claw-empire/.claude/skills/):**
 
 ```
-Lead → Prospecto → Entrevista → Arquitetura Técnica (salva em ordens_arquiteturatecnica)
+Prospecto → Entrevista → Arquitetura Técnica (salva em ordens_arquiteturatecnica)
     ↓
-Planner lê Lead + Entrevista + ArquiteturaTecnica via MCP — só lê e delega, nunca implementa
+Planner lê Prospecto + Entrevista + ArquiteturaTecnica via MCP — só lê e delega, nunca implementa
     ↓
 Planner delega ANALISTA (nunca pula, mesmo com spec pronta)
     → entrega Levantamento_Requisitos.md + usecase.md + classes.md + activity.md
@@ -879,6 +890,8 @@ Planner delega Forge (backend) + Loom (frontend) em paralelo
     ↓
 Sentinel valida → aprovado, Planner delega Pilot (deploy, obrigatório)
 ```
+Lead não faz parte dessa cadeia — é captação inbound separada, opcionalmente
+vinculada a um Prospecto por rastreabilidade (ver nota 30/08/2026 acima).
 
 Analista e Blueprint rodam **entre** a Arquitetura Técnica e o Forge/Loom — não aparecem no diagrama simplificado acima do menu porque foram adicionados depois; a esteira real sempre passa por eles.
 
@@ -2743,3 +2756,60 @@ Manutenção própria do ContratID.
 - Mudança de 1 linha, sem lógica nova além de incluir o campo já existente no model
 - Health check backend 200 OK, sem regressão
 - Resultado: APROVADO
+
+### [2026-08-30] — Reestruturação Lead x Prospecto: origens diferentes, não estágios sequenciais
+
+**Motivação:** consulta com o time de marketing (usuário, 30/08/2026) —
+Lead é captação inbound (quem vem até o site/campanha via vitrine).
+Prospecto é alvo de prospecção ativa/outbound (a Uid foi atrás). O
+sistema tratava como sequência obrigatória de qualificação ("Prospecto =
+Lead qualificado"), o que estava conceitualmente errado — o modelo de
+dados já suportava a relação certa (Prospecto.lead sempre foi
+null=True, blank=True), só o fluxo/UI/documentação que apresentavam
+como conversão linear que consome o Lead.
+
+**Backend:**
+- vitrine/views.py::LeadViewSet.converter() — removido o bloqueio
+  "if lead.convertido: return erro" e o "lead.convertido = True" no
+  sucesso. Criar um Prospecto vinculado a um Lead nunca mais bloqueia
+  nem "consome" o Lead; lead.lido = True continua sendo setado (isso é
+  independente, só marca que foi revisado). Um mesmo Lead pode originar
+  mais de um Prospecto ao longo do tempo.
+- vitrine/serializers.py::LeadGestaoSerializer — novo campo calculado
+  qtd_prospectos (obj.prospectos.count()), pra UI parar de depender
+  do campo convertido (que agora é só histórico/legado, não é mais
+  setado por esse fluxo).
+- Lead.convertido (model) não foi removido/migrado — decisão
+  deliberada pra evitar risco de schema change sem staging; fica como
+  campo legado, sempre False daqui pra frente nesse fluxo, sem uso
+  ativo na UI.
+- Testes (vitrine/tests.py) atualizados: test_converter_lead_ja_convertido_retorna_400
+  virou test_converter_lead_nao_consome_o_lead (agora testa o oposto —
+  que converter 2x seguidas é permitido e soma prospectos).
+
+**Frontend:**
+- LeadsPage.jsx — badge "Convertido" trocado por contagem real
+  (qtd_prospectos); botão "Converter" (que sumia após 1 uso) virou
+  "Prospectar"/"Criar Prospecto" (sempre visível); modal renomeado
+  pra "Criar Prospecto a partir deste Lead", com nota explícita "o Lead
+  continua ativo".
+- Sidebar.jsx — submenu menuNovoProjeto: Prospectos passou a ser o
+  primeiro item (é o ponto de entrada real do pipeline — Entrevista.prospecto
+  sempre foi FK obrigatória, nunca aceitou Lead direto); Leads foi pro
+  fim da lista, como captação separada, não pré-requisito.
+- Removido código morto: office/LeadsNovoProjetoPage.jsx (placeholder
+  "selecione o lead pra iniciar o projeto — em breve", nunca chegou a
+  ser roteado em App.jsx — reforçava o modelo mental errado) + o
+  import órfão correspondente em App.jsx.
+
+**Validado de verdade antes do push (sem staging):**
+- docker compose -f docker-compose.prod.yml build backend + run --rm
+  backend python manage.py test vitrine prospectos → 23/23 OK (imagem
+  nova, não o container antigo rodando — testar contra o container já
+  em produção teria validado o código velho).
+- docker compose -f docker-compose.prod.yml build frontend-builder →
+  build limpo, sem erro de import quebrado após remover o arquivo morto.
+
+**Escopo que ficou de fora, de propósito:** Prospecto.convertido/converter()
+(prospectos/views.py) — a conversão Prospecto → Cliente é uma progressão
+linear legítima (negócio fechado vira cliente) e não foi tocada.

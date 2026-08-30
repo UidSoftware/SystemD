@@ -54,11 +54,14 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='converter')
     def converter(self, request, pk=None):
+        """Cria um Prospecto vinculado a este Lead — não é uma conversão que
+        consome o Lead. Lead (inbound: site/campanha) e Prospecto (outbound:
+        prospecção ativa) são origens diferentes, não estágios sequenciais do
+        mesmo funil; um Lead pode originar mais de um Prospecto ao longo do
+        tempo e continua visível/ativo normalmente depois disso."""
         from prospectos.serializers import ProspectoSerializer
 
         lead = self.get_object()
-        if lead.convertido:
-            return Response({'erro': 'Lead já foi convertido em Prospecto'}, status=status.HTTP_400_BAD_REQUEST)
 
         dados = {
             'lead': lead.id,
@@ -79,7 +82,6 @@ class LeadViewSet(viewsets.ModelViewSet):
         serializer = ProspectoSerializer(data=dados)
         if serializer.is_valid():
             prospecto = serializer.save()
-            lead.convertido = True
             lead.lido = True
             lead.save()
             return Response(ProspectoSerializer(prospecto).data, status=status.HTTP_201_CREATED)

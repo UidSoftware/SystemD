@@ -69,13 +69,18 @@ const menuContabilidade = [
 ]
 
 
+// Prospectos é o ponto real de entrada do pipeline (Entrevista exige um
+// Prospecto, nunca um Lead — ver Entrevista.prospecto, FK obrigatória).
+// Leads (captação inbound: site/campanha) e Prospectos (prospecção ativa
+// outbound) são origens diferentes, não estágios sequenciais do mesmo
+// funil — por isso Leads não abre mais essa lista.
 const menuNovoProjeto = [
-  { label: 'Leads',               path: '/sistema/office/novo-projeto/leads',               emoji: '📝' },
   { label: 'Prospectos',          path: '/sistema/prospectos',                               emoji: '🔍' },
   { label: 'Entrevista',          path: '/sistema/office/novo-projeto/entrevista',            emoji: '📋' },
   { label: 'Arquitetura Tecnica', path: '/sistema/office/novo-projeto/arquitetura-tecnica', emoji: '🏗️' },
   { label: 'Orcamentos',          path: '/sistema/orcamentos',                              emoji: '💰' },
   { label: 'Contratos',           path: '/sistema/contratos',                                emoji: '📄' },
+  { label: 'Leads',               path: '/sistema/office/novo-projeto/leads',               emoji: '📥' },
 ]
 
 // Simplificado em 09/08/2026 (Manutencao #26): removidos itens sem

@@ -112,6 +112,7 @@ class EntrevistaSerializer(serializers.ModelSerializer):
     lead_id = serializers.IntegerField(source='prospecto.lead.id', read_only=True)
     lead_nome = serializers.CharField(source='prospecto.lead.nome', read_only=True)
     lead_mensagem = serializers.CharField(source='prospecto.lead.mensagem', read_only=True)
+    prospecto_descricao_projeto = serializers.CharField(source='prospecto.descricao_projeto', read_only=True, default='')
     segmento_display = serializers.CharField(source='get_segmento_display', read_only=True)
     orcamento_faixa_display = serializers.CharField(source='get_orcamento_faixa_display', read_only=True)
 

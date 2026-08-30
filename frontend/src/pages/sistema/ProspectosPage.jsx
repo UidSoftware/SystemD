@@ -41,7 +41,7 @@ const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', 
 const PROSPECTO_VAZIO = {
   lead: null, cliente: null,
   nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
-  origem: '', observacoes: '', responsavel: null,
+  origem: '', descricao_projeto: '', observacoes: '', responsavel: null,
   socios: [{ ...SOCIO_VAZIO, principal: true }],
 }
 
@@ -524,6 +524,16 @@ export default function ProspectosPage() {
                   <option value="">Sem responsável</option>
                   {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
                 </select>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Descrição do projeto</label>
+                <textarea value={modal.descricao_projeto || ''} rows={4}
+                  onChange={e => setModal(m => ({ ...m, descricao_projeto: e.target.value }))}
+                  placeholder="O que é a oportunidade — contexto do negócio, o que o prospecto precisa..."
+                  style={{ ...inputStyle, resize: 'vertical' }} />
+                <p style={{ fontSize: 11, color: '#6b6b8a', marginTop: 4 }}>
+                  Este Prospecto pode não vir de um Lead — não há mensagem de formulário pra herdar. Preencha aqui.
+                </p>
               </div>
               <div>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>

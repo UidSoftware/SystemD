@@ -268,6 +268,14 @@ export default function EntrevistaPage() {
                           <div style={{ fontSize: 13, color: '#e2d9f3', whiteSpace: 'pre-wrap' }}>{p.lead_mensagem}</div>
                         </div>
                       )}
+                      {p.descricao_projeto && (
+                        <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8 }}>
+                          <div style={{ fontSize: 11, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+                            Mensagem do prospecto
+                          </div>
+                          <div style={{ fontSize: 13, color: '#e2d9f3', whiteSpace: 'pre-wrap' }}>{p.descricao_projeto}</div>
+                        </div>
+                      )}
                     </>
                   )
                 })()}

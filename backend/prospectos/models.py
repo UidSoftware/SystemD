@@ -23,6 +23,12 @@ class Prospecto(models.Model):
     cnpj_cpf      = models.CharField(max_length=20, blank=True)
     origem        = models.CharField(max_length=50, blank=True)
     observacoes   = models.TextField(blank=True)
+    descricao_projeto = models.TextField(
+        blank=True,
+        help_text='Descrição da oportunidade/projeto — sobretudo quando este '
+                   'Prospecto não vem de um Lead (prospecção outbound), caso em '
+                   'que não há mensagem original de formulário pra herdar.',
+    )
 
     responsavel = models.ForeignKey(
         'usuarios.Usuario',

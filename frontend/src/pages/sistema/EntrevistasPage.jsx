@@ -206,6 +206,7 @@ export default function EntrevistasPage() {
 
   const prospectoSelecionado = modal ? prospectos.find(p => String(p.id) === String(modal.prospecto)) : null
   const leadMensagem = prospectoSelecionado?.lead_mensagem || modal?.lead_mensagem || ''
+  const prospectoDescricaoProjeto = prospectoSelecionado?.descricao_projeto || ''
 
   return (
     <SistemaLayout>
@@ -351,6 +352,12 @@ export default function EntrevistasPage() {
                 <div style={{ background: 'rgba(6,59,248,0.08)', border: '1px solid rgba(6,59,248,0.25)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b8fff', marginBottom: 6 }}>📨 Resumo do Lead</div>
                   <div style={{ fontSize: 13, color: '#e2d9f3', lineHeight: 1.5 }}>{leadMensagem}</div>
+                </div>
+              )}
+              {prospectoDescricaoProjeto && (
+                <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#10b981', marginBottom: 6 }}>💬 Mensagem do Prospecto</div>
+                  <div style={{ fontSize: 13, color: '#e2d9f3', lineHeight: 1.5 }}>{prospectoDescricaoProjeto}</div>
                 </div>
               )}
               <Field label="Descrição do projeto" required>

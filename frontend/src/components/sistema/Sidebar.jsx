@@ -91,17 +91,20 @@ const menuOffice = [
   { label: 'Manutencoes', path: '/sistema/office/manutencoes', emoji: '🔧' },
 ]
 
+const menuProdutos = [
+  { label: 'Produtos', path: '/sistema/produtos', emoji: '🛍️' },
+  { label: 'Pedidos',  path: '/sistema/pedidos',  emoji: '📦' },
+]
+
 const menuPorPerfil = {
   ADMIN: [
-    { label: 'Dashboard',     path: '/sistema/',              emoji: '🏠', submenu: undefined },
-    { label: 'Office',        path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
-    { label: 'Novo Projeto',  path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
-    { label: 'Produtos',      path: '/sistema/produtos',               emoji: '🛍️' },
-    { label: 'Pedidos',       path: '/sistema/pedidos',                emoji: '📦' },
+    { label: 'Dashboard',     path: '/sistema/',              emoji: '🏠' },
+    { label: 'DEV',           path: '/sistema/office',         emoji: '🏢', submenu: menuOffice },
+    { label: 'Comercial',     path: '/sistema/office/novo-projeto', emoji: '🚀', submenu: menuNovoProjeto },
     { label: 'Clientes',      path: '/sistema/clientes',      emoji: '👥' },
     { label: 'OS',            path: '/sistema/os',            emoji: '📋' },
-    { label: 'Contratos',     path: '/sistema/contratos',                               emoji: '📄' },
     { label: 'Entregas',      path: '/sistema/entregas',      emoji: '🚚' },
+    { label: 'Produtos',      path: '/sistema/produtos',      emoji: '🛍️', submenu: menuProdutos },
     { label: 'Financeiro',    path: '/sistema/financeiro/visao-geral', activeMatch: '/sistema/financeiro', emoji: '💰' },
     { label: 'Email',         path: '/sistema/email',         emoji: '📧' },
     { label: 'Usuarios',      path: '/sistema/usuarios',      emoji: '👤' },

@@ -2856,3 +2856,94 @@ via `docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 56
 
 **Sentinel:**
 - Resultado: APROVADO
+
+### [2026-09-03] — Nicho substitui Segmento: tabela única compartilhada por Cliente/Prospecto/Entrevista
+
+**Motivação:** pedido do usuário — "Nicho" condiz mais com o negócio que
+"Segmento", e o campo era texto livre duplicado em 3 lugares (Cliente,
+Prospecto, Entrevista) sem nenhuma fonte comum. Achado real no banco de
+produção que confirmou o problema antes de qualquer mudança: Cliente já
+tinha "transporte" e "Transporte" cadastrados como dois valores diferentes
+pra mesma coisa (RL Express e Testando Aqui).
+
+**Decisão de escopo (confirmada com o usuário):** incluir Cliente também
+na mudança, não só Prospecto/Entrevista como pedido originalmente — sem
+isso o ciclo Lead→Prospecto→Cliente ficaria com uma ponta ainda em texto
+livre, perpetuando o problema.
+
+- Novo app `nichos` (model `Nicho`: `nome` único + soft-delete `ativo`),
+  seedado com os 7 valores que já eram usados como `choices` fixo em
+  `Entrevista.segmento` (Saúde/Bem-estar, Beleza, Varejo, Alimentação,
+  Serviços, Educação, Outro) — vira o ponto de partida da tabela única.
+- `Cliente.segmento`, `Prospecto.segmento` e `Entrevista.segmento` (antes
+  um `CharField`/`choices` cada) viraram `nicho = FK('nichos.Nicho')`.
+  Cliente e Entrevista continuam obrigatórios (`on_delete=PROTECT`, como
+  antes eram campos obrigatórios); Prospecto continua opcional
+  (`on_delete=SET_NULL`, como antes era `blank=True`).
+- 3 migrations de backfill (`clientes.0006`, `prospectos.0005`,
+  `ordens.0013`), cada uma no padrão `AddField(null)` → `RunPython` (match
+  case-insensitive contra nichos já existentes, cria só se não achar) →
+  `AlterField(not null)` quando aplicável → `RemoveField` do campo antigo
+  — tudo numa transação só. Resultado real do backfill em produção:
+  "transporte"/"Transporte" colapsaram no mesmo Nicho, confirmando o
+  problema que motivou o pedido.
+- Fluxos de cópia entre os 3 models (Lead→Prospecto `converter`, Cliente
+  selecionado no form de Prospecto, Prospecto→Cliente `converter`)
+  atualizados pra propagar o id do nicho em vez do texto livre.
+- Frontend: toda tela que tinha input/chip de "Segmento" (Clientes,
+  Prospectos — incl. os 2 modais de conversão, as 2 telas de Entrevista, e
+  o modal Lead→Prospecto) virou `<select>` alimentado por `/api/nichos/`,
+  com "+ Novo nicho" inline (cria via POST e já seleciona, sem sair do
+  form).
+
+**Validado antes do push:** rebuild real (não container antigo já
+rodando) + suíte completa do backend (118/118) + `makemigrations --check`
+limpo pros apps tocados (só sobra o mesmo drift preexistente de
+`SocioProspecto`/`notificacoes`, já documentado, não relacionado a esta
+mudança) + build do frontend sem erro.
+
+**Escopo que ficou de fora, de propósito:** `Prospecto.convertido`/
+`converter()` (Prospecto→Cliente) — essa conversão é uma progressão
+linear legítima (negócio fechado vira cliente) e não foi tocada.
+
+### [2026-09-03] — Contabilidade interna x externa + self-service "Conectar Email" (usuário conecta a própria caixa)
+
+**Motivação:** usuário interno novo (Contador, `contador@uidsoftware.com.br`)
+precisava configurar o próprio email no módulo Email do SystemD. Descoberto
+na investigação: não existia NENHUMA tela pra isso — "Email corp." na
+página de Usuários sempre foi só leitura; os 2 usuários já configurados
+(`contato@` e `luizeduardo@`) foram inseridos direto no banco meses antes,
+não por autoatendimento. O usuário recusou passar a senha real por chat
+("não faz sentido ficar passando senha, violação de segurança") e pediu
+autoatendimento de verdade: o próprio usuário digita a senha uma vez,
+direto pro backend, sem passar por outra sessão/pessoa.
+
+**Achado que mudou o escopo:** a permissão usada pelo módulo Email
+(`IsAdminOrOperacionalOrFinanceiro`) bloqueava `CONTABILIDADE` por
+completo — decisão documentada de 03/08/2026, na época só existia o
+usuário EXTERNO "Contador Direto" (escritório de contabilidade
+terceirizado). Confirmado com o usuário: a regra real nunca foi sobre o
+perfil, e sim interno x externo — o Contador interno (criado depois) deve
+ter acesso, o externo nunca.
+
+- `usuarios.Usuario` ganha campo `externo` (bool, `default=False`) —
+  migration `0005` já marca "Contador Direto"
+  (`documento@contadordireto.com.br`) como `externo=True` via `RunPython`,
+  mantendo o resto `False`.
+- Nova permissão `IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna`
+  (`usuarios/permissions.py`) substitui `IsAdminOrOperacionalOrFinanceiro`
+  nas 8 views de `email_client` — único lugar que a usava (confirmado
+  antes de trocar). Contabilidade externa continua bloqueada.
+- Novo endpoint self-service `GET/POST/DELETE /api/auth/me/email-config/`
+  (`MinhaEmailConfigView`) — sempre opera em `request.user`, nunca aceita
+  configurar email de outro usuário.
+- `UsuariosPage.jsx` ganha toggle "Externo" no form (pensando em futuros
+  contratados terceirizados além de Contabilidade). `EmailPage.jsx` ganha
+  3 estados novos antes do webmail normal: sem acesso (403), carregando, e
+  formulário "Conectar meu email" quando ainda não configurado — troca o
+  comportamento anterior de só mostrar um erro genérico.
+
+**Validado:** `usuarios/tests.py` novo (8 casos: interno conecta e usa,
+externo toma 403 mesmo com o mesmo perfil, CLIENTE toma 403, reconectar
+atualiza em vez de duplicar, desconectar funciona). Suíte completa do
+backend 126/126 rodada contra imagem rebuilada antes do push.

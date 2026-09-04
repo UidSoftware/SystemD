@@ -12,7 +12,7 @@ const PERFIS = [
   { value: 'CLIENTE',       label: 'Cliente',       cor: '#3d0361' },
 ]
 
-const formVazio = { nome: '', email: '', perfil: 'OPERACIONAL', setor_id: null, senha: '', ativo: true }
+const formVazio = { nome: '', email: '', perfil: 'OPERACIONAL', setor_id: null, senha: '', ativo: true, externo: false }
 
 const labelStyle = { fontSize: 11, color: '#6b6b8a' }
 const valueStyle = { fontSize: 13, color: '#e2d9f3' }
@@ -83,6 +83,7 @@ export default function UsuariosPage() {
       setor_id: u.setor?.id ?? null,
       senha: '',
       ativo: u.ativo,
+      externo: u.externo,
     })
     setErro('')
     setModalAberto(true)
@@ -315,6 +316,21 @@ export default function UsuariosPage() {
                   <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
                     style={{ left: form.ativo ? '22px' : '2px' }} />
                 </button>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-semibold" style={{ color: '#a78bca' }}>Externo</label>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, externo: !f.externo }))}
+                    className="w-10 h-5 rounded-full transition-colors relative"
+                    style={{ backgroundColor: form.externo ? '#063BF8' : 'rgba(255,255,255,0.1)' }}>
+                    <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                      style={{ left: form.externo ? '22px' : '2px' }} />
+                  </button>
+                </div>
+                <p className="text-xs mt-1" style={{ color: '#6b6b8a' }}>
+                  Pessoa/empresa terceirizada (ex: contabilidade contratada) — nunca tem acesso a módulos internos como Email.
+                </p>
               </div>
 
               {erro && <p className="text-xs" style={{ color: '#FF0000' }}>{erro}</p>}

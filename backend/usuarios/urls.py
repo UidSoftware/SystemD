@@ -4,6 +4,7 @@ from .views import (
     LoginView, TokenRefreshCookieView, LogoutView, MeView,
     UsuarioViewSet, SetorViewSet,
     AlterarSenhaView, SolicitarAcessoView, DefinirSenhaView,
+    MinhaEmailConfigView,
 )
 
 router = DefaultRouter()
@@ -16,6 +17,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('me/', MeView.as_view(), name='me'),
     path('alterar-senha/', AlterarSenhaView.as_view(), name='alterar_senha'),
+    path('me/email-config/', MinhaEmailConfigView.as_view(), name='minha_email_config'),
     path('solicitar-acesso/', SolicitarAcessoView.as_view(), name='solicitar_acesso'),
     path('definir-senha/', DefinirSenhaView.as_view(), name='definir_senha'),
     path('', include(router.urls)),

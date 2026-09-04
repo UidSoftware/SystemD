@@ -10,9 +10,9 @@ from rest_framework.decorators import action
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import Usuario, Setor
+from .models import Usuario, Setor, UsuarioEmailConfig
 from .serializers import UsuarioTokenSerializer, UsuarioSerializer, SetorSerializer, MeSerializer
-from .permissions import IsAdmin
+from .permissions import IsAdmin, IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna
 
 
 class LoginView(TokenObtainPairView):
@@ -85,6 +85,46 @@ class UsuarioViewSet(ModelViewSet):
         instance = self.get_object()
         instance.ativo = False
         instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MinhaEmailConfigView(APIView):
+    """Usuário logado conecta a própria caixa de email ao módulo Email do
+    SystemD -- self-service, nunca aceita configurar email de outro
+    usuário (sempre opera em cima de request.user). A senha nunca passa
+    por outro humano/sessão -- vai direto do formulário pro backend."""
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
+
+    def get(self, request):
+        config = getattr(request.user, 'email_config', None)
+        if not config:
+            return Response({'configurado': False})
+        return Response({'configurado': True, 'email_conta': config.email_conta, 'ativo': config.ativo})
+
+    def post(self, request):
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        email_conta = (request.data.get('email_conta') or '').strip()
+        email_senha = request.data.get('email_senha') or ''
+
+        if not email_conta or not email_senha:
+            return Response({'erro': 'Preencha email e senha.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_email(email_conta)
+        except DjangoValidationError:
+            return Response({'erro': 'Email inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        config, _ = UsuarioEmailConfig.objects.update_or_create(
+            usuario=request.user,
+            defaults={'email_conta': email_conta, 'email_senha': email_senha, 'ativo': True},
+        )
+        return Response({'mensagem': 'Email conectado com sucesso.', 'email_conta': config.email_conta})
+
+    def delete(self, request):
+        config = getattr(request.user, 'email_config', None)
+        if config:
+            config.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

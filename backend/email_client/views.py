@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
 from . import services
-from usuarios.permissions import IsAdminOrOperacionalOrFinanceiro
+from usuarios.permissions import IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna
 
 
 def _get_credenciais(request):
@@ -14,7 +14,7 @@ def _get_credenciais(request):
 
 
 class InboxView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def get(self, request):
         try:
@@ -29,7 +29,7 @@ class InboxView(APIView):
 
 
 class EmailDetailView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def get(self, request, uid):
         try:
@@ -41,7 +41,7 @@ class EmailDetailView(APIView):
 
 
 class EnviarEmailView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def post(self, request):
         try:
@@ -64,7 +64,7 @@ class EnviarEmailView(APIView):
 
 
 class ResponderEmailView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def post(self, request, uid):
         try:
@@ -85,7 +85,7 @@ class ResponderEmailView(APIView):
 
 
 class DeletarEmailView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def delete(self, request, uid):
         try:
@@ -97,7 +97,7 @@ class DeletarEmailView(APIView):
 
 
 class PastasView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def get(self, request):
         try:
@@ -108,7 +108,7 @@ class PastasView(APIView):
 
 
 class DownloadAnexoView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def get(self, request, uid):
         try:
@@ -124,7 +124,7 @@ class DownloadAnexoView(APIView):
 
 
 class ArquivarEmailView(APIView):
-    permission_classes = [IsAdminOrOperacionalOrFinanceiro]
+    permission_classes = [IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna]
 
     def post(self, request, uid):
         try:

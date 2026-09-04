@@ -34,6 +34,14 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     criado_em = models.DateTimeField(auto_now_add=True)
     perfil    = models.CharField(max_length=20, choices=Perfil.choices, default=Perfil.OPERACIONAL)
     setor     = models.ForeignKey(Setor, null=True, blank=True, on_delete=models.SET_NULL, related_name='usuarios')
+    externo   = models.BooleanField(
+        default=False,
+        help_text='Pessoa/empresa externa contratada (ex: escritório de contabilidade '
+                   'terceirizado) — nunca tem acesso a módulos internos como Email, '
+                   'independente do perfil (decisão 03/09/2026: distinção é interno x '
+                   'externo, não o perfil em si — CONTABILIDADE interna e externa '
+                   'coexistem e têm acesso diferente).',
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['nome']

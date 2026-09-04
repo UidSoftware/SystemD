@@ -21,6 +21,24 @@ class IsAdminOrOperacionalOrFinanceiro(BasePermission):
         return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'OPERACIONAL', 'FINANCEIRO'])
 
 
+class IsAdminOrOperacionalOrFinanceiroOrContabilidadeInterna(BasePermission):
+    """Igual IsAdminOrOperacionalOrFinanceiro, mas também libera CONTABILIDADE
+    quando o usuário é interno da Uid (Usuario.externo=False) -- decisão
+    03/09/2026: o módulo Email nunca é liberado pra parceiro externo (ex:
+    escritório de contabilidade terceirizado), só pra quem é da própria Uid.
+    Antes da existência do campo `externo`, CONTABILIDADE era bloqueada por
+    completo nas views de email_client (decisão de 03/08/2026, quando só
+    existia o usuário externo) -- agora a distinção certa é interno x
+    externo, não mais o perfil sozinho."""
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        if u.perfil in ['ADMIN', 'OPERACIONAL', 'FINANCEIRO']:
+            return True
+        return u.perfil == 'CONTABILIDADE' and not u.externo
+
+
 class IsAdminOperacionalOrCliente(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.perfil in ['ADMIN', 'OPERACIONAL', 'CLIENTE'])

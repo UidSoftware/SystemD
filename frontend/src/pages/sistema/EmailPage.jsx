@@ -4,6 +4,7 @@ import EmailList from '../../components/email/EmailList'
 import EmailDetail from '../../components/email/EmailDetail'
 import EmailCompose from '../../components/email/EmailCompose'
 import { emailApi } from '../../services/emailApi'
+import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 
 const PASTAS_META = {
@@ -35,18 +36,48 @@ export default function EmailPage() {
   const [busca, setBusca]                       = useState('')
   const [buscaAtiva, setBuscaAtiva]             = useState('')
 
+  // null = ainda checando; false = sem conta conectada; true = pronto
+  const [configurado, setConfigurado]           = useState(null)
+  const [semAcesso, setSemAcesso]               = useState(false)
+  const [conexao, setConexao]                   = useState({ email_conta: '', email_senha: '' })
+  const [conectando, setConectando]             = useState(false)
+  const [erroConexao, setErroConexao]           = useState('')
+
   useEffect(() => {
     if (!accessToken) return
+    api.get('/auth/me/email-config/')
+      .then(res => setConfigurado(Boolean(res.data.configurado)))
+      .catch(e => {
+        if (e.response?.status === 403) setSemAcesso(true)
+        else setConfigurado(false)
+      })
+  }, [accessToken])
+
+  const conectarEmail = async (e) => {
+    e.preventDefault()
+    setConectando(true); setErroConexao('')
+    try {
+      await api.post('/auth/me/email-config/', conexao)
+      setConfigurado(true)
+    } catch (e) {
+      setErroConexao(e.response?.data?.erro || 'Erro ao conectar. Confira o email e a senha.')
+    } finally {
+      setConectando(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!accessToken || configurado !== true) return
     emailApi.pastas().then(res => {
       const nomes = res.data.results.map(p => p.nome)
       setPastas([...ORDEM.filter(p => nomes.includes(p)), ...nomes.filter(p => !ORDEM.includes(p))])
     }).catch(() => setPastas(['INBOX']))
-  }, [accessToken])
+  }, [accessToken, configurado])
 
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || configurado !== true) return
     carregarEmails()
-  }, [pagina, pastaAtual, accessToken])
+  }, [pagina, pastaAtual, accessToken, configurado])
 
   useEffect(() => {
     const t = setTimeout(() => setBuscaAtiva(busca), 300)
@@ -270,6 +301,64 @@ export default function EmailPage() {
       </div>
     </div>
   )
+
+  if (semAcesso) {
+    return (
+      <SistemaLayout titulo="Email">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-sm text-center max-w-sm" style={{ color: '#6b6b8a' }}>
+            Você não tem acesso ao módulo de Email.
+          </p>
+        </div>
+      </SistemaLayout>
+    )
+  }
+
+  if (configurado === null) {
+    return (
+      <SistemaLayout titulo="Email">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-sm" style={{ color: '#6b6b8a' }}>Carregando...</p>
+        </div>
+      </SistemaLayout>
+    )
+  }
+
+  if (configurado === false) {
+    return (
+      <SistemaLayout titulo="Email">
+        <div className="flex items-center justify-center h-full p-6">
+          <form onSubmit={conectarEmail} className="w-full max-w-sm rounded-xl p-6"
+            style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+            <h2 className="text-base font-semibold mb-1" style={{ color: '#f1f5f9' }}>Conectar meu email</h2>
+            <p className="text-xs mb-5" style={{ color: '#a78bca' }}>
+              Digite o email e a senha da sua caixa. Fica salvo só pra você usar o módulo de Email.
+            </p>
+
+            {erroConexao && <p className="text-xs mb-4" style={{ color: '#f87171' }}>{erroConexao}</p>}
+
+            <label className="block text-xs mb-1" style={{ color: '#a78bca' }}>Email</label>
+            <input type="email" required value={conexao.email_conta}
+              onChange={e => setConexao(c => ({ ...c, email_conta: e.target.value }))}
+              className="w-full rounded-lg px-3 py-2 text-sm mb-4 outline-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f1f5f9' }} />
+
+            <label className="block text-xs mb-1" style={{ color: '#a78bca' }}>Senha</label>
+            <input type="password" required value={conexao.email_senha}
+              onChange={e => setConexao(c => ({ ...c, email_senha: e.target.value }))}
+              className="w-full rounded-lg px-3 py-2 text-sm mb-5 outline-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f1f5f9' }} />
+
+            <button type="submit" disabled={conectando}
+              className="w-full py-2 rounded-lg text-sm font-semibold"
+              style={{ backgroundColor: '#063BF8', color: '#fff', opacity: conectando ? 0.7 : 1 }}>
+              {conectando ? 'Conectando...' : 'Conectar'}
+            </button>
+          </form>
+        </div>
+      </SistemaLayout>
+    )
+  }
 
   return (
     <SistemaLayout titulo="Email">

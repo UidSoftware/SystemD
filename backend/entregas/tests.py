@@ -5,6 +5,7 @@ from rest_framework import status
 from .models import Entrega, StatusEntrega, ConfirmacaoEntrega
 from usuarios.models import Usuario
 from clientes.models import Cliente
+from nichos.models import Nicho
 
 
 def criar_cliente(**kwargs):
@@ -13,7 +14,7 @@ def criar_cliente(**kwargs):
     kwargs.pop('telefone', None)
     defaults = {
         'nome_empresa': 'Empresa A',
-        'segmento': 'comercio',
+        'nicho': Nicho.objects.get_or_create(nome='Comércio')[0],
         'origem': 'indicacao',
     }
     defaults.update(kwargs)

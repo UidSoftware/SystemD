@@ -11,6 +11,7 @@ class SocioClienteSerializer(serializers.ModelSerializer):
 class ClienteSerializer(serializers.ModelSerializer):
     socios = SocioClienteSerializer(many=True, required=False)
     usuario_email = serializers.EmailField(source='usuario.email', read_only=True)
+    nicho_nome    = serializers.CharField(source='nicho.nome', read_only=True)
     email_ativo   = serializers.SerializerMethodField()
     socio_principal_nome = serializers.SerializerMethodField()
 
@@ -51,4 +52,4 @@ class ClienteSerializer(serializers.ModelSerializer):
         model = Cliente
         fields = '__all__'
         read_only_fields = ('id', 'criado_em', 'atualizado_em', 'usuario_email',
-                            'email_ativo', 'socio_principal_nome')
+                            'nicho_nome', 'email_ativo', 'socio_principal_nome')

@@ -55,6 +55,9 @@ export default function LeadsPage() {
   const [modalLead, setModalLead] = useState(null)
   const [modalConverter, setModalConverter] = useState(null)
   const [dadosConverter, setDadosConverter] = useState({})
+  const [nichos, setNichos] = useState([])
+  const [novoNicho, setNovoNicho] = useState('')
+  const [mostrarNovoNicho, setMostrarNovoNicho] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [novosLeads, setNovosLeads] = useState(0)
 
@@ -104,7 +107,18 @@ export default function LeadsPage() {
     if (!accessToken) return
     carregar(1)
     carregarNaoLidos()
+    api.get('/nichos/', { params: { page_size: 200 }, headers: authHeader() }).then(r => setNichos(r.data.results || [])).catch(() => {})
   }, [accessToken])
+
+  const criarNicho = async () => {
+    const nome = novoNicho.trim()
+    if (!nome) return
+    const res = await api.post('/nichos/', { nome }, { headers: authHeader() })
+    setNichos(ns => [...ns, res.data].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setDadosConverter(d => ({ ...d, nicho: res.data.id }))
+    setNovoNicho('')
+    setMostrarNovoNicho(false)
+  }
 
   const filtrar = () => {
     setFiltrosAtivos({ ...filtros })
@@ -473,7 +487,6 @@ export default function LeadsPage() {
               { label: 'Email *', field: 'email' },
               { label: 'Telefone', field: 'telefone' },
               { label: 'WhatsApp', field: 'whatsapp' },
-              { label: 'Segmento', field: 'segmento' },
               { label: 'Cidade', field: 'cidade' },
               { label: 'Estado (UF)', field: 'estado' },
               { label: 'CNPJ/CPF', field: 'cnpj_cpf' },
@@ -485,6 +498,32 @@ export default function LeadsPage() {
                   style={inputStyle} />
               </div>
             ))}
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Nicho</label>
+              <select value={dadosConverter.nicho || ''} onChange={e => setDadosConverter(d => ({ ...d, nicho: e.target.value || null }))} style={inputStyle}>
+                <option value="">Selecione...</option>
+                {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
+              </select>
+              {mostrarNovoNicho ? (
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <input style={inputStyle} value={novoNicho} onChange={e => setNovoNicho(e.target.value)} placeholder="Nome do novo nicho" />
+                  <button type="button" onClick={criarNicho}
+                    style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Salvar
+                  </button>
+                  <button type="button" onClick={() => { setMostrarNovoNicho(false); setNovoNicho('') }}
+                    style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setMostrarNovoNicho(true)}
+                  style={{ fontSize: 11, color: '#6b8fff', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, padding: 0 }}>
+                  + Novo nicho
+                </button>
+              )}
+            </div>
 
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>

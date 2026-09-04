@@ -163,16 +163,6 @@ class MensagemChamado(models.Model):
         return f'Msg de {self.autor} em #{self.chamado_id}'
 
 
-class SegmentoEntrevista(models.TextChoices):
-    SAUDE       = 'SAUDE',       'Saúde / Bem-estar'
-    BELEZA      = 'BELEZA',      'Beleza'
-    VAREJO      = 'VAREJO',      'Varejo'
-    ALIMENTACAO = 'ALIMENTACAO', 'Alimentação'
-    SERVICOS    = 'SERVICOS',    'Serviços'
-    EDUCACAO    = 'EDUCACAO',    'Educação'
-    OUTRO       = 'OUTRO',       'Outro'
-
-
 class OrcamentoFaixa(models.TextChoices):
     MEI     = 'MEI',     'MEI'
     PEQUENO = 'PEQUENO', 'Pequeno'
@@ -188,7 +178,7 @@ class Entrevista(models.Model):
     whatsapp_business = models.BooleanField(default=False)
     redes_sociais    = models.TextField(blank=True)
     palavras_chave   = models.TextField(blank=True)
-    segmento         = models.CharField(max_length=20, choices=SegmentoEntrevista.choices)
+    nicho            = models.ForeignKey('nichos.Nicho', on_delete=models.PROTECT, related_name='entrevistas')
     publico_alvo     = models.TextField(blank=True)
     concorrentes     = models.TextField(blank=True)
     prazo_desejado   = models.DateField(null=True, blank=True)

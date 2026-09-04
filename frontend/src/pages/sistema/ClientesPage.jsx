@@ -43,7 +43,7 @@ const cardStyle = {
 const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', principal: false }
 
 const CLIENTE_VAZIO = {
-  nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
+  nome_empresa: '', nicho: null, cidade: '', estado: '', cnpj_cpf: '',
   dominio_email: '', origem: '', observacoes: '',
   tipo_pessoa: 'PJ', documento: '',
   socios: [{ ...SOCIO_VAZIO, principal: true }],
@@ -135,7 +135,7 @@ export default function ClientesPage() {
   const [pagina, setPagina] = useState(1)
   const [totalPaginas, setTotalPaginas] = useState(1)
 
-  const [filtros, setFiltros] = useState({ segmento: '', cidade: '', search: '' })
+  const [filtros, setFiltros] = useState({ nicho: '', cidade: '', search: '' })
   const [filtrosAtivos, setFiltrosAtivos] = useState({})
 
   const [modal, setModal] = useState(null)
@@ -145,9 +145,28 @@ export default function ClientesPage() {
   const [enviandoAcesso, setEnviandoAcesso] = useState(null)
   const [msgAcesso, setMsgAcesso] = useState('')
 
+  const [nichos, setNichos] = useState([])
+  const [novoNicho, setNovoNicho] = useState('')
+  const [mostrarNovoNicho, setMostrarNovoNicho] = useState(false)
+
   const tokenRef = useRef(accessToken)
   useEffect(() => { tokenRef.current = accessToken }, [accessToken])
   const authHeader = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {}
+
+  useEffect(() => {
+    if (!accessToken) return
+    api.get('/nichos/', { params: { page_size: 200 }, headers: authHeader() }).then(r => setNichos(r.data.results || [])).catch(() => {})
+  }, [accessToken])
+
+  const criarNicho = async () => {
+    const nome = novoNicho.trim()
+    if (!nome) return
+    const res = await api.post('/nichos/', { nome }, { headers: authHeader() })
+    setNichos(ns => [...ns, res.data].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setModal(m => ({ ...m, nicho: res.data.id }))
+    setNovoNicho('')
+    setMostrarNovoNicho(false)
+  }
 
   const carregar = useCallback(async (pag = 1, f = filtrosAtivos) => {
     if (!tokenRef.current) return
@@ -176,7 +195,7 @@ export default function ClientesPage() {
   }
 
   const limpar = () => {
-    setFiltros({ segmento: '', cidade: '', search: '' })
+    setFiltros({ nicho: '', cidade: '', search: '' })
     setFiltrosAtivos({})
     setPagina(1)
     carregar(1, {})
@@ -235,7 +254,6 @@ export default function ClientesPage() {
 
   const camposEmpresa = [
     { label: 'Nome da empresa *', field: 'nome_empresa' },
-    { label: 'Segmento *', field: 'segmento' },
     { label: 'Cidade', field: 'cidade' },
     { label: 'Estado (UF)', field: 'estado' },
     { label: 'CNPJ/CPF', field: 'cnpj_cpf' },
@@ -269,13 +287,18 @@ export default function ClientesPage() {
                 onChange={e => setFiltros(f => ({ ...f, search: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && filtrar()} />
             </div>
-            {[{ label: 'Segmento', field: 'segmento' }, { label: 'Cidade', field: 'cidade' }].map(({ label, field }) => (
-              <div key={field}>
-                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>
-                <input type="text" style={inputStyle} value={filtros[field]}
-                  onChange={e => setFiltros(f => ({ ...f, [field]: e.target.value }))} />
-              </div>
-            ))}
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Nicho</label>
+              <select style={inputStyle} value={filtros.nicho} onChange={e => setFiltros(f => ({ ...f, nicho: e.target.value }))}>
+                <option value="">Todos</option>
+                {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cidade</label>
+              <input type="text" style={inputStyle} value={filtros.cidade}
+                onChange={e => setFiltros(f => ({ ...f, cidade: e.target.value }))} />
+            </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
               <button onClick={filtrar}
                 style={{ flex: 1, background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -300,7 +323,7 @@ export default function ClientesPage() {
               <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9', marginBottom: 4 }}>{c.nome_empresa}</div>
               <div style={{ fontSize: 12, color: '#a78bca', marginBottom: 10 }}>{c.socio_principal_nome}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: 12, marginBottom: 10 }}>
-                <span style={{ color: '#6b6b8a' }}>Segmento: <span style={{ color: '#e2d9f3' }}>{c.segmento || '—'}</span></span>
+                <span style={{ color: '#6b6b8a' }}>Nicho: <span style={{ color: '#e2d9f3' }}>{c.nicho_nome || '—'}</span></span>
                 <span style={{ color: '#6b6b8a' }}>Cidade: <span style={{ color: '#e2d9f3' }}>{c.cidade || '—'}</span></span>
                 <span style={{ color: '#6b6b8a' }}>Sócios: <span style={{ color: '#e2d9f3' }}>{c.socios?.length || 0}</span></span>
               </div>
@@ -317,7 +340,7 @@ export default function ClientesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Empresa', 'Sócio(s)', 'Segmento', 'Cidade', 'Domínio', 'Ações'].map(h => (
+                {['Empresa', 'Sócio(s)', 'Nicho', 'Cidade', 'Domínio', 'Ações'].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -338,7 +361,7 @@ export default function ClientesPage() {
                       <div style={{ fontSize: 11, color: '#6b6b8a', marginTop: 2 }}>+{c.socios.length - 1} sócio{c.socios.length - 1 > 1 ? 's' : ''}</div>
                     )}
                   </td>
-                  <td style={tdStyle}>{c.segmento || '—'}</td>
+                  <td style={tdStyle}>{c.nicho_nome || '—'}</td>
                   <td style={tdStyle}>{c.cidade || '—'}</td>
                   <td style={tdStyle}>{c.dominio_email || '—'}</td>
                   <td style={tdStyle}>
@@ -390,6 +413,31 @@ export default function ClientesPage() {
                     style={inputStyle} />
                 </div>
               ))}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Nicho *</label>
+                <select value={modal.nicho || ''} onChange={e => setModal(m => ({ ...m, nicho: e.target.value || null }))} style={inputStyle}>
+                  <option value="">Selecione...</option>
+                  {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
+                </select>
+                {mostrarNovoNicho ? (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <input style={inputStyle} value={novoNicho} onChange={e => setNovoNicho(e.target.value)} placeholder="Nome do novo nicho" />
+                    <button type="button" onClick={criarNicho}
+                      style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      Salvar
+                    </button>
+                    <button type="button" onClick={() => { setMostrarNovoNicho(false); setNovoNicho('') }}
+                      style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, cursor: 'pointer' }}>
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setMostrarNovoNicho(true)}
+                    style={{ fontSize: 11, color: '#6b8fff', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, padding: 0 }}>
+                    + Novo nicho
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 12 }}>
                 <div>
                   <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Tipo de pessoa</label>

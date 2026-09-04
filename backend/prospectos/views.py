@@ -12,7 +12,7 @@ from usuarios.permissions import IsAdmin, IsAdminOrOperacional
 class ProspectoViewSet(viewsets.ModelViewSet):
     serializer_class = ProspectoSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['convertido', 'ativo', 'segmento', 'responsavel']
+    filterset_fields = ['convertido', 'ativo', 'nicho', 'responsavel']
     search_fields = ['nome_empresa', 'cidade', 'socios__nome', 'socios__email']
     ordering_fields = ['criado_em', 'nome_empresa']
     ordering = ['-criado_em']
@@ -54,7 +54,7 @@ class ProspectoViewSet(viewsets.ModelViewSet):
 
         dados_cliente = {
             'nome_empresa': request.data.get('nome_empresa', prospecto.nome_empresa),
-            'segmento': request.data.get('segmento', prospecto.segmento or ''),
+            'nicho': request.data.get('nicho', prospecto.nicho_id),
             'cidade': request.data.get('cidade', prospecto.cidade or ''),
             'estado': request.data.get('estado', prospecto.estado or ''),
             'cnpj_cpf': request.data.get('cnpj_cpf', prospecto.cnpj_cpf or ''),

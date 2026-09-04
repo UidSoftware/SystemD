@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'orcamentos',
     'produtos',
     'artefatos',
+    'nichos',
 ]
 
 MIDDLEWARE = [

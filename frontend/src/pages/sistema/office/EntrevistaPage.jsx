@@ -60,17 +60,11 @@ function Fld({ label, required, children }) {
 }
 
 // ── Constantes ─────────────────────────────────────────────────────────────
-const SEGMENTOS = [
-  { key: 'SAUDE', label: 'Saúde / Bem-estar' }, { key: 'BELEZA', label: 'Beleza' },
-  { key: 'VAREJO', label: 'Varejo' }, { key: 'ALIMENTACAO', label: 'Alimentação' },
-  { key: 'SERVICOS', label: 'Serviços' }, { key: 'EDUCACAO', label: 'Educação' },
-  { key: 'OUTRO', label: 'Outro' },
-]
 const ORCAMENTOS = [{ key: 'MEI', label: 'MEI' }, { key: 'PEQUENO', label: 'Pequeno' }, { key: 'MEDIO', label: 'Médio' }]
 
 const FORM_VAZIO = {
   prospecto: '', sistema: '', descricao: '', cores_empresa: '', dominio: '',
-  whatsapp_business: false, redes_sociais: '', palavras_chave: '', segmento: '',
+  whatsapp_business: false, redes_sociais: '', palavras_chave: '', nicho: '',
   publico_alvo: '', concorrentes: '', prazo_desejado: '', orcamento_faixa: '',
 }
 
@@ -83,6 +77,9 @@ export default function EntrevistaPage() {
   const [pagina, setPagina]           = useState(1)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [prospectos, setProspectos]   = useState([])
+  const [nichos, setNichos]           = useState([])
+  const [novoNicho, setNovoNicho]     = useState('')
+  const [mostrarNovoNicho, setMostrarNovoNicho] = useState(false)
   const [modal, setModal]             = useState(null)
   const [editandoId, setEditandoId]   = useState(null)
   const [salvando, setSalvando]       = useState(false)
@@ -101,7 +98,18 @@ export default function EntrevistaPage() {
   useEffect(() => {
     carregar()
     api.get('/prospectos/?page_size=200').then(r => setProspectos(r.data.results || [])).catch(() => {})
+    api.get('/nichos/?page_size=200').then(r => setNichos(r.data.results || [])).catch(() => {})
   }, [])
+
+  const criarNicho = async () => {
+    const nome = novoNicho.trim()
+    if (!nome) return
+    const res = await api.post('/nichos/', { nome })
+    setNichos(ns => [...ns, res.data].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setModal(m => ({ ...m, nicho: res.data.id }))
+    setNovoNicho('')
+    setMostrarNovoNicho(false)
+  }
 
   const abrirNovo = () => {
     setEditandoId(null)
@@ -120,7 +128,7 @@ export default function EntrevistaPage() {
       whatsapp_business: e.whatsapp_business || false,
       redes_sociais:    e.redes_sociais || '',
       palavras_chave:   e.palavras_chave || '',
-      segmento:         e.segmento || '',
+      nicho:            e.nicho || '',
       publico_alvo:     e.publico_alvo || '',
       concorrentes:     e.concorrentes || '',
       prazo_desejado:   e.prazo_desejado || '',
@@ -154,7 +162,6 @@ export default function EntrevistaPage() {
     } finally { setSalvando(false) }
   }
 
-  const segLabel = (key) => SEGMENTOS.find(s => s.key === key)?.label || key || '—'
   const orcLabel = (key) => ORCAMENTOS.find(o => o.key === key)?.label || key || '—'
 
   return (
@@ -178,7 +185,7 @@ export default function EntrevistaPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Sistema', 'Prospecto', 'Segmento', 'Orçamento', 'Prazo', 'Criada em', 'Ações'].map(h => (
+                {['Sistema', 'Prospecto', 'Nicho', 'Orçamento', 'Prazo', 'Criada em', 'Ações'].map(h => (
                   <th key={h} style={thS}>{h}</th>
                 ))}
               </tr>
@@ -199,7 +206,7 @@ export default function EntrevistaPage() {
                       <div style={{ fontSize: 11, color: '#6b8fff', marginTop: 2 }}>🔗 {e.prospecto_cliente_nome}</div>
                     )}
                   </td>
-                  <td style={tdS}>{segLabel(e.segmento)}</td>
+                  <td style={tdS}>{e.nicho_nome || '—'}</td>
                   <td style={tdS}>{orcLabel(e.orcamento_faixa)}</td>
                   <td style={tdS}>{e.prazo_desejado ? new Date(e.prazo_desejado + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
                   <td style={{ ...tdS, color: '#94a3b8', fontSize: 12 }}>{new Date(e.criado_em).toLocaleDateString('pt-BR')}</td>
@@ -310,10 +317,28 @@ export default function EntrevistaPage() {
               <Fld label="Palavras-chave">
                 <textarea style={{ ...IS, minHeight: 60, resize: 'vertical', lineHeight: 1.6 }} value={modal.palavras_chave} onChange={e => set('palavras_chave', e.target.value)} />
               </Fld>
-              <Fld label="Segmento">
+              <Fld label="Nicho">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  {SEGMENTOS.map(s => <Chip key={s.key} label={s.label} active={modal.segmento === s.key} onClick={() => set('segmento', s.key)} />)}
+                  {nichos.map(n => <Chip key={n.id} label={n.nome} active={String(modal.nicho) === String(n.id)} onClick={() => set('nicho', n.id)} />)}
                 </div>
+                {mostrarNovoNicho ? (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    <input style={IS} value={novoNicho} onChange={e => setNovoNicho(e.target.value)} placeholder="Nome do novo nicho" />
+                    <button type="button" onClick={criarNicho}
+                      style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      Salvar
+                    </button>
+                    <button type="button" onClick={() => { setMostrarNovoNicho(false); setNovoNicho('') }}
+                      style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, cursor: 'pointer' }}>
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setMostrarNovoNicho(true)}
+                    style={{ fontSize: 11, color: '#6b8fff', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, padding: 0 }}>
+                    + Novo nicho
+                  </button>
+                )}
               </Fld>
               <Fld label="Público-alvo">
                 <textarea style={{ ...IS, minHeight: 60, resize: 'vertical', lineHeight: 1.6 }} value={modal.publico_alvo} onChange={e => set('publico_alvo', e.target.value)} />

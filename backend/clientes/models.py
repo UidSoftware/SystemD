@@ -14,7 +14,11 @@ class Cliente(PessoaBase):
         null=True, blank=True,
         related_name='cliente_perfil',
     )
-    segmento      = models.CharField(max_length=50)
+    nicho         = models.ForeignKey(
+        'nichos.Nicho',
+        on_delete=models.PROTECT,
+        related_name='clientes',
+    )
     cidade        = models.CharField(max_length=100, blank=True)
     estado        = models.CharField(max_length=2, blank=True)
     cnpj_cpf      = models.CharField(max_length=20, blank=True)

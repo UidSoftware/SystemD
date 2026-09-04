@@ -70,7 +70,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             'email': request.data.get('email', lead.email),
             'telefone': request.data.get('telefone', lead.telefone or ''),
             'whatsapp': request.data.get('whatsapp', ''),
-            'segmento': request.data.get('segmento', ''),
+            'nicho': request.data.get('nicho'),
             'cidade': request.data.get('cidade', ''),
             'estado': request.data.get('estado', ''),
             'cnpj_cpf': request.data.get('cnpj_cpf', ''),

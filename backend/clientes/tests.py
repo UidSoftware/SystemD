@@ -4,6 +4,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from .models import Cliente
 from usuarios.models import Usuario
+from nichos.models import Nicho
 
 
 class ClienteTemEntregasTest(TestCase):
@@ -16,13 +17,14 @@ class ClienteTemEntregasTest(TestCase):
         self.url = reverse('cliente-list')
 
     def test_cliente_criado_sem_tem_entregas_por_padrao(self):
+        nicho = Nicho.objects.create(nome='Comércio')
         self.client.force_authenticate(self.admin)
         res = self.client.post(self.url, {
             'nome_empresa': 'Empresa X',
             'nome_contato': 'Contato',
             'email': 'x@empresa.com',
             'telefone': '34999990000',
-            'segmento': 'comercio',
+            'nicho': nicho.id,
             'origem': 'indicacao',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -30,7 +32,7 @@ class ClienteTemEntregasTest(TestCase):
 
     def test_admin_ativa_tem_entregas(self):
         cliente = Cliente.objects.create(
-            nome_empresa='Studio', segmento='pilates', origem='indicacao',
+            nome_empresa='Studio', nicho=Nicho.objects.create(nome='Pilates'), origem='indicacao',
         )
         self.client.force_authenticate(self.admin)
         url = reverse('cliente-detail', args=[cliente.id])
@@ -41,7 +43,7 @@ class ClienteTemEntregasTest(TestCase):
 
     def test_me_retorna_tem_entregas_true_para_cliente_com_flag(self):
         cliente = Cliente.objects.create(
-            nome_empresa='Studio', segmento='pilates', origem='indicacao',
+            nome_empresa='Studio', nicho=Nicho.objects.create(nome='Pilates'), origem='indicacao',
             tem_entregas=True,
         )
         usuario_cliente = Usuario.objects.create_user(

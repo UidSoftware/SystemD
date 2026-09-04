@@ -83,16 +83,6 @@ const tdStyle = {
 const labelStyle = { fontSize: 11, color: '#6b6b8a' }
 const valueStyle = { fontSize: 13, color: '#e2d9f3' }
 
-const SEGMENTO_CHOICES = [
-  { value: 'SAUDE', label: 'Saúde / Bem-estar' },
-  { value: 'BELEZA', label: 'Beleza' },
-  { value: 'VAREJO', label: 'Varejo' },
-  { value: 'ALIMENTACAO', label: 'Alimentação' },
-  { value: 'SERVICOS', label: 'Serviços' },
-  { value: 'EDUCACAO', label: 'Educação' },
-  { value: 'OUTRO', label: 'Outro' },
-]
-
 const ORCAMENTO_CHOICES = [
   { value: 'MEI', label: 'MEI' },
   { value: 'PEQUENO', label: 'Pequeno' },
@@ -103,7 +93,7 @@ const ENTREVISTA_VAZIA = {
   prospecto: '', sistema: '', descricao: '',
   cores_empresa: '', dominio: '', whatsapp_business: false,
   redes_sociais: '', palavras_chave: '',
-  segmento: '', publico_alvo: '', concorrentes: '',
+  nicho: '', publico_alvo: '', concorrentes: '',
   prazo_desejado: '', orcamento_faixa: '',
 }
 
@@ -133,10 +123,25 @@ export default function EntrevistasPage() {
     }
   }, [])
 
+  const [nichos, setNichos] = useState([])
+  const [novoNicho, setNovoNicho] = useState('')
+  const [mostrarNovoNicho, setMostrarNovoNicho] = useState(false)
+
   useEffect(() => {
     carregar()
     api.get('/prospectos/').then(r => setProspectos(r.data.results)).catch(() => {})
+    api.get('/nichos/', { params: { page_size: 200 } }).then(r => setNichos(r.data.results || [])).catch(() => {})
   }, [])
+
+  const criarNicho = async () => {
+    const nome = novoNicho.trim()
+    if (!nome) return
+    const res = await api.post('/nichos/', { nome })
+    setNichos(ns => [...ns, res.data].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setModal(m => ({ ...m, nicho: res.data.id }))
+    setNovoNicho('')
+    setMostrarNovoNicho(false)
+  }
 
   const set = (k, v) => setModal(m => ({ ...m, [k]: v }))
 
@@ -152,7 +157,7 @@ export default function EntrevistasPage() {
   const abrirEditar = (e) => { setModal({ ...e }); setModoEdicao(true); setErro('') }
 
   const salvar = async () => {
-    if (!modal.prospecto || !modal.sistema || !modal.descricao || !modal.segmento || !modal.orcamento_faixa) {
+    if (!modal.prospecto || !modal.sistema || !modal.descricao || !modal.nicho || !modal.orcamento_faixa) {
       setErro('Preencha todos os campos obrigatórios.')
       return
     }
@@ -168,7 +173,7 @@ export default function EntrevistasPage() {
         whatsapp_business: modal.whatsapp_business,
         redes_sociais: modal.redes_sociais,
         palavras_chave: modal.palavras_chave,
-        segmento: modal.segmento,
+        nicho: modal.nicho,
         publico_alvo: modal.publico_alvo,
         concorrentes: modal.concorrentes,
         prazo_desejado: modal.prazo_desejado || null,
@@ -237,8 +242,8 @@ export default function EntrevistasPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
                 <div>
-                  <div style={labelStyle}>Segmento</div>
-                  <div style={valueStyle}>{e.segmento_display || '—'}</div>
+                  <div style={labelStyle}>Nicho</div>
+                  <div style={valueStyle}>{e.nicho_nome || '—'}</div>
                 </div>
                 <div>
                   <div style={labelStyle}>Orçamento</div>
@@ -278,7 +283,7 @@ export default function EntrevistasPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Sistema', 'Prospecto', 'Segmento', 'Orçamento', 'Prazo', 'Ações'].map(h => (
+                {['Sistema', 'Prospecto', 'Nicho', 'Orçamento', 'Prazo', 'Ações'].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -294,7 +299,7 @@ export default function EntrevistasPage() {
                   onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
                   <td style={tdStyle}>{e.sistema}</td>
                   <td style={tdStyle}>{e.prospecto_nome || '—'}</td>
-                  <td style={tdStyle}>{e.segmento_display || '—'}</td>
+                  <td style={tdStyle}>{e.nicho_nome || '—'}</td>
                   <td style={tdStyle}>{e.orcamento_faixa_display || '—'}</td>
                   <td style={tdStyle}>{e.prazo_desejado || '—'}</td>
                   <td style={tdStyle}>
@@ -364,11 +369,29 @@ export default function EntrevistasPage() {
                 <textarea style={{ ...inputStyle, minHeight: 160, resize: 'vertical', lineHeight: 1.6 }} value={modal.descricao} onChange={e => set('descricao', e.target.value)} placeholder="Descreva o projeto com detalhes — o que o cliente precisa, contexto do negócio, fluxos principais..." />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Field label="Segmento" required>
-                  <select style={inputStyle} value={modal.segmento} onChange={e => set('segmento', e.target.value)}>
+                <Field label="Nicho" required>
+                  <select style={inputStyle} value={modal.nicho} onChange={e => set('nicho', e.target.value)}>
                     <option value="">Selecione...</option>
-                    {SEGMENTO_CHOICES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
                   </select>
+                  {mostrarNovoNicho ? (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                      <input style={inputStyle} value={novoNicho} onChange={e => setNovoNicho(e.target.value)} placeholder="Nome do novo nicho" />
+                      <button type="button" onClick={criarNicho}
+                        style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Salvar
+                      </button>
+                      <button type="button" onClick={() => { setMostrarNovoNicho(false); setNovoNicho('') }}
+                        style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setMostrarNovoNicho(true)}
+                      style={{ fontSize: 11, color: '#6b8fff', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, padding: 0 }}>
+                      + Novo nicho
+                    </button>
+                  )}
                 </Field>
                 <Field label="Público-alvo"><input style={inputStyle} value={modal.publico_alvo} onChange={e => set('publico_alvo', e.target.value)} placeholder="ex: mulheres 25-45 anos, classe B/C" /></Field>
               </div>

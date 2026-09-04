@@ -5,6 +5,7 @@ from rest_framework import status
 from .models import Prospecto
 from usuarios.models import Usuario
 from clientes.models import Cliente
+from nichos.models import Nicho
 
 
 def criar_prospecto(**kwargs):
@@ -81,12 +82,13 @@ class ProspectoCRUDTest(TestCase):
 
     def test_editar_prospecto(self):
         p = criar_prospecto()
+        nicho = Nicho.objects.create(nome='Pilates')
         self.client.force_authenticate(self.admin)
         url = reverse('prospectos-detail', args=[p.id])
-        res = self.client.patch(url, {'segmento': 'pilates'}, format='json')
+        res = self.client.patch(url, {'nicho': nicho.id}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         p.refresh_from_db()
-        self.assertEqual(p.segmento, 'pilates')
+        self.assertEqual(p.nicho, nicho)
 
 
 class ProspectoConverterTest(TestCase):
@@ -103,7 +105,7 @@ class ProspectoConverterTest(TestCase):
             nome_empresa='Studio Fluir',
             email='studio@fluir.com',
             telefone='34999990000',
-            segmento='pilates',
+            nicho=Nicho.objects.create(nome='Pilates'),
             cidade='Uberlândia',
             estado='MG',
             origem='indicacao',

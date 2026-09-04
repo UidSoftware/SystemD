@@ -9,7 +9,7 @@ class SocioProspectoInline(admin.TabularInline):
 
 @admin.register(Prospecto)
 class ProspectoAdmin(admin.ModelAdmin):
-    list_display = ('nome_empresa', 'segmento', 'responsavel', 'convertido', 'criado_em')
-    list_filter = ('convertido', 'ativo', 'segmento')
+    list_display = ('nome_empresa', 'nicho', 'responsavel', 'convertido', 'criado_em')
+    list_filter = ('convertido', 'ativo', 'nicho')
     search_fields = ('nome_empresa', 'socios__nome', 'socios__email')
     inlines = [SocioProspectoInline]

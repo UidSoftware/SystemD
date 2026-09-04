@@ -40,7 +40,7 @@ const SOCIO_VAZIO = { nome: '', email: '', telefone: '', whatsapp: '', cpf: '', 
 
 const PROSPECTO_VAZIO = {
   lead: null, cliente: null,
-  nome_empresa: '', segmento: '', cidade: '', estado: '', cnpj_cpf: '',
+  nome_empresa: '', nicho: null, cidade: '', estado: '', cnpj_cpf: '',
   origem: '', descricao_projeto: '', observacoes: '', responsavel: null,
   socios: [{ ...SOCIO_VAZIO, principal: true }],
 }
@@ -134,8 +134,11 @@ export default function ProspectosPage() {
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [usuarios, setUsuarios] = useState([])
   const [clientes, setClientes] = useState([])
+  const [nichos, setNichos] = useState([])
+  const [novoNicho, setNovoNicho] = useState('')
+  const [mostrarNovoNicho, setMostrarNovoNicho] = useState(false)
 
-  const [filtros, setFiltros] = useState({ segmento: '', cidade: '', responsavel: '', convertido: '' })
+  const [filtros, setFiltros] = useState({ nicho: '', cidade: '', responsavel: '', convertido: '' })
   const [filtrosAtivos, setFiltrosAtivos] = useState({})
 
   const [modal, setModal] = useState(null)
@@ -168,7 +171,18 @@ export default function ProspectosPage() {
     carregar()
     api.get('/auth/usuarios/', { headers: authHeader() }).then(r => setUsuarios(r.data.results || r.data)).catch(() => {})
     api.get('/clientes/', { params: { page_size: 200, ativo: true }, headers: authHeader() }).then(r => setClientes(r.data.results || r.data)).catch(() => {})
+    api.get('/nichos/', { params: { page_size: 200 }, headers: authHeader() }).then(r => setNichos(r.data.results || [])).catch(() => {})
   }, [accessToken])
+
+  const criarNicho = async () => {
+    const nome = novoNicho.trim()
+    if (!nome) return
+    const res = await api.post('/nichos/', { nome }, { headers: authHeader() })
+    setNichos(ns => [...ns, res.data].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setModal(m => ({ ...m, nicho: res.data.id }))
+    setNovoNicho('')
+    setMostrarNovoNicho(false)
+  }
 
   const filtrar = () => {
     const f = Object.fromEntries(Object.entries(filtros).filter(([, v]) => v !== ''))
@@ -178,7 +192,7 @@ export default function ProspectosPage() {
   }
 
   const limpar = () => {
-    setFiltros({ segmento: '', cidade: '', responsavel: '', convertido: '' })
+    setFiltros({ nicho: '', cidade: '', responsavel: '', convertido: '' })
     setFiltrosAtivos({})
     setPagina(1)
     carregar(1, {})
@@ -210,7 +224,7 @@ export default function ProspectosPage() {
       ...m,
       cliente: clienteId,
       nome_empresa: c.nome_empresa,
-      segmento: c.segmento || '',
+      nicho: c.nicho || null,
       cidade: c.cidade || '',
       estado: c.estado || '',
       cnpj_cpf: c.cnpj_cpf || '',
@@ -248,7 +262,7 @@ export default function ProspectosPage() {
     setDadosConverter({
       cliente_existente: null,
       nome_empresa: p.nome_empresa,
-      segmento: p.segmento || '',
+      nicho: p.nicho || null,
       cidade: p.cidade || '',
       estado: p.estado || '',
       cnpj_cpf: p.cnpj_cpf || '',
@@ -271,7 +285,7 @@ export default function ProspectosPage() {
       ...d,
       cliente_existente: clienteId,
       nome_empresa: c.nome_empresa,
-      segmento: c.segmento || '',
+      nicho: c.nicho || null,
       cidade: c.cidade || '',
       estado: c.estado || '',
       cnpj_cpf: c.cnpj_cpf || '',
@@ -306,7 +320,6 @@ export default function ProspectosPage() {
 
   const camposEmpresa = [
     { label: 'Nome da empresa *', field: 'nome_empresa' },
-    { label: 'Segmento', field: 'segmento' },
     { label: 'Cidade', field: 'cidade' },
     { label: 'Estado (UF)', field: 'estado' },
     { label: 'CNPJ/CPF', field: 'cnpj_cpf' },
@@ -331,13 +344,18 @@ export default function ProspectosPage() {
         {/* Filtros */}
         <div style={{ ...cardStyle, padding: '16px 20px', marginBottom: 20, overflow: 'visible' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-            {[{ label: 'Segmento', field: 'segmento' }, { label: 'Cidade', field: 'cidade' }].map(({ label, field }) => (
-              <div key={field}>
-                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>{label}</label>
-                <input type="text" style={inputStyle} value={filtros[field]}
-                  onChange={e => setFiltros(f => ({ ...f, [field]: e.target.value }))} />
-              </div>
-            ))}
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Nicho</label>
+              <select style={inputStyle} value={filtros.nicho} onChange={e => setFiltros(f => ({ ...f, nicho: e.target.value }))}>
+                <option value="">Todos</option>
+                {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Cidade</label>
+              <input type="text" style={inputStyle} value={filtros.cidade}
+                onChange={e => setFiltros(f => ({ ...f, cidade: e.target.value }))} />
+            </div>
             <div>
               <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Convertido</label>
               <select style={inputStyle} value={filtros.convertido}
@@ -382,7 +400,7 @@ export default function ProspectosPage() {
                 }
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 10 }}>
-                <div><div style={labelStyle}>Segmento</div><div style={valueStyle}>{p.segmento || '—'}</div></div>
+                <div><div style={labelStyle}>Nicho</div><div style={valueStyle}>{p.nicho_nome || '—'}</div></div>
                 <div><div style={labelStyle}>Cidade</div><div style={valueStyle}>{p.cidade || '—'}</div></div>
                 <div><div style={labelStyle}>Sócios</div><div style={valueStyle}>{p.socios?.length || 0}</div></div>
               </div>
@@ -413,7 +431,7 @@ export default function ProspectosPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Empresa', 'Sócio(s)', 'Segmento', 'Cidade', 'Responsável', 'Status', 'Ações'].map(h => (
+                {['Empresa', 'Sócio(s)', 'Nicho', 'Cidade', 'Responsável', 'Status', 'Ações'].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -439,7 +457,7 @@ export default function ProspectosPage() {
                       <div style={{ fontSize: 11, color: '#6b6b8a', marginTop: 2 }}>+{p.socios.length - 1} sócio{p.socios.length - 1 > 1 ? 's' : ''}</div>
                     )}
                   </td>
-                  <td style={tdStyle}>{p.segmento || '—'}</td>
+                  <td style={tdStyle}>{p.nicho_nome || '—'}</td>
                   <td style={tdStyle}>{p.cidade || '—'}</td>
                   <td style={tdStyle}>{p.responsavel_nome || '—'}</td>
                   <td style={tdStyle}>
@@ -517,6 +535,31 @@ export default function ProspectosPage() {
                     style={inputStyle} />
                 </div>
               ))}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Nicho</label>
+                <select value={modal.nicho || ''} onChange={e => setModal(m => ({ ...m, nicho: e.target.value || null }))} style={inputStyle}>
+                  <option value="">Selecione...</option>
+                  {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
+                </select>
+                {mostrarNovoNicho ? (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <input style={inputStyle} value={novoNicho} onChange={e => setNovoNicho(e.target.value)} placeholder="Nome do novo nicho" />
+                    <button type="button" onClick={criarNicho}
+                      style={{ background: '#063BF8', color: '#fff', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      Salvar
+                    </button>
+                    <button type="button" onClick={() => { setMostrarNovoNicho(false); setNovoNicho('') }}
+                      style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, cursor: 'pointer' }}>
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setMostrarNovoNicho(true)}
+                    style={{ fontSize: 11, color: '#6b8fff', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, padding: 0 }}>
+                    + Novo nicho
+                  </button>
+                )}
+              </div>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Responsável</label>
                 <select value={modal.responsavel || ''} onChange={e => setModal(m => ({ ...m, responsavel: e.target.value || null }))}
@@ -605,6 +648,16 @@ export default function ProspectosPage() {
                   style={{ ...inputStyle, opacity: dadosConverter.cliente_existente ? 0.6 : 1 }} />
               </div>
             ))}
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Nicho *</label>
+              <select value={dadosConverter.nicho || ''} disabled={Boolean(dadosConverter.cliente_existente)}
+                onChange={e => setDadosConverter(d => ({ ...d, nicho: e.target.value || null }))}
+                style={{ ...inputStyle, opacity: dadosConverter.cliente_existente ? 0.6 : 1 }}>
+                <option value="">Selecione...</option>
+                {nichos.map(n => <option key={n.id} value={n.id}>{n.nome}</option>)}
+              </select>
+            </div>
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, color: '#a78bca', marginBottom: 4, display: 'block' }}>Observações</label>

@@ -9,8 +9,8 @@ class SocioClienteInline(admin.TabularInline):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nome_empresa', 'segmento', 'dominio_email', 'usuario', 'ativo')
-    list_filter = ('segmento', 'estado', 'ativo')
+    list_display = ('nome_empresa', 'nicho', 'dominio_email', 'usuario', 'ativo')
+    list_filter = ('nicho', 'estado', 'ativo')
     search_fields = ('nome_empresa', 'socios__nome', 'socios__email', 'dominio_email')
     ordering = ('-criado_em',)
     inlines = [SocioClienteInline]

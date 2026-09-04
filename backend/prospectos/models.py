@@ -17,7 +17,12 @@ class Prospecto(models.Model):
     )
 
     nome_empresa  = models.CharField(max_length=150)
-    segmento      = models.CharField(max_length=50, blank=True)
+    nicho         = models.ForeignKey(
+        'nichos.Nicho',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='prospectos',
+    )
     cidade        = models.CharField(max_length=100, blank=True)
     estado        = models.CharField(max_length=2, blank=True)
     cnpj_cpf      = models.CharField(max_length=20, blank=True)

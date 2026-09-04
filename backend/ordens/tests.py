@@ -5,6 +5,7 @@ from django.test import TestCase
 from notificacoes.models import Notificacao, TipoNotificacao
 from prospectos.models import Prospecto
 from usuarios.models import Usuario
+from nichos.models import Nicho
 
 from .models import ArquiteturaTecnica, Entrevista
 
@@ -23,7 +24,7 @@ def criar_arquitetura(**kwargs):
         sistema='Sistema Teste',
         descricao='Descrição',
         cores_empresa='#000000',
-        segmento='OUTRO',
+        nicho=Nicho.objects.create(nome='Outro Teste'),
         orcamento_faixa='PEQUENO',
     )
     defaults = dict(

@@ -2947,3 +2947,64 @@ ter acesso, o externo nunca.
 externo toma 403 mesmo com o mesmo perfil, CLIENTE toma 403, reconectar
 atualiza em vez de duplicar, desconectar funciona). Suíte completa do
 backend 126/126 rodada contra imagem rebuilada antes do push.
+
+---
+
+### [2026-09-16] — Botão PDF para Orçamento (Manutenção #61)
+
+**Tarefas executadas:**
+- `backend/orcamentos/orcamento_pdf.py` (novo) — `gerar_orcamento_pdf(orcamento)`, reportlab, reaproveita `common/pdf_utils.py`
+- `@action GET /api/orcamentos/{id}/pdf/` no `OrcamentoViewSet`, `permission_classes=IsAdminOrOperacional` (mesmo padrão do resto do viewset)
+- `backend/orcamentos/tests.py` (novo, 10 testes) — 200+`application/pdf` p/ ADMIN/OPERACIONAL, 403 p/ FINANCEIRO/CLIENTE, 401 anônimo, 404 id inexistente, casos de borda (Prospecto sem Cliente, sem nenhum vínculo, desconto R$+% simultâneos)
+- Frontend: botão "🖨️ PDF" na tabela de `OrcamentosPage.jsx` (coluna de ações) + botão "🖨️ Gerar PDF" no rodapé do modal de edição — busca via `api` (interceptor injeta Bearer token) + abre blob em nova aba
+
+**Arquivos alterados:**
+- `backend/orcamentos/orcamento_pdf.py` (novo)
+- `backend/orcamentos/views.py`
+- `backend/orcamentos/tests.py` (novo)
+- `frontend/src/pages/sistema/OrcamentosPage.jsx`
+
+**Commits:**
+- `e526b4f` — feat(orcamentos): botao PDF para Orcamento (Manutencao 61)
+- `580d145` — feat(orcamentos): botao PDF na listagem e no modal de edicao (Manutencao 61)
+
+**Deploy:**
+- Data: 2026-09-16
+- Push: `git push origin main` → `1c8d270..580d145` — CI/CD GitHub Actions do backend disparado automaticamente
+- Health check backend pós-push: `GET /api/` → 200 OK
+- URL: https://uidsoftware.com.br
+- Status: ✅ Backend em produção via CI/CD. Frontend com deploy **pendente** (ver abaixo) — `OrcamentosPage.jsx` foi alterado
+
+**⚠️ Pendente — fora do escopo do Pilot, requer execução manual no host da VPS:**
+Esta alteração inclui frontend (`OrcamentosPage.jsx`) — o rebuild do bundle React não é
+automático via CI/CD (ver seção "Deploy frontend — 3 comandos obrigatórios" acima).
+O Pilot está proibido de rodar comandos Docker (regra absoluta do próprio agente —
+"ÚNICO deploy permitido: git push origin main"; mesma limitação já registrada nos
+ciclos de 02/06/2026, 16/08/2026 #34/#35, 21/08/2026 #46, 23/08/2026 #47/#48/#49/#50).
+Os passos abaixo precisam ser executados por alguém com acesso direto ao host da VPS:
+
+```bash
+# 1. Rebuild do frontend (obrigatório — OrcamentosPage.jsx alterado)
+docker compose -f /root/SystemD/docker-compose.prod.yml build --no-cache frontend-builder
+docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"
+docker compose -f /root/SystemD/docker-compose.prod.yml restart nginx
+
+# 2. Verificar bundle real servido (confirmar string 'Gerar PDF' no bundle)
+# curl -s https://uidsoftware.com.br/sistema/ | grep -o 'index-[^"]*\.js' | head -1
+# depois: curl -s https://uidsoftware.com.br/assets/<arquivo-acima> | grep -o 'Gerar PDF'
+
+# 3. Concluir a Manutenção #61 no Kanban (etapa → DEPLOYADO)
+docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 61
+```
+
+**Ressalva não bloqueante (Sentinel, não corrigida agora):** `OrcamentosPage.jsx`
+nunca teve layout de cards mobile (página não segue o padrão Mobile First do resto
+do sistema) — condição pré-existente, não regressão desta Manutenção. Botão PDF
+acessível em qualquer resolução porque a tabela é única (sem split responsivo).
+
+**Sentinel:**
+- `docker exec sytemd-backend-1 python manage.py test orcamentos --verbosity=2` → 10/10 OK
+- Suíte completa (`test`, sem app específico) → 136/136 OK, 0 falhas, 0 erros
+- `makemigrations orcamentos --check --dry-run` → "No changes detected" (sem migration necessária)
+- `npm run build` (frontend) → build limpo, string "Gerar PDF" confirmada no bundle
+- Resultado: APROVADO

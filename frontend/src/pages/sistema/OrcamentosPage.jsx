@@ -262,6 +262,18 @@ export default function OrcamentosPage() {
     setModalConfirmar({ msg: 'Excluir este orçamento?', onConfirm: async () => { await api.delete('/orcamentos/' + id + '/'); carregar(pagina) } })
   }
 
+  // RF10/RF11 — endpoint exige JWT no header; window.open() não envia Authorization,
+  // então busca via api (interceptor já injeta o Bearer token) e abre o blob em nova aba.
+  const abrirPdf = async (id) => {
+    try {
+      const res = await api.get(`/orcamentos/${id}/pdf/`, { responseType: 'blob' })
+      const blobUrl = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      window.open(blobUrl, '_blank')
+    } catch (e) {
+      setErro('Erro ao gerar PDF do orçamento.')
+    }
+  }
+
   const setItem = (idx, field, val) => setModal(m => {
     const itens = [...m.itens]
     itens[idx] = { ...itens[idx], [field]: val, ordem: idx + 1 }
@@ -437,6 +449,10 @@ export default function OrcamentosPage() {
                         : <span style={{ color: '#fbbf24', fontSize: 12 }}>⏳ Pendente</span>}
                     </td>
                     <td style={tdS}>
+                      <button onClick={() => abrirPdf(o.id)}
+                        style={{ background: 'rgba(16,185,129,0.12)', color: '#34d399', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
+                        🖨️ PDF
+                      </button>
                       <button onClick={() => abrirEditar(o)}
                         style={{ background: 'rgba(6,59,248,0.15)', color: '#6b8fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
                         Editar
@@ -646,6 +662,12 @@ export default function OrcamentosPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              {editandoId && (
+                <button onClick={() => abrirPdf(editandoId)}
+                  style={{ background: 'rgba(16,185,129,0.12)', color: '#34d399', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, cursor: 'pointer', marginRight: 'auto' }}>
+                  🖨️ Gerar PDF
+                </button>
+              )}
               <button onClick={() => setModal(null)}
                 style={{ background: 'rgba(255,255,255,0.06)', color: '#a78bca', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, cursor: 'pointer' }}>
                 Cancelar

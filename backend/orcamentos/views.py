@@ -49,6 +49,12 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             return Response({'ok': True, 'contratid_id': result})
         return Response({'ok': False, 'erro': result}, status=500)
 
+    @action(detail=True, methods=['get'], url_path='pdf', permission_classes=[IsAdminOrOperacional])
+    def pdf(self, request, pk=None):
+        from .orcamento_pdf import gerar_orcamento_pdf
+        orcamento = self.get_object()
+        return gerar_orcamento_pdf(orcamento)
+
 
 class PedidoViewSet(viewsets.ModelViewSet):
     """Sem sync com ContratID — essa integração é exclusiva do Orcamento."""

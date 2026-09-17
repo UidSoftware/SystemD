@@ -13,13 +13,14 @@ const thS = { padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#a78b
 const tdS = { padding: '10px 14px', fontSize: 13, color: '#e2e8f0', borderBottom: '1px solid rgba(255,255,255,0.04)' }
 const card = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }
 
-function Chip({ label, active, onClick }) {
+function Chip({ label, active, onClick, disabled }) {
   return (
-    <button type="button" onClick={onClick} style={{
-      padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+    <button type="button" disabled={disabled} onClick={onClick} style={{
+      padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: disabled ? 'not-allowed' : 'pointer',
       background: active ? 'rgba(6,59,248,0.15)' : 'rgba(255,255,255,0.04)',
       border: active ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
       color: active ? '#6b8fff' : '#a78bca', fontWeight: active ? 600 : 400,
+      opacity: disabled ? 0.45 : 1,
     }}>{label}</button>
   )
 }
@@ -156,9 +157,9 @@ export default function ArquiteturaTecnicaFormPage() {
     }))
   }
 
-  const chips = (field, options) => (
+  const chips = (field, options, disabled = false) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-      {options.map(op => <Chip key={op} label={op} active={modal[field] === op} onClick={() => set(field, op)} />)}
+      {options.map(op => <Chip key={op} label={op} active={modal[field] === op} disabled={disabled} onClick={() => set(field, op)} />)}
     </div>
   )
 
@@ -175,7 +176,9 @@ export default function ArquiteturaTecnicaFormPage() {
     } finally { setSalvando(false) }
   }
 
-  const divergencias = modal
+  const stackTravada = modal?.base_projeto === 'UIDCORE'
+
+  const divergencias = modal && !stackTravada
     ? Object.entries(STACK_PADRAO).filter(([c, p]) => modal[c] !== p).map(([c, p]) => ({ c, label: STACK_LABELS[c], padrao: p, atual: modal[c] }))
     : []
 
@@ -278,8 +281,8 @@ export default function ArquiteturaTecnicaFormPage() {
             <Sec num="00" title="Base do Projeto">
               <div style={{ display: 'flex', gap: 10 }}>
                 <BaseCard
-                  value="UIDCORE" active={modal.base_projeto === 'UIDCORE'} onClick={() => set('base_projeto', 'UIDCORE')}
-                  titulo="🧬 Fork do UidCore" desc="Cadastros, financeiro/LivroCaixa, estoque e RBAC já prontos — Planner adapta ao nicho em vez de refazer do zero." />
+                  value="UIDCORE" active={modal.base_projeto === 'UIDCORE'} onClick={() => setModal(m => ({ ...m, base_projeto: 'UIDCORE', ...STACK_PADRAO }))}
+                  titulo="🧬 Fork do UidCore" desc="Cadastros, financeiro/LivroCaixa, estoque e RBAC já prontos — Planner adapta ao nicho em vez de refazer do zero. Stack já vem definida pelo UidCore." />
                 <BaseCard
                   value="ZERO" active={modal.base_projeto === 'ZERO'} onClick={() => set('base_projeto', 'ZERO')}
                   titulo="🌱 Do zero" desc="Stack padrão Uid montada do zero pelo Blueprint/Forge/Loom — sem herdar nenhum módulo pronto." />
@@ -313,40 +316,44 @@ export default function ArquiteturaTecnicaFormPage() {
               <Fld label="Responsável técnico"><input style={IS} value={modal.responsavel} onChange={e => set('responsavel', e.target.value)} placeholder="seu nome" /></Fld>
             </Sec>
 
-            <Sec num="02" title="Stack Backend">
-              <Fld label="Linguagem">{chips('linguagem', ['Python', 'PHP', 'Node.js', 'Java', 'Go', 'Outro'])}</Fld>
-              <Fld label="Framework">{chips('framework', ['Django REST Framework', 'FastAPI', 'Laravel', 'Express', 'Spring Boot', 'Nenhum'])}</Fld>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
-                <Fld label="Banco de dados">
-                  <select style={IS} value={modal.banco} onChange={e => set('banco', e.target.value)}>
-                    {['PostgreSQL','MySQL','SQLite','MongoDB','Redis'].map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </Fld>
-                <Fld label="Autenticação">
-                  <select style={IS} value={modal.autenticacao} onChange={e => set('autenticacao', e.target.value)}>
-                    {['JWT','Session / Cookie','OAuth2','API Key'].map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </Fld>
+            <Sec num="02" title={stackTravada ? 'Stack Backend (herdada do UidCore 🔒)' : 'Stack Backend'}>
+              <div style={{ opacity: stackTravada ? 0.5 : 1, pointerEvents: stackTravada ? 'none' : 'auto' }}>
+                <Fld label="Linguagem">{chips('linguagem', ['Python', 'PHP', 'Node.js', 'Java', 'Go', 'Outro'], stackTravada)}</Fld>
+                <Fld label="Framework">{chips('framework', ['Django REST Framework', 'FastAPI', 'Laravel', 'Express', 'Spring Boot', 'Nenhum'], stackTravada)}</Fld>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
+                  <Fld label="Banco de dados">
+                    <select disabled={stackTravada} style={IS} value={modal.banco} onChange={e => set('banco', e.target.value)}>
+                      {['PostgreSQL','MySQL','SQLite','MongoDB','Redis'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </Fld>
+                  <Fld label="Autenticação">
+                    <select disabled={stackTravada} style={IS} value={modal.autenticacao} onChange={e => set('autenticacao', e.target.value)}>
+                      {['JWT','Session / Cookie','OAuth2','API Key'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </Fld>
+                </div>
+                <Fld label="Padrão de API">{chips('padrao_api', ['REST', 'GraphQL', 'gRPC', 'Sem API'], stackTravada)}</Fld>
               </div>
-              <Fld label="Padrão de API">{chips('padrao_api', ['REST', 'GraphQL', 'gRPC', 'Sem API'])}</Fld>
             </Sec>
 
-            <Sec num="03" title="Stack Frontend">
-              <Fld label="Framework">{chips('frontend_fw', ['React 18', 'Vue 3', 'Angular', 'Next.js', 'HTML/CSS puro', 'Sem frontend'])}</Fld>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
-                <Fld label="Build tool">
-                  <select style={IS} value={modal.build_tool} onChange={e => set('build_tool', e.target.value)}>
-                    {['Vite','Webpack','Create React App','Não aplicável'].map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </Fld>
-                <Fld label="Estilização">
-                  <select style={IS} value={modal.estilizacao} onChange={e => set('estilizacao', e.target.value)}>
-                    {['Tailwind CSS','CSS Modules','Styled Components','SASS/SCSS','CSS puro'].map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </Fld>
+            <Sec num="03" title={stackTravada ? 'Stack Frontend (herdada do UidCore 🔒)' : 'Stack Frontend'}>
+              <div style={{ opacity: stackTravada ? 0.5 : 1, pointerEvents: stackTravada ? 'none' : 'auto' }}>
+                <Fld label="Framework">{chips('frontend_fw', ['React 18', 'Vue 3', 'Angular', 'Next.js', 'HTML/CSS puro', 'Sem frontend'], stackTravada)}</Fld>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
+                  <Fld label="Build tool">
+                    <select disabled={stackTravada} style={IS} value={modal.build_tool} onChange={e => set('build_tool', e.target.value)}>
+                      {['Vite','Webpack','Create React App','Não aplicável'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </Fld>
+                  <Fld label="Estilização">
+                    <select disabled={stackTravada} style={IS} value={modal.estilizacao} onChange={e => set('estilizacao', e.target.value)}>
+                      {['Tailwind CSS','CSS Modules','Styled Components','SASS/SCSS','CSS puro'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </Fld>
+                </div>
+                <Fld label="Estado global">{chips('estado_global', ['Zustand', 'Redux Toolkit', 'Context API', 'Pinia', 'Não aplicável'], stackTravada)}</Fld>
+                <Fld label="Server state">{chips('server_state', ['TanStack Query', 'SWR', 'Apollo Client', 'Fetch direto', 'Não aplicável'], stackTravada)}</Fld>
               </div>
-              <Fld label="Estado global">{chips('estado_global', ['Zustand', 'Redux Toolkit', 'Context API', 'Pinia', 'Não aplicável'])}</Fld>
-              <Fld label="Server state">{chips('server_state', ['TanStack Query', 'SWR', 'Apollo Client', 'Fetch direto', 'Não aplicável'])}</Fld>
             </Sec>
 
             <Sec num="04" title="Infraestrutura">

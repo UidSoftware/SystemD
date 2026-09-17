@@ -68,6 +68,7 @@ class Command(BaseCommand):
                     'notificacao_id': notificacao.id,
                     'arquitetura_id': arquitetura.id,
                     'projeto': arquitetura.projeto,
+                    'base_projeto': arquitetura.base_projeto,
                     'entrevista_sistema': arquitetura.entrevista.sistema,
                     'prospecto_nome': arquitetura.entrevista.prospecto.nome_empresa,
                     'core_goal': resumir_descricao(arquitetura.entrevista.descricao),

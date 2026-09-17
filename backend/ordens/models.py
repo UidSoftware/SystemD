@@ -199,6 +199,15 @@ class Entrevista(models.Model):
 class ArquiteturaTecnica(models.Model):
     entrevista         = models.ForeignKey('ordens.Entrevista', on_delete=PROTECT, related_name='arquiteturas')
 
+    # Base do projeto — de onde o Planner deve partir ao montar o Fluxo 1
+    BASE_ZERO = 'ZERO'
+    BASE_UIDCORE = 'UIDCORE'
+    BASE_CHOICES = [
+        (BASE_ZERO, 'Do zero (stack padrão Uid)'),
+        (BASE_UIDCORE, 'Fork do UidCore (template multi-nicho)'),
+    ]
+    base_projeto       = models.CharField(max_length=20, choices=BASE_CHOICES, default=BASE_UIDCORE)
+
     # Identificação
     projeto            = models.CharField(max_length=200)
     cliente            = models.CharField(max_length=200)

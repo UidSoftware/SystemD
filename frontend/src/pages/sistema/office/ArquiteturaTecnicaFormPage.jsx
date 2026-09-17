@@ -47,6 +47,18 @@ function Sec({ num, title, children }) {
     </div>
   )
 }
+function BaseCard({ value, active, onClick, titulo, desc }) {
+  return (
+    <button type="button" onClick={onClick} style={{
+      flex: 1, textAlign: 'left', cursor: 'pointer', padding: '14px 16px', borderRadius: 10,
+      background: active ? 'rgba(6,59,248,0.15)' : 'rgba(255,255,255,0.03)',
+      border: active ? '1px solid #063BF8' : '1px solid rgba(255,255,255,0.1)',
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: active ? '#6b8fff' : '#f1f5f9', marginBottom: 4 }}>{titulo}</div>
+      <div style={{ fontSize: 11, color: '#a78bca', lineHeight: 1.5 }}>{desc}</div>
+    </button>
+  )
+}
 function Fld({ label, required, children }) {
   return (
     <div style={{ marginBottom: 9 }}>
@@ -74,6 +86,7 @@ const STACK_LABELS = {
 const hoje = new Date().toISOString().split('T')[0]
 const FORM_VAZIO = {
   entrevista: '',
+  base_projeto: 'UIDCORE',
   projeto: '', cliente: '', versao: '1.0.0', data_levantamento: hoje, responsavel: '',
   linguagem: 'Python', framework: 'Django REST Framework', banco: 'PostgreSQL',
   autenticacao: 'JWT', padrao_api: 'REST',
@@ -189,21 +202,26 @@ export default function ArquiteturaTecnicaFormPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Projeto', 'Cliente', 'Stack BE', 'Stack FE', 'Deploy', 'Versão', 'Data', 'Ações'].map(h => (
+                {['Projeto', 'Base', 'Cliente', 'Stack BE', 'Stack FE', 'Deploy', 'Versão', 'Data', 'Ações'].map(h => (
                   <th key={h} style={thS}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {carregando ? (
-                <tr><td colSpan={8} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</td></tr>
+                <tr><td colSpan={9} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Carregando...</td></tr>
               ) : lista.length === 0 ? (
-                <tr><td colSpan={8} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhuma arquitetura encontrada</td></tr>
+                <tr><td colSpan={9} style={{ ...tdS, textAlign: 'center', color: '#a78bca', padding: 32 }}>Nenhuma arquitetura encontrada</td></tr>
               ) : lista.map(a => (
                 <tr key={a.id}
                   onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(6,59,248,0.05)'}
                   onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
                   <td style={{ ...tdS, fontWeight: 600 }}>{a.projeto}</td>
+                  <td style={tdS}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: a.base_projeto === 'ZERO' ? 'rgba(255,255,255,0.08)' : 'rgba(6,59,248,0.15)', color: a.base_projeto === 'ZERO' ? '#a78bca' : '#6b8fff' }}>
+                      {a.base_projeto === 'ZERO' ? '🌱 Zero' : '🧬 UidCore'}
+                    </span>
+                  </td>
                   <td style={tdS}>{a.cliente}</td>
                   <td style={{ ...tdS, fontSize: 12, color: '#a78bca' }}>{a.linguagem} / {a.framework?.split(' ')[0]}</td>
                   <td style={{ ...tdS, fontSize: 12, color: '#a78bca' }}>{a.frontend_fw}</td>
@@ -256,6 +274,17 @@ export default function ArquiteturaTecnicaFormPage() {
                 ))}
               </div>
             )}
+
+            <Sec num="00" title="Base do Projeto">
+              <div style={{ display: 'flex', gap: 10 }}>
+                <BaseCard
+                  value="UIDCORE" active={modal.base_projeto === 'UIDCORE'} onClick={() => set('base_projeto', 'UIDCORE')}
+                  titulo="🧬 Fork do UidCore" desc="Cadastros, financeiro/LivroCaixa, estoque e RBAC já prontos — Planner adapta ao nicho em vez de refazer do zero." />
+                <BaseCard
+                  value="ZERO" active={modal.base_projeto === 'ZERO'} onClick={() => set('base_projeto', 'ZERO')}
+                  titulo="🌱 Do zero" desc="Stack padrão Uid montada do zero pelo Blueprint/Forge/Loom — sem herdar nenhum módulo pronto." />
+              </div>
+            </Sec>
 
             <Sec num="01" title="Identificação">
               <Fld label="Entrevista de origem" required>

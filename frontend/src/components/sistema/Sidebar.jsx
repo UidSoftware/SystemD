@@ -240,20 +240,33 @@ function SubNav({ items, depth = 0, onClose, location }) {
             key={item.path}
             to={item.path}
             onClick={onClose}
-            style={({ isActive: a }) => ({
+            style={{
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               padding: depth === 0 ? '7px 16px 7px 20px' : '6px 16px 6px 20px',
               fontSize: '0.78rem',
-              fontWeight: 500,
-              color: a ? '#f1f5f9' : 'var(--color-text-muted)',
+              fontWeight: isActive ? 700 : 500,
+              color: isActive ? '#f1f5f9' : 'var(--color-text-muted)',
               textDecoration: 'none',
               borderRadius: 6,
               margin: '1px 8px 1px 0',
-              backgroundColor: a ? 'rgba(6,59,248,0.1)' : 'transparent',
+              backgroundColor: isActive ? 'rgba(6,59,248,0.14)' : 'transparent',
+              borderLeft: isActive ? '2px solid var(--color-brand-blue)' : '2px solid transparent',
               transition: 'all 0.15s ease',
-            })}
+            }}
+            onMouseEnter={e => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'
+                e.currentTarget.style.color = 'var(--color-text-sub)'
+              }
+            }}
+            onMouseLeave={e => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = 'var(--color-text-muted)'
+              }
+            }}
           >
             <span style={{ fontSize: 14, lineHeight: 1, width: 18, textAlign: 'center', flexShrink: 0 }}>{item.emoji || '·'}</span>
             {item.label}

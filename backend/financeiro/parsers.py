@@ -179,6 +179,24 @@ def parse_btg(texto: str, ano: int | None = None) -> list[dict]:
     if ano is None:
         ano = datetime.now().year
 
+    # Realocação automática entre "bolsos" do mesmo BTG (Conta Corrente ↔
+    # Conta Remunerada) sempre aparece como DUAS linhas no extrato (valor
+    # igual, sinal oposto, mesma data) — é rendimento automático varrendo
+    # dinheiro pra aplicação e de volta, efeito líquido ZERO na conta, não é
+    # uma transação externa de verdade (mesma regra já documentada pro
+    # Livro Caixa: "transferência entre bolsos do mesmo banco... não deve
+    # contar"). Sem filtrar aqui, essas duas linhas entram na lista ANTES
+    # da transação real do mesmo dia/valor e roubam o match dela no
+    # conciliar_extrato, sobrando como falso "Faltando sistema" pra
+    # transação que na verdade já está lançada certinha (achado real:
+    # BTG abr/2026 e jul/2026, R$200 e R$204).
+    _DESCRICOES_INTERNAS_BTG = (
+        'aplicação conta remunerada',
+        'débito na conta corrente',
+        'resgate conta remunerada',
+        'crédito na conta corrente',
+    )
+
     resultados = []
     padrao = re.compile(
         r'(\d{2}/\d{2}(?:/\d{2,4})?)\s+'
@@ -190,6 +208,8 @@ def parse_btg(texto: str, ano: int | None = None) -> list[dict]:
     for linha in texto.splitlines():
         linha = linha.strip()
         if not linha or any(k in linha for k in ['Saldo', 'Total', 'Data', 'Extrato']):
+            continue
+        if any(p in linha.lower() for p in _DESCRICOES_INTERNAS_BTG):
             continue
         m = padrao.search(linha)
         if m:

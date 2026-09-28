@@ -11,7 +11,9 @@ from financeiro.models import (
     Aporte, Categoria, Conta, ConciliacaoExtrato, Despesa, ItemConciliacao,
     LivroCaixa, PadraoSeguroConciliacao, Receita, TipoLancamento,
 )
-from financeiro.parsers import extrair_texto_pdf, inferir_categoria_descricao, parse_btg, parse_c6
+from financeiro.parsers import (
+    extrair_texto_pdf, inferir_categoria_descricao, parse_btg, parse_c6, parse_c6_fatura,
+)
 
 
 class Command(BaseCommand):
@@ -62,28 +64,60 @@ class Command(BaseCommand):
         except Exception as e:
             raise CommandError(f'Erro ao ler PDF: {e}')
 
-        # Parseia de acordo com o banco
+        # Parseia de acordo com o TIPO de documento — extrato de conta
+        # corrente (parse_c6/parse_btg) e fatura de cartão (parse_c6_fatura)
+        # têm layouts completamente diferentes, não dá pra decidir só pelo
+        # nome do banco. tipo=CARTEIRA é sempre fatura.
         ano = periodo.year
-        if 'C6' in nome_conta:
+        eh_fatura_cartao = conta.tipo == 'CARTEIRA'
+        if eh_fatura_cartao:
+            transacoes_banco = parse_c6_fatura(texto, ano=ano)
+        elif 'C6' in nome_conta:
             transacoes_banco = parse_c6(texto, ano=ano)
         else:
             transacoes_banco = parse_btg(texto, ano=ano)
 
-        # Filtra só o mês do período
-        transacoes_banco = [
-            t for t in transacoes_banco
-            if t['data'].year == periodo.year and t['data'].month == periodo.month
-        ]
+        if eh_fatura_cartao:
+            # Fatura de cartão pode listar compra de mês anterior ao
+            # vencimento (settlement internacional atrasado é comum — ver
+            # parse_c6_fatura) — filtrar por mês do período descartaria
+            # transação real. A janela de comparação com o sistema segue as
+            # próprias datas encontradas na fatura (±1 dia de tolerância),
+            # não o mês do arquivo — pega certo mesmo quando a fatura cruza
+            # meses, e não arrasta pra dentro lançamentos do mês do período
+            # que não têm nada a ver com essa fatura específica.
+            if transacoes_banco:
+                datas = [t['data'] for t in transacoes_banco]
+                primeiro_dia = min(datas) - timedelta(days=1)
+                ultimo_dia   = max(datas) + timedelta(days=2)
+            else:
+                # Fatura sem transações (R$0,00) — nada foi faturado NESTE
+                # ciclo ainda; não é o mesmo que "mês sem atividade". O
+                # settlement internacional atrasado pode faturar tudo junto
+                # num ciclo futuro (achado real: compras de mar/abr só
+                # apareceram faturadas em maio). Comparar contra o mês
+                # inteiro do Livro Caixa aqui criaria falso "Faltando banco"
+                # pra compra que já está certa, só ainda não foi cobrada —
+                # janela vazia de propósito (gte==lt não retorna nada).
+                primeiro_dia = periodo
+                ultimo_dia = periodo
+        else:
+            # Extrato de conta corrente: transações realmente pertencem ao
+            # mês do arquivo — filtra fora qualquer ruído de borda de mês.
+            transacoes_banco = [
+                t for t in transacoes_banco
+                if t['data'].year == periodo.year and t['data'].month == periodo.month
+            ]
+
+            primeiro_dia = periodo
+            if periodo.month == 12:
+                ultimo_dia = date(periodo.year + 1, 1, 1)
+            else:
+                ultimo_dia = date(periodo.year, periodo.month + 1, 1)
 
         self.stdout.write(f'   Transações no extrato: {len(transacoes_banco)}')
 
-        # Busca lançamentos no sistema para o período
-        primeiro_dia = periodo
-        if periodo.month == 12:
-            ultimo_dia = date(periodo.year + 1, 1, 1)
-        else:
-            ultimo_dia = date(periodo.year, periodo.month + 1, 1)
-
+        # Busca lançamentos no sistema na janela definida acima
         lancamentos_sistema = list(
             LivroCaixa.objects.filter(
                 conta=conta,

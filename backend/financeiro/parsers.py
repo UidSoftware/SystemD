@@ -96,6 +96,75 @@ def parse_c6(texto: str, ano: int | None = None) -> list[dict]:
     return resultados
 
 
+_MESES_PT = {
+    'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+    'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12,
+}
+
+
+def parse_c6_fatura(texto: str, ano: int | None = None) -> list[dict]:
+    """
+    Parseia FATURA de cartão de crédito C6 — documento bem diferente do
+    extrato de conta corrente (parse_c6): é a fatura mensal (compras,
+    IOF, pagamentos), sem as colunas "Entrada/Saída" do extrato.
+
+    Formato de cada linha, na seção "Transações do cartão principal":
+        DD mmm   DESCRIÇÃO   [info extra: USD .../Cotação USD: ...]   VALOR
+    Sem sinal — tudo é débito na fatura (SAIDA), exceto linhas de
+    pagamento/crédito (descrição contém "pagamento" — cobre tanto
+    "Inclusao de Pagamento" quanto "Pagamento CDB", os dois rótulos reais
+    já vistos), que reduzem o valor devido (ENTRADA).
+
+    Importante: a data de cada transação pode cair em mês ANTERIOR ao mês
+    de vencimento da fatura — settlement internacional atrasado é comum
+    (ex: compra feita em 23/mai só aparece na fatura com vencimento em
+    julho). Por isso esta função NÃO filtra por mês — quem chama decide a
+    janela de comparação com o Livro Caixa (ver conciliar_extrato.py).
+    """
+    if ano is None:
+        ano = datetime.now().year
+
+    inicio = texto.find('Transações do cartão principal')
+    if inicio == -1:
+        return []
+    trecho = texto[inicio:]
+
+    padrao = re.compile(r'^\s*(\d{1,2})\s+([a-z]{3})\s+(.+?)\s{2,}([\d.,]+)\s*$')
+
+    resultados = []
+    for linha in trecho.splitlines():
+        m = padrao.match(linha)
+        if not m:
+            continue
+
+        dia_str, mes_str, desc, valor_str = m.groups()
+        mes_num = _MESES_PT.get(mes_str.lower())
+        if not mes_num:
+            continue
+
+        try:
+            data = datetime(ano, mes_num, int(dia_str)).date()
+        except (ValueError, OverflowError):
+            continue
+
+        try:
+            valor = Decimal(valor_str.replace('.', '').replace(',', '.'))
+        except Exception:
+            continue
+
+        desc_limpa = re.sub(r'\s+', ' ', desc).strip()
+        tipo = 'ENTRADA' if 'pagamento' in desc_limpa.lower() else 'SAIDA'
+
+        resultados.append({
+            'data': data,
+            'descricao': desc_limpa[:500],
+            'valor': valor,
+            'tipo': tipo,
+        })
+
+    return resultados
+
+
 def parse_btg(texto: str, ano: int | None = None) -> list[dict]:
     """
     Parseia extrato BTG. Formato mais simples — pode não ter transações frequentes.

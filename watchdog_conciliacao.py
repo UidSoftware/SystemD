@@ -24,7 +24,19 @@ log = logging.getLogger(__name__)
 
 
 def inferir_conta(nome_arquivo):
+    """
+    Classifica o arquivo pelo nome e retorna o nome da Conta correspondente.
+    'FATURA-C6-...' é a fatura do CARTÃO (conta "Cartão C6", tipo CARTEIRA)
+    — documento de compras/juros/IOF, layout bem diferente do extrato de
+    conta corrente. Checar 'FATURA' ANTES do 'C6' genérico é o que evita
+    misturar os dois: sem essa checagem a fatura ia pra conta corrente "C6"
+    e o parser de extrato não reconhecia o formato, zerando o total do
+    banco e criando falsas divergências "Faltando banco" todo mês (achado
+    real, conciliação C6, jan-jul/2026 — corrigido em 28/09/2026).
+    """
     nome = nome_arquivo.upper()
+    if 'FATURA' in nome and 'C6' in nome:
+        return 'Cartão C6'
     if 'C6' in nome:
         return 'C6'
     if 'BTG' in nome:

@@ -117,13 +117,22 @@ class Command(BaseCommand):
 
         self.stdout.write(f'   Transações no extrato: {len(transacoes_banco)}')
 
-        # Busca lançamentos no sistema na janela definida acima
+        # Busca lançamentos no sistema na janela definida acima.
+        # NÃO filtra estornado=False aqui: um lançamento estornado ainda é
+        # dinheiro real que passou pela conta (saiu e voltou) — o extrato do
+        # banco mostra as duas pontas como transações reais, então a
+        # conciliação também precisa considerar as duas, senão o par vira
+        # falso "Faltando sistema" mesmo já lançado corretamente (achado
+        # real: Despesa+Estorno "VPS Integrator" de 03/03/2026, filtrados
+        # daqui e aparecendo como se nunca tivessem sido registrados).
+        # `estornado=False` continua fazendo sentido em consultas de saldo/
+        # DRE (regime de competência), só não aqui, que é conciliação de
+        # caixa de verdade.
         lancamentos_sistema = list(
             LivroCaixa.objects.filter(
                 conta=conta,
                 data__gte=primeiro_dia,
                 data__lt=ultimo_dia,
-                estornado=False,
             ).order_by('data', 'created_at')
         )
 

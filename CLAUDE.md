@@ -736,6 +736,65 @@ Signal OS (`ordens/signals.py`):
 - OS status→CONTRATO → cria Receitas (ENTRADA_CONTRATO + 3x MENSALIDADE)
   Usa `_add_months()` customizada — **não usar `python-dateutil`** (não instalado)
 
+### Conciliação Bancária (`watchdog_conciliacao.py` / `conciliar_extrato`)
+
+Contas hoje: `C6` (corrente), `BTG` (corrente), `Cartão C6` (tipo CARTEIRA
+— fatura, não extrato). Arquivos chegam em
+`/mnt/dropbox/01 - Contabilidade/Extratos Onvio/Extratos` via rclone
+(sync com o Onvio do contador — **nunca** reorganizar essa pasta em
+subpastas, é estado externo compartilhado; classificação é sempre por
+código, nunca por mover arquivo).
+
+```
+watchdog_conciliacao.py (systemd service conciliacao-watchdog, roda no
+HOST, não no container — polling a cada 300s):
+  inferir_conta(nome) → checa 'FATURA' antes de 'C6' genérico:
+    'FATURA' + 'C6' no nome → conta "Cartão C6"
+    'C6'    no nome → conta "C6"
+    'BTG'   no nome → conta "BTG"
+  dispara: docker exec sytemd-backend-1 python manage.py conciliar_extrato
+           --arquivo <path> --conta <nome> --auto
+
+conciliar_extrato.py (management command, financeiro/):
+  dispatch de parser por conta.tipo:
+    tipo=CARTEIRA        → parsers.parse_c6_fatura (fatura de cartão)
+    tipo=CORRENTE, 'C6'  → parsers.parse_c6       (extrato conta corrente)
+    tipo=CORRENTE, senão → parsers.parse_btg      (extrato conta corrente)
+  janela de comparação com LivroCaixa:
+    CARTEIRA  → datas da PRÓPRIA fatura ±1 dia (nunca mês do arquivo —
+                settlement internacional pode faturar em ciclo atrasado)
+    CORRENTE  → mês calendário do arquivo (comportamento original)
+  query de LivroCaixa NÃO filtra estornado=False — estorno é dinheiro
+    real que já passou pela conta, tem que casar com o extrato também.
+```
+
+**Três bugs reais corrigidos nessa área (28/09/2026, commits `91466c3`,
+`e6e0631`, `3c3f159`) — regra geral em
+`/home/notuidsoftware/.claude/CLAUDE.md` (Módulo Financeiro), aqui só o
+resumo técnico de onde mexer se reaparecer algo parecido:**
+
+1. `inferir_conta()` não distinguia `Fatura-C6-*.pdf` de `C6-*.pdf` —
+   fatura ia pra conta corrente errada, `parse_c6` não reconhecia o
+   layout de fatura (zerava total_banco), todo lançamento do período
+   virava falso "Faltando banco". 7 meses (jan-jul/2026) afetados.
+2. `estornado=False` na query de `lancamentos_sistema` escondia qualquer
+   par Despesa+Estorno já lançado corretamente da comparação com o banco
+   — aparecia como "Faltando sistema" mesmo já registrado certo.
+3. `parse_btg` não filtrava as linhas de realocação automática BTG
+   (Conta Corrente ↔ Conta Remunerada — "Aplicação Conta Remunerada" /
+   "Débito na Conta Corrente" / "Resgate Conta Remunerada" / "Crédito na
+   Conta Corrente", sempre em par valor igual/sinal oposto mesma data) —
+   essas linhas entravam na lista ANTES da transação externa real do
+   mesmo dia/valor e roubavam o match dela.
+
+Se aparecer divergência estranha de novo na Conciliação: primeiro
+`ConciliacaoExtrato.objects.filter(...)` pra ver qual arquivo gerou o
+registro e o `total_banco`/`total_sistema`; se `total_banco=0` com
+transações reais no Livro Caixa, suspeitar de conta errada ou parser não
+reconhecendo o layout; se os totais batem mas tem item "Faltando" sozinho
+(sem par), suspeitar de linha interna do banco (realocação/estorno) não
+filtrada antes do match.
+
 ---
 
 ## Auth JWT

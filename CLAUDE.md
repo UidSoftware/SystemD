@@ -138,7 +138,7 @@ A Uid foi construída pra durar além das pessoas que a fundaram. O que se deixa
 | Transferência entre contas | `POST /api/financeiro/contas/{id}/transferir/` — cria dois `LivroCaixa` direto (sem model próprio): SAIDA da origem + ENTRADA no destino, ambos com `origem='TRANSFER'` (8 chars, cabe no `max_length=10`). Usa `select_for_update()` + `transaction.atomic()` para saldo seguro. Não passa por `_gerar_lancamento` (sem duplicate guard por `origem_id`). |
 | Sidebar — emojis no menu | A `Sidebar.jsx` usa emojis (campo `emoji` em cada item do menu) em vez de SVG icons para itens principais e submenus. O objeto `icons` com SVGs foi mantido mas não é renderizado. Ao adicionar novo item de menu, **sempre incluir `emoji`** no objeto do item. |
 | `OrigemLancamento` max_length | Campo `origem` no `LivroCaixa` tem `max_length=10`. Choices atuais: APORTE(6), RECEITA(7), DESPESA(7), MANUAL(6), TRANSFER(8). Nunca adicionar choice com mais de 10 chars sem migration que aumente o max_length. |
-| Deploy frontend — 3 comandos obrigatórios | Qualquer alteração no frontend **exige os 3 comandos na sequência**, senão o nginx continua servindo o build antigo e Ctrl+Shift+R não resolve: (1) `docker compose -f docker-compose.prod.yml build --no-cache frontend-builder` → (2) `docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"` → (3) `docker compose -f docker-compose.prod.yml restart nginx`. **Nunca usar `docker compose run frontend-builder`** — cria o container mas não copia para o volume de forma confiável. |
+| Deploy frontend — 3 comandos obrigatórios | Qualquer alteração no frontend **exige os 3 comandos na sequência**, senão o nginx continua servindo o build antigo e Ctrl+Shift+R não resolve: (1) `docker compose -f docker-compose.prod.yml build --no-cache frontend-builder` → (2) `docker run --rm -v sytemd_frontend_build:/output sytemd-frontend-builder sh -c "cp -r /app/dist/. /output/"` → (3) `docker compose -f docker-compose.prod.yml restart nginx`. **Nunca usar `docker compose run frontend-builder`** — cria o container mas não copia para o volume de forma confiável. **Atualização 11/10/2026:** o CI (`deploy.yml`) já roda `build frontend-builder` + `run --rm frontend-builder` em todo push — confirmado em 29/09/2026 (bundle no volume `sytemd_frontend_build` gravado no mesmo minuto do run do CI). Os 3 comandos manuais ficam só como fallback: antes de declarar "rebuild do frontend pendente", conferir o bundle servido (`docker exec sytemd-nginx-1 grep -o '<string nova>' /usr/share/nginx/html/assets/index-*.js`). |
 | `livro-caixa/totais/` e `fluxo-caixa/` — saldo calculado | Nunca usar `ultimo.saldo_atual` como saldo de período. O campo `saldo_atual` em cada `LivroCaixa` é o running balance da conta naquele instante — diverge quando há saldo_inicial ou múltiplas contas. **Fórmula correta:** `livro-caixa/totais/` → `saldo_atual = total_entradas - total_saidas`; `fluxo-caixa/` → `saldo_final = saldo_inicial + total_entradas - total_saidas`. |
 | `parse_btg` — coluna Entradas/Saídas vs Saldo | O extrato BTG tem duas colunas numéricas por lançamento na mesma linha (Entradas/Saídas e Saldo acumulado). O regex de `financeiro/parsers.py::parse_btg` **sempre** captura o primeiro número após a descrição (valor da transação) e absorve um segundo número final sem capturá-lo (saldo) — nunca inverter isso, senão o valor lançado vira o saldo da conta em vez do valor real da transação (bug real já corrido em produção: "Rendimento Remunerado" de R$0,01 virou ~R$204). |
 | `PadraoSeguroConciliacao.natureza` — Aporte vs Receita Financeira | Ao criar um padrão seguro de ENTRADA para o `--auto`/`--criar` do `conciliar_extrato`, definir `natureza` corretamente: `APORTE` só para capital social/investidor de verdade; `RECEITA_FINANCEIRA` para qualquer rendimento/juro de conta remunerada ou aplicação automática do banco. Default é `APORTE` — esquecer de setar `RECEITA_FINANCEIRA` faz o sistema tratar rendimento de banco como se o sócio tivesse aportado capital. |
@@ -3067,3 +3067,35 @@ acessível em qualquer resolução porque a tabela é única (sem split responsi
 - `makemigrations orcamentos --check --dry-run` → "No changes detected" (sem migration necessária)
 - `npm run build` (frontend) → build limpo, string "Gerar PDF" confirmada no bundle
 - Resultado: APROVADO
+
+---
+
+### [2026-10-11] — Pilot roda o `--concluir`; hook não bloqueia mais o disparo do Pilot
+
+**Problema:** desde junho quase toda Manutenção (#34, #35, #46, #47, #48,
+#56, #61) terminava com o bloco "⚠️ Pendente — fora do escopo do Pilot...
+rodar `--concluir` à mão". Na #61 isso fez o cron redisparar o Planner 3x
+à toa (~$4) porque `feito` continuou `False` com o deploy já feito.
+
+**Duas causas, as duas corrigidas:**
+1. `PilotSKILL.md` proibia qualquer `docker exec` sem exceção, enquanto o
+   briefing mandava o Pilot rodar `--concluir`. Agora a skill libera
+   **só** `docker exec <projeto>-backend-1 python manage.py disparar_hotfix
+   --concluir <ID>`, depois do deploy confirmado e **só na última fase**
+   de Manutenção multi-fase (UidSkills `16d2bd8`, `0c07eee`).
+2. `/opt/uid-automation/enforce_pipeline_vps.py` casava `git push` /
+   `docker compose ... prod` com o **texto do prompt** passado em
+   `claude --agent pilot -p "..."` e bloqueava o Planner de chamar o
+   Pilot. Agora o argumento de `-p` de uma invocação `claude ... --agent`
+   é ignorado na checagem; o resto do comando continua checado e o agente
+   chamado passa pelo hook com o próprio `agent_type`. Testado com 14
+   casos (incluindo o comando real que foi bloqueado na #61): Planner
+   chamando Pilot passa; Planner/Sentinel/sessão raiz com `git push`/
+   `commit`, `cmd ; git push` depois de um `claude --agent`, `bash -c "git
+   push"`, `docker compose prod` e `push --force` continuam bloqueados.
+   Backup: `enforce_pipeline_vps.py.bak-*`.
+
+Os blocos "Pendente — Pilot proibido de rodar comandos Docker" dos ciclos
+anteriores ficam como histórico, mas **não valem mais** para o `--concluir`.
+Frontend: ver nota de 11/10/2026 na linha "Deploy frontend — 3 comandos"
+(o CI já reconstrói o bundle).

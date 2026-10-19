@@ -3099,3 +3099,47 @@ Os blocos "Pendente — Pilot proibido de rodar comandos Docker" dos ciclos
 anteriores ficam como histórico, mas **não valem mais** para o `--concluir`.
 Frontend: ver nota de 11/10/2026 na linha "Deploy frontend — 3 comandos"
 (o CI já reconstrói o bundle).
+
+---
+
+### [2026-10-19] — Botão Sair e toggle tema claro/escuro no Header (Manutenção #67) — primeiro deploy ponta a ponta sem pendência manual
+
+**Tarefas executadas:**
+- Botão "Sair" (logout) no Header
+- Toggle de tema claro/escuro (`useTheme.js` novo hook)
+
+**Arquivos alterados (100% frontend):**
+- `frontend/index.html`
+- `frontend/src/components/sistema/Header.jsx`
+- `frontend/src/hooks/useTheme.js` (novo)
+- `frontend/src/index.css`
+
+**Commits:**
+- `5cf5c14` — feat(header): botao Sair e toggle tema claro/escuro (Manutencao 67)
+
+**Deploy:**
+- Data: 2026-10-19
+- Push: `git push origin main` → `0190276..5cf5c14` — CI/CD GitHub Actions ("Deploy SystemD", run `39309761334`) — sucesso em 56s
+- Health check backend: `GET /api/` → 200 OK
+- Bundle novo confirmado servido: `index-B6SvjITI.js` contém a string `systemd-theme`
+- URL: https://uidsoftware.com.br
+- Status: ✅ Deployado e confirmado ao vivo em produção (backend + frontend)
+
+**Nota — confirma a mudança de 11/10/2026:** esta foi a primeira Manutenção
+100% frontend desde o fix do `deploy.yml` em que **nenhum rebuild manual
+foi necessário** — o CI já reconstrói e publica o bundle sozinho (`build
+frontend-builder backend` + `run --rm frontend-builder` + `up -d nginx`
+dentro do mesmo job SSH). Os blocos "⚠️ Pendente — fora do escopo do
+Pilot" dos ciclos #34 a #61 não se aplicam mais a partir daqui — o único
+passo real pós-push é verificar o bundle servido antes de concluir.
+
+**Pilot — Manutenção de fase única, `--concluir` executado por último,
+após os 4 checks (push, CI verde, health check, bundle confirmado):**
+```
+docker exec sytemd-backend-1 python manage.py disparar_hotfix --concluir 67
+→ "Manutencao 67 marcada como concluida."
+```
+
+**Sentinel:**
+- Status recebido: APROVADO (commit `5cf5c14`)
+- Resultado: APROVADO

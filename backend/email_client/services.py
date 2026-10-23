@@ -1,5 +1,6 @@
 import smtplib
 import ssl
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import decode_header
@@ -135,26 +136,58 @@ def ler_email(email_conta, email_senha, uid, pasta="INBOX"):
             client.logout()
 
 
-def enviar_email_sistema(destinatario, assunto, corpo_html):
-    """Envia email usando a conta de sistema configurada em settings."""
+def enviar_email_sistema(destinatario, assunto, corpo_html, anexos=None):
+    """Envia email usando a conta de sistema configurada em settings.
+
+    anexos (opcional, Manutencao #68): lista de tuples
+    (nome_arquivo, bytes, mimetype) a anexar. Default None preserva o
+    comportamento atual (RN05) -- as chamadas existentes (convite de
+    acesso, redefinicao de senha em usuarios/views.py) nao mudam.
+    """
     email_conta = settings.SYSTEM_EMAIL_CONTA
     email_senha = settings.SYSTEM_EMAIL_SENHA
     if not email_senha:
         raise Exception("SYSTEM_EMAIL_SENHA não configurada no .env")
-    enviar_email(email_conta, email_senha, destinatario, assunto, corpo_html, corpo_html=corpo_html)
+    enviar_email(email_conta, email_senha, destinatario, assunto, corpo_html, corpo_html=corpo_html, anexos=anexos)
 
 
-def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html=None, cc=None):
+def enviar_email(email_conta, email_senha, destinatario, assunto, corpo, corpo_html=None, cc=None, anexos=None):
+    """Envia email via SMTP (Mailcow).
+
+    anexos (opcional, Manutencao #68): lista de tuples
+    (nome_arquivo, bytes, mimetype) a anexar ao email. Quando None
+    (default), o comportamento e' idêntico ao de antes desta extensao
+    (MIMEMultipart('alternative') simples, texto + html) -- extensao
+    100% aditiva, RN05. Quando ha' anexo, a mensagem vira
+    MIMEMultipart('mixed') com uma sub-parte 'alternative' (texto+html)
+    dentro, seguida de uma MIMEApplication por anexo com
+    Content-Disposition: attachment.
+    """
     try:
-        msg = MIMEMultipart("alternative")
+        if anexos:
+            msg = MIMEMultipart("mixed")
+            corpo_alt = MIMEMultipart("alternative")
+            corpo_alt.attach(MIMEText(corpo, "plain", "utf-8"))
+            if corpo_html:
+                corpo_alt.attach(MIMEText(corpo_html, "html", "utf-8"))
+            msg.attach(corpo_alt)
+        else:
+            msg = MIMEMultipart("alternative")
+            msg.attach(MIMEText(corpo, "plain", "utf-8"))
+            if corpo_html:
+                msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+
         msg["From"] = email_conta
         msg["To"] = destinatario
         msg["Subject"] = assunto
         if cc:
             msg["CC"] = cc
-        msg.attach(MIMEText(corpo, "plain", "utf-8"))
-        if corpo_html:
-            msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+
+        for nome_arquivo, conteudo_bytes, mimetype in (anexos or []):
+            maintype, _, subtype = (mimetype or "application/octet-stream").partition("/")
+            parte = MIMEApplication(conteudo_bytes, _subtype=subtype or "octet-stream")
+            parte.add_header("Content-Disposition", "attachment", filename=nome_arquivo)
+            msg.attach(parte)
 
         context = ssl.create_default_context()
         context.check_hostname = False

@@ -1453,6 +1453,39 @@ para um Fluxo 1 completo.
 
 ---
 
+### [2026-10-23] — Relatório PDF do Studio Fluir + envio por email (Manutenção #68)
+
+**Tarefas executadas:**
+- `backend/ordens/relatorio_pdf.py` (novo) — `gerar_relatorio_sistema_pdf(os_obj) -> bytes`, reaproveita padrão de `orcamentos/orcamento_pdf.py` (paleta Uid, `common/pdf_utils.py`), seções: dados do projeto/cliente, linha do tempo FaseOS, manutenções concluídas, pendentes/bloqueadas, artefatos técnicos
+- `backend/email_client/services.py` — extensão ADITIVA de `enviar_email()` e `enviar_email_sistema()` com parâmetro `anexos=None` (lista de tuples `(nome, bytes, mimetype)`); `MIMEMultipart('mixed')` com sub-parte `alternative` quando há anexo — chamadas existentes não foram quebradas
+- `backend/ordens/management/commands/relatorio_studio_fluir.py` (novo) — management command com resolução dinâmica da OS do Studio Fluir (busca por título/cliente), `--dry-run`, `--destinatario`, `--os-id`; gera PDF via `gerar_relatorio_sistema_pdf()` e envia via `enviar_email_sistema()`
+- Testes novos: `backend/email_client/tests.py` (9 casos: mock SMTP, anexo, sem anexo, regressão) + 7 casos em `backend/ordens/tests.py` (`RelatorioSistemaPdfTest` + `RelatorioStudioFluirCommandTest`)
+- Email real enviado: `contato@uidsoftware.com.br` → `luizeduardo@uidsoftware.com.br`, PDF de 5248 bytes em anexo
+
+**Arquivos alterados:**
+- `backend/email_client/services.py`
+- `backend/email_client/tests.py`
+- `backend/ordens/management/commands/relatorio_studio_fluir.py` (novo)
+- `backend/ordens/relatorio_pdf.py` (novo)
+- `backend/ordens/tests.py`
+
+**Commits:**
+- `fd94a58` — feat(ordens): relatorio PDF Studio Fluir + envio por email (Manutencao 68)
+
+**Deploy:**
+- Data: 2026-10-23
+- CI/CD GitHub Actions ("Deploy SystemD", run `40039654537`) — sucesso em 19s
+- URL: https://uidsoftware.com.br
+- Status: ✅ Backend em produção via CI/CD
+
+**Sentinel:**
+- 152/152 testes passando (16 novos desta manutenção)
+- 5/5 critérios de aceite atendidos (dry-run confirmado, PDF 5248 bytes, sem regressão)
+- Resultado: APROVADO
+
+
+---
+
 ### [2026-06-20] — EntrevistaPage no pipeline Novo Projeto
 
 **Tarefas executadas:**

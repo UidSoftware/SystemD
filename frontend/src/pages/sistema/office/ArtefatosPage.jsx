@@ -157,7 +157,7 @@ export default function ArtefatosPage() {
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Artefatos</h1>
             <p style={{ fontSize: 13, color: '#a78bca', marginTop: 4 }}>
-              Documentos e entregas geradas pelos agents do Claw Empire — {total} artefato{total !== 1 ? 's' : ''}
+              Documentos e entregas geradas pelos agents da esteira — {total} artefato{total !== 1 ? 's' : ''}
             </p>
           </div>
         </div>

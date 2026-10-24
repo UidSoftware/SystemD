@@ -1,6 +1,6 @@
 # CLAUDE.md — Sistema Interno Uid Software (SystemD)
 
-> Ler o CLAUDE.md global (`/opt/claw-empire/CLAUDE.md`) — contém as regras gerais da Uid que se aplicam a todos os projetos.
+> Ler o CLAUDE.md global (`/root/.claude/CLAUDE.md`, carregado automaticamente) — contém as regras gerais da Uid que se aplicam a todos os projetos.
 
 ---
 
@@ -30,8 +30,8 @@
 3. Você (Claude raiz) não faz mais nada além de invocar o hotfix.
 ```
 
-**Sempre usar os bonequinhos** — cada agent DEVE ser invocado via `Agent tool` (não via texto, não via instrução verbal).
-Bonequinho no Office = Agent tool foi chamado. Sem Agent tool = sem bonequinho = pipeline quebrado.
+**Sempre delegar via Agent tool** — cada agent DEVE ser invocado via `Agent tool` (não via texto, não via instrução verbal). Sem delegação real = pipeline quebrado.
+(Antes isto falava em "bonequinho no Office"; Office/Claw Empire foram removidos em 23/10/2026, a regra de delegar continua.)
 
 **Única exceção:** diagnóstico de leitura (Read, grep, git log, git diff, git status, docker ps, docker logs) para entender o problema antes de passar para o hotfix. Leitura é permitida. Escrita não.
 
@@ -920,7 +920,6 @@ O SystemD tem um menu **Office** (somente ADMIN) que integra o pipeline de desen
 
 ```
 Office  (logo após Dashboard — somente ADMIN)
-├── Escritório      → iframe office.uidsoftware.com.br
 ├── Board           → Kanban/Scrum (em breve)
 ├── Agents          → status do time (em breve)
 ├── Activity Feed   → log de eventos (em breve)
@@ -931,7 +930,7 @@ Office  (logo após Dashboard — somente ADMIN)
     └── Arquitetura Técnica → form → salva em ordens_arquiteturatecnica
 ```
 
-**Fluxo de aquisição completo (fonte de verdade: PlannerSKILL.md / AnalistaSKILL.md em /opt/claw-empire/.claude/skills/):**
+**Fluxo de aquisição completo (fonte de verdade: PlannerSKILL.md / AnalistaSKILL.md em /opt/uid-skills/.claude/skills/, gerados para /root/.claude/agents/):**
 
 ```
 Prospecto → Entrevista → Arquitetura Técnica (salva em ordens_arquiteturatecnica)
@@ -1146,9 +1145,11 @@ Levantamento → UML → Skills → código-base → protótipo → contrato →
 
 ## Agents da Fábrica Uid (Claw Empire — VPS)
 
+> ⚠️ **HISTÓRICO — Office (UidOffice) e Claw Empire foram REMOVIDOS da VPS em 23/10/2026** (diretórios, containers, imagens, volumes, certificado e os 11 hooks `claude-office-hook`). Nada desta seção existe mais; não reinstalar. Backup só local, no notebook do usuário (`~/Área de trabalho/backup-office-empire/`).
+
 > **UidOffice foi substituído pelo Claw Empire** (`empire.uidsoftware.com.br`). O backup do UidOffice está em `/opt/backups/uid-office-20260605/`.
 
-Os agents estão em `/opt/claw-empire/.claude/agents/` na VPS.
+Os agents estão em `/root/.claude/agents/` na VPS (gerados a partir de `/opt/uid-skills/.claude/skills/` pelo cron `generate_agents.py` — editar sempre no uid-skills).
 
 | Agent | Papel | Quando usar |
 |-------|-------|-------------|
@@ -1164,13 +1165,12 @@ Os agents estão em `/opt/claw-empire/.claude/agents/` na VPS.
 ### Como invocar agents na VPS
 
 ```bash
-# Carregar credenciais do Office e rodar agent
-cd /opt/claw-empire && export $(cat .env | xargs) && cd /diretorio-projeto
-claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
+# Token OAuth do Claude (mesmo arquivo usado por disparar_hotfix.py / disparar_planner.py)
+cd /diretorio-projeto
+CLAUDE_CODE_OAUTH_TOKEN=$(cat /root/.claude_oauth_token) claude --agent sentinel -p "..."
 
-# O Claw Empire usa CLAUDE_CODE_OAUTH_TOKEN (não claude login)
 # claude login NÃO funciona em servidor headless (sem browser)
-# Sempre exportar as vars do /opt/claw-empire/.env antes de rodar
+# /opt/claw-empire (onde ficava o .env antigo) foi removido em 23/10/2026
 ```
 
 ### Permissões da VPS (`/root/.claude/settings.json`)
@@ -1190,13 +1190,15 @@ claude --model claude-sonnet-4-6 -p "Você é o Sentinel — ..."
 
 ### Como os bonequinhos aparecem no Claw Empire
 
+> ⚠️ **HISTÓRICO — Office (UidOffice) e Claw Empire foram REMOVIDOS da VPS em 23/10/2026** (diretórios, containers, imagens, volumes, certificado e os 11 hooks `claude-office-hook`). Nada desta seção existe mais; não reinstalar. Backup só local, no notebook do usuário (`~/Área de trabalho/backup-office-empire/`).
+
 O Claw Empire (pixel art) mostra personagens trabalhando via hooks `SubagentStart`/`SubagentStop`.
 Os bonequinhos aparecem quando o Agent tool é chamado — cada subagente spawnado dispara `SubagentStart` e aciona a animação do personagem correspondente.
 
 O pipeline usa subagentes sequenciais por papel: **Hotfix → Planner → Ursula/Bob → Sentinel → Pilot**.
-Cada agent tem seu CLAUDE.md em `/opt/claw-empire/.claude/agents/` que define o papel e instrui a chamar o próximo via Agent tool.
+Cada agent tem seu CLAUDE.md em `/root/.claude/agents/` que define o papel e instrui a chamar o próximo via Agent tool.
 
-**Regra absoluta do Hotfix** (`/opt/claw-empire/.claude/agents/hotfix.md`):
+**Regra absoluta do Hotfix** (`/root/.claude/agents/hotfix.md`):
 - Primeira linha: `EXPRESSAMENTE PROIBIDO QUEBRAR O FLUXO DE TRABALHO`
 - O Hotfix NÃO analisa, NÃO implementa, NÃO dá instruções de deploy
 - Única ação: invocar Planner via Agent tool com `subagent_type: "planner"`
@@ -1225,7 +1227,7 @@ Pipeline completo testado usando Studio Fluir como caso real:
 - **Loom** — executou F1 (simplificação MinistrarAulaPage), F2 (filtro turma RelPressaoPage)
 - **Sentinel** — validou deploy na VPS, 5/5 checks passaram, dado real confirmado em produção
 
-Os bonequinhos pixel art do Office ficam visíveis em **SystemD → Office → Escritório** (iframe de office.uidsoftware.com.br). Hooks registram todos os eventos em tempo real.
+~~Os bonequinhos pixel art do Office ficam visíveis em SystemD → Office → Escritório.~~ (Removido em 23/10/2026: a página Escritório, a rota `/sistema/office/escritorio` e os hooks não existem mais.)
 
 ---
 

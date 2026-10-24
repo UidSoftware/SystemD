@@ -15,16 +15,6 @@ SISTEMAS_UID = [
         'caminho_servidor': '/root/SystemD',
     },
     {
-        'titulo':           'Uid Office',
-        'url':              'https://office.uidsoftware.com.br',
-        'caminho_servidor': '/opt/uid-office',
-    },
-    {
-        'titulo':           'Claw Empire',
-        'url':              'https://empire.uidsoftware.com.br',
-        'caminho_servidor': '/opt/claw-empire',
-    },
-    {
         'titulo':           'Studio Fluir',
         'url':              '',
         'caminho_servidor': '/var/www/studio-fluir',

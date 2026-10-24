@@ -15,7 +15,6 @@ import SetoresPage from './pages/sistema/SetoresPage'
 import OSPage from './pages/sistema/OSPage'
 import OSDetailPage from './pages/sistema/OSDetailPage'
 import UnidadesPage from './pages/sistema/UnidadesPage'
-import EscritorioPage from './pages/sistema/EscritorioPage'
 import ContratosPage from './pages/sistema/ContratosPage'
 import OrcamentosPage from './pages/sistema/OrcamentosPage'
 import PedidosPage    from './pages/sistema/PedidosPage'
@@ -106,7 +105,6 @@ export default function App() {
           <Route path="/sistema/relatorios/despesas" element={<PrivateRoute perfisPermitidos={FIN_LEITURA}><DespesasRelatorioPage /></PrivateRoute>} />
 
           {/* Office */}
-          <Route path="/sistema/office/escritorio" element={<PrivateRoute perfisPermitidos={['ADMIN']}><EscritorioPage /></PrivateRoute>} />
           <Route path="/sistema/produtos" element={<PrivateRoute perfisPermitidos={['ADMIN','OPERACIONAL']}><ProdutosPage /></PrivateRoute>} />
           <Route path="/sistema/orcamentos" element={<PrivateRoute perfisPermitidos={['ADMIN']}><OrcamentosPage /></PrivateRoute>} />
           <Route path="/sistema/pedidos" element={<PrivateRoute perfisPermitidos={['ADMIN','OPERACIONAL']}><PedidosPage /></PrivateRoute>} />

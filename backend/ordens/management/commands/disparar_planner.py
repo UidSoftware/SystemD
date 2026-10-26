@@ -85,6 +85,8 @@ class Command(BaseCommand):
                     'arquitetura_id': arquitetura.id,
                     'projeto': arquitetura.projeto,
                     'base_projeto': arquitetura.base_projeto,
+                    'dominio_uid': arquitetura.dominio_uid,
+                    'ssl': arquitetura.ssl,
                     'entrevista_sistema': arquitetura.entrevista.sistema,
                     'prospecto_nome': arquitetura.entrevista.prospecto.nome_empresa,
                     'core_goal': resumir_descricao(arquitetura.entrevista.descricao),

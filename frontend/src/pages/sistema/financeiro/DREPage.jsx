@@ -76,6 +76,7 @@ export default function DREPage() {
                   { key: 'prolabore',            label: 'Pró-labore',          cor: '#FF0000', bold: false },
                   { key: 'impostos',             label: 'Impostos',            cor: '#FF0000', bold: false },
                   { key: 'outros',               label: 'Outros',              cor: '#FF0000', bold: false },
+                  { key: 'despesas_financeiras', label: 'Desp. Financeiras',   cor: '#FF0000', bold: false },
                   { key: 'total_despesas',       label: 'Total Despesas',      cor: '#FF0000', bold: true },
                   { key: null },
                   { key: 'resultado',            label: 'Resultado Líquido',   cor: null,      bold: true, dynamic: true },

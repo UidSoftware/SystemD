@@ -39,6 +39,7 @@ const TIPO_DESPESA_CFG = {
   VARIAVEL:  'Variável',
   PROLABORE: 'Pro-labore',
   IMPOSTO:   'Imposto',
+  FINANCEIRA: 'Financeira',
   OUTRO:     'Outro',
 }
 

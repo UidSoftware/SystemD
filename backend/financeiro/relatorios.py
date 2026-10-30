@@ -65,7 +65,8 @@ def _calcular_dre_mes(ano, mes):
     prolabore = desp_qs.filter(tipo='PROLABORE').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
     impostos = desp_qs.filter(tipo='IMPOSTO').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
     outros = desp_qs.filter(tipo='OUTRO').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
-    total_despesas = fixas + variaveis + prolabore + impostos + outros
+    financeiras = desp_qs.filter(tipo='FINANCEIRA').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
+    total_despesas = fixas + variaveis + prolabore + impostos + outros + financeiras
     resultado = receita_liquida - total_despesas
 
     # EBITDA padrao (corrigido em 29/10/2026, decisao do Luiz; antes era
@@ -91,6 +92,7 @@ def _calcular_dre_mes(ano, mes):
         'prolabore': prolabore,
         'impostos': impostos,
         'outros': outros,
+        'despesas_financeiras': financeiras,
         'total_despesas': total_despesas,
         'resultado': resultado,
         'receita_liquida_operacional': receita_liquida_operacional,

@@ -156,6 +156,8 @@ class TipoDespesa(models.TextChoices):
     VARIAVEL  = 'VARIAVEL',  'Despesa Variável'
     PROLABORE = 'PROLABORE', 'Pró-labore'
     IMPOSTO   = 'IMPOSTO',   'Imposto / DAS'
+    # juros, multas, IOF e tarifas bancarias: fora do EBITDA (resultado financeiro)
+    FINANCEIRA = 'FINANCEIRA', 'Despesa Financeira (juros/tarifas)'
     OUTRO     = 'OUTRO',     'Outro'
 
 

@@ -19,6 +19,7 @@ const TIPO_CFG = {
   VARIAVEL:  { label: 'Variavel',   cor: '#f59e0b' },
   PROLABORE: { label: 'Pro-labore', cor: '#3d0361' },
   IMPOSTO:   { label: 'Imposto',    cor: '#FF0000' },
+  FINANCEIRA: { label: 'Financeira (juros/tarifas)', cor: '#6b8fff' },
   OUTRO:     { label: 'Outro',      cor: '#6b7280' },
 }
 const FREQUENCIA_OPTS = [

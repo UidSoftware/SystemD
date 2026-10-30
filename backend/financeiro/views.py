@@ -813,6 +813,7 @@ def dre(request):
         'receita_liquida': Decimal('0'), 'despesas_fixas': Decimal('0'),
         'despesas_variaveis': Decimal('0'), 'prolabore': Decimal('0'),
         'impostos': Decimal('0'), 'outros': Decimal('0'),
+        'despesas_financeiras': Decimal('0'),
         'total_despesas': Decimal('0'), 'resultado': Decimal('0'),
         'receita_liquida_operacional': Decimal('0'), 'ebitda': Decimal('0'),
         'ebitda_ajustado': Decimal('0'), 'resultado_financeiro': Decimal('0'),
@@ -846,7 +847,8 @@ def dre(request):
         prolabore = desp_qs.filter(tipo='PROLABORE').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
         impostos  = desp_qs.filter(tipo='IMPOSTO').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
         outros    = desp_qs.filter(tipo='OUTRO').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
-        total_desp = fixas + variaveis + prolabore + impostos + outros
+        financeiras = desp_qs.filter(tipo='FINANCEIRA').aggregate(v=Sum('valor_liquido'))['v'] or Decimal('0')
+        total_desp = fixas + variaveis + prolabore + impostos + outros + financeiras
         resultado  = receita_liq - total_desp
 
         # EBITDA padrao (corrigido em 29/10/2026, decisao do Luiz; antes era
@@ -875,6 +877,7 @@ def dre(request):
             'prolabore':        prolabore,
             'impostos':         impostos,
             'outros':           outros,
+            'despesas_financeiras': financeiras,
             'total_despesas':   total_desp,
             'resultado':        resultado,
             'receita_liquida_operacional': receita_liquida_operacional,
@@ -910,7 +913,7 @@ def dre_pdf(request):
     except ValueError:
         return Response({'detail': 'Ano inválido.'}, status=400)
 
-    headers = ['Mês', 'Receita Líquida', 'Desp. Fixas', 'Desp. Variáveis', 'Pró-labore', 'Impostos', 'Outros', 'Total Despesas', 'Resultado']
+    headers = ['Mês', 'Receita Líquida', 'Desp. Fixas', 'Desp. Variáveis', 'Pró-labore', 'Impostos', 'Outros', 'Financeiras', 'Total Despesas', 'Resultado']
     rows = []
     totais = None
     for mes in range(1, 13):
@@ -918,7 +921,8 @@ def dre_pdf(request):
         rows.append([
             f'{mes:02d}/{ano}', fmt_money(d['receita_liquida']), fmt_money(d['despesas_fixas']),
             fmt_money(d['despesas_variaveis']), fmt_money(d['prolabore']), fmt_money(d['impostos']),
-            fmt_money(d['outros']), fmt_money(d['total_despesas']), fmt_money(d['resultado']),
+            fmt_money(d['outros']), fmt_money(d['despesas_financeiras']),
+            fmt_money(d['total_despesas']), fmt_money(d['resultado']),
         ])
         if totais is None:
             totais = dict(d)
@@ -929,7 +933,8 @@ def dre_pdf(request):
     total_row = [
         'TOTAL ANO', fmt_money(totais['receita_liquida']), fmt_money(totais['despesas_fixas']),
         fmt_money(totais['despesas_variaveis']), fmt_money(totais['prolabore']), fmt_money(totais['impostos']),
-        fmt_money(totais['outros']), fmt_money(totais['total_despesas']), fmt_money(totais['resultado']),
+        fmt_money(totais['outros']), fmt_money(totais['despesas_financeiras']),
+        fmt_money(totais['total_despesas']), fmt_money(totais['resultado']),
     ]
     return gerar_pdf_tabela(
         titulo=f'DRE — Demonstrativo de Resultado ({ano})', headers=headers, rows=rows,

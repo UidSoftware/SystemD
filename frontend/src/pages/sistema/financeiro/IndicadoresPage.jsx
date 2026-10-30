@@ -57,6 +57,7 @@ export default function IndicadoresPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
                 <Kpi label="Margem Líquida" value={`${indicadores.margem_liquida}%`} cor={Number(indicadores.margem_liquida) >= 0 ? '#10b981' : '#FF0000'} />
                 <Kpi label="EBITDA (mês)" value={formatMoeda(indicadores.ebitda_mes)} cor={Number(indicadores.ebitda_mes) >= 0 ? '#10b981' : '#FF0000'} />
+                <Kpi label="EBITDA ajustado (mês)" value={formatMoeda(indicadores.ebitda_ajustado_mes)} cor={Number(indicadores.ebitda_ajustado_mes) >= 0 ? '#10b981' : '#FF0000'} />
                 <Kpi label="vs. Mês Anterior" value={<DeltaArrow value={indicadores.var_mes_anterior} />} />
                 <Kpi label="vs. Mesmo Mês (Ano Ant.)" value={<DeltaArrow value={indicadores.var_ano_anterior} />} />
               </div>

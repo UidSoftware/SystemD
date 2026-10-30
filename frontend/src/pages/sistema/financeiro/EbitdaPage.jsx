@@ -17,12 +17,11 @@ import { financeiroApi } from '../../../services/financeiroApi'
 // bate exatamente com o EBITDA e o Resultado Liquido que a aba DRE ja
 // mostra, nao e um numero paralelo divergente.
 //
-// Pro-labore aparece como linha propria ABAIXO do EBITDA (nao dentro de
-// "Despesas Operacionais" acima dele) porque a Uid trata isso como
-// normalizacao/add-back de propósito (mesma logica ja usada em toda
-// esteira: EBITDA = Resultado + Impostos + Pro-labore) — pratica comum
-// em avaliacao de pequena empresa pra mostrar o EBITDA "normalizado",
-// sem o custo de oportunidade do dono trabalhando na propria empresa.
+// Formula padrao desde 29/10/2026 (decisao do Luiz): Impostos/DAS sao
+// deducao da receita (Simples incide sobre o faturamento), pro-labore e
+// custo operacional ACIMA do EBITDA e a receita financeira entra so
+// depois do EBIT. O antigo "EBITDA normalizado" (somando pro-labore de
+// volta) virou o card "EBITDA ajustado".
 
 const NAO_MODELADO_NOTA = 'Não modelado hoje — nenhuma linha própria no sistema pra isso ainda.'
 
@@ -83,14 +82,17 @@ export default function EbitdaPage() {
   if (!dados) return null
 
   const t = dados.totais_ano || {}
-  const receitaLiquida = Number(t.receita_liquida || 0)
-  const receitaBruta = Number(t.receita_bruta || 0)
-  const descontos = Number(t.descontos || 0)
+  const receitaLiquida = Number(t.receita_liquida_operacional || 0)
+  const receitaBruta = Number(t.receita_operacional || 0)
+  const resultadoFinanceiro = Number(t.resultado_financeiro || 0)
+  const ebitdaAjustado = Number(t.ebitda_ajustado || 0)
   const despesasOperacionais = Number(t.despesas_fixas || 0) + Number(t.despesas_variaveis || 0) + Number(t.outros || 0)
   const ebitda = Number(t.ebitda || 0)
   const ebit = ebitda // D&A não modelado, EBIT = EBITDA
   const prolabore = Number(t.prolabore || 0)
   const impostos = Number(t.impostos || 0)
+  // descontos so da receita operacional: o que sobra entre bruta, DAS e liquida operacional
+  const descontos = receitaBruta - impostos - receitaLiquida
   const lucroLiquido = Number(t.resultado || 0)
   const margemEbitda = Number(t.margem_ebitda || 0)
   const pctDe = (v) => receitaLiquida ? (v / receitaLiquida * 100) : 0
@@ -126,6 +128,11 @@ export default function EbitdaPage() {
             <p style={{ fontSize: 12, color: '#a78bca', margin: 0 }}>Margem: {margemEbitda.toFixed(1)}%</p>
           </div>
           <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 18px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#a78bca', margin: 0, textTransform: 'uppercase' }}>EBITDA ajustado ({ano})</p>
+            <p style={{ fontSize: 24, fontWeight: 700, color: ebitdaAjustado >= 0 ? '#10b981' : '#FF0000', margin: '6px 0 2px' }}>{formatMoeda(ebitdaAjustado)}</p>
+            <p style={{ fontSize: 12, color: '#a78bca', margin: 0 }}>EBITDA sem o pró-labore</p>
+          </div>
+          <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 18px' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#a78bca', margin: 0, textTransform: 'uppercase' }}>EBIT ({ano})</p>
             <p style={{ fontSize: 24, fontWeight: 700, color: ebit >= 0 ? '#10b981' : '#FF0000', margin: '6px 0 2px' }}>{formatMoeda(ebit)}</p>
             <p style={{ fontSize: 12, color: '#a78bca', margin: 0 }}>= EBITDA (D&amp;A não modelado)</p>
@@ -133,14 +140,15 @@ export default function EbitdaPage() {
           <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 18px' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#a78bca', margin: 0, textTransform: 'uppercase' }}>Lucro Líquido ({ano})</p>
             <p style={{ fontSize: 24, fontWeight: 700, color: lucroLiquido >= 0 ? '#10b981' : '#FF0000', margin: '6px 0 2px' }}>{formatMoeda(lucroLiquido)}</p>
-            <p style={{ fontSize: 12, color: '#a78bca', margin: 0 }}>{pctDe(lucroLiquido).toFixed(1)}% da receita líquida</p>
+            <p style={{ fontSize: 12, color: '#a78bca', margin: 0 }}>{pctDe(lucroLiquido).toFixed(1)}% da receita líquida operacional</p>
           </div>
         </div>
 
         {/* Demonstracao linha a linha */}
         <div style={{ background: '#1a0a2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '4px 18px 14px', marginBottom: 24 }}>
-          <Linha label="(+) Receita Bruta" valor={receitaBruta} pct={pctDe(receitaBruta)} />
+          <Linha label="(+) Receita Bruta Operacional" valor={receitaBruta} pct={pctDe(receitaBruta)} nota="Sem receita financeira (rendimento entra depois do EBIT)" />
           <Linha label="(−) Descontos" valor={-descontos} pct={-pctDe(descontos)} />
+          <Linha label="(−) Impostos sobre o faturamento" valor={-impostos} pct={-pctDe(impostos)} nota="DAS/Simples — sem separação IRPJ/CSLL hoje" />
           <Linha label="(=) Receita Líquida" valor={receitaLiquida} pct={100} bold />
           <Linha label="(−) CMV / CSP" valor={null} nota={NAO_MODELADO_NOTA} />
           <Linha label="(=) Lucro Bruto" valor={receitaLiquida} pct={100} bold />
@@ -150,18 +158,13 @@ export default function EbitdaPage() {
             pct={-pctDe(despesasOperacionais)}
             nota="Fixas + Variáveis + Outros — sem separação Vendas/Marketing vs G&A hoje"
           />
+          <Linha label="(−) Pró-labore" valor={-prolabore} pct={-pctDe(prolabore)} nota="Custo operacional (o EBITDA ajustado soma de volta)" />
           <Linha label="(+) Outras Receitas Operacionais" valor={null} nota={NAO_MODELADO_NOTA} />
           <Linha label="(=) EBITDA" valor={ebitda} pct={margemEbitda} bold highlight cor={ebitda >= 0 ? '#10b981' : '#FF0000'} />
           <Linha label="(−) Depreciação" valor={null} nota={NAO_MODELADO_NOTA} />
           <Linha label="(−) Amortização" valor={null} nota={NAO_MODELADO_NOTA} />
           <Linha label="(=) EBIT (Lucro Operacional)" valor={ebit} pct={pctDe(ebit)} bold />
-          <Linha
-            label="(−) Pró-labore"
-            valor={-prolabore}
-            pct={-pctDe(prolabore)}
-            nota="Normalizado fora do EBITDA de propósito (padrão da Uid — ver Módulo Financeiro do CLAUDE.md)"
-          />
-          <Linha label="(−) Impostos" valor={-impostos} pct={-pctDe(impostos)} nota="Regime tributário real (DAS/Simples) — sem separação IRPJ/CSLL hoje" />
+          <Linha label="(±) Resultado Financeiro" valor={resultadoFinanceiro} pct={pctDe(resultadoFinanceiro)} nota="Receita financeira (rendimentos) menos seus descontos — juros pagos ainda não têm tipo próprio" />
           <Linha label="(=) Lucro Líquido" valor={lucroLiquido} pct={pctDe(lucroLiquido)} bold highlight cor={lucroLiquido >= 0 ? '#10b981' : '#FF0000'} />
         </div>
       </div>

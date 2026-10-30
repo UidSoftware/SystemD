@@ -79,7 +79,9 @@ export default function DREPage() {
                   { key: 'total_despesas',       label: 'Total Despesas',      cor: '#FF0000', bold: true },
                   { key: null },
                   { key: 'resultado',            label: 'Resultado Líquido',   cor: null,      bold: true, dynamic: true },
+                  { key: 'resultado_financeiro', label: 'Resultado Financeiro', cor: '#6b8fff', bold: false },
                   { key: 'ebitda',               label: 'EBITDA',              cor: null,      bold: true, dynamic: true, highlight: true },
+                  { key: 'ebitda_ajustado',      label: 'EBITDA ajustado (sem pró-labore)', cor: null, bold: false, dynamic: true },
                   { key: 'margem_ebitda',        label: 'Margem EBITDA',       cor: '#a78bca', bold: false, pct: true },
                 ].map((linha, i) => {
                   if (!linha.key) return (
@@ -118,6 +120,7 @@ export default function DREPage() {
               const t = dados.totais_ano
               const ebitda = Number(t.ebitda || 0)
               const margem = Number(t.margem_ebitda || 0)
+              const ebitdaAjustado = Number(t.ebitda_ajustado || 0)
               const receitaLiq = Number(t.receita_liquida || 0)
               const resultado = Number(t.resultado || 0)
               const impostos = Number(t.impostos || 0)
@@ -132,10 +135,11 @@ export default function DREPage() {
               )
               return (
                 <>
-                  {kpiCard('EBITDA (Ano)', formatMoeda(ebitda), `Margem: ${margem.toFixed(1)}% da receita líquida`, ebitda >= 0 ? '#10b981' : '#FF0000')}
+                  {kpiCard('EBITDA (Ano)', formatMoeda(ebitda), `Margem: ${margem.toFixed(1)}% da receita líquida operacional`, ebitda >= 0 ? '#10b981' : '#FF0000')}
+                  {kpiCard('EBITDA ajustado (Ano)', formatMoeda(ebitdaAjustado), 'EBITDA sem o pró-labore', ebitdaAjustado >= 0 ? '#10b981' : '#FF0000')}
                   {kpiCard('Resultado Líquido', formatMoeda(resultado), `${pctDe(resultado).toFixed(1)}% da receita`, resultado >= 0 ? '#10b981' : '#FF0000')}
-                  {kpiCard('(+) Impostos/DAS', formatMoeda(impostos), `${pctDe(impostos).toFixed(1)}% da receita`, '#f59e0b')}
-                  {kpiCard('(+) Pró-labore', formatMoeda(prolabore), `${pctDe(prolabore).toFixed(1)}% da receita`, '#f59e0b')}
+                  {kpiCard('Impostos/DAS', formatMoeda(impostos), `${pctDe(impostos).toFixed(1)}% da receita`, '#f59e0b')}
+                  {kpiCard('Pró-labore', formatMoeda(prolabore), `${pctDe(prolabore).toFixed(1)}% da receita`, '#f59e0b')}
                 </>
               )
             })()}

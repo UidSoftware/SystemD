@@ -812,8 +812,10 @@ def dre(request):
         'receita_bruta': Decimal('0'), 'descontos': Decimal('0'),
         'receita_liquida': Decimal('0'), 'despesas_fixas': Decimal('0'),
         'despesas_variaveis': Decimal('0'), 'prolabore': Decimal('0'),
-        'impostos': Decimal('0'), 'total_despesas': Decimal('0'),
-        'resultado': Decimal('0'), 'ebitda': Decimal('0'),
+        'impostos': Decimal('0'), 'outros': Decimal('0'),
+        'total_despesas': Decimal('0'), 'resultado': Decimal('0'),
+        'receita_liquida_operacional': Decimal('0'), 'ebitda': Decimal('0'),
+        'ebitda_ajustado': Decimal('0'), 'resultado_financeiro': Decimal('0'),
     }
 
     for mes in range(1, 13):
@@ -847,15 +849,19 @@ def dre(request):
         total_desp = fixas + variaveis + prolabore + impostos + outros
         resultado  = receita_liq - total_desp
 
-        # EBITDA = resultado + impostos + prolabore (sem D&A modelado) —
-        # mesma formula ja usada em indicadores_cfo()/_calcular_dre_mes(),
-        # so que ali so cobria o mes atual; aqui passa a existir tambem na
-        # serie anual completa do DRE, que e onde a tela realmente mostra
-        # a evolucao mes a mes (achado 07/08/2026: EBITDA nunca aparecia
-        # na tabela do DRE nem no total do ano, so no card avulso de
-        # Indicadores CFO do mes corrente).
-        ebitda = resultado + impostos + prolabore
-        margem_ebitda = (ebitda / receita_liq * 100) if receita_liq else Decimal('0')
+        # EBITDA padrao (corrigido em 29/10/2026, decisao do Luiz; antes era
+        # resultado + impostos + prolabore): resultado operacional antes do
+        # resultado financeiro e de D&A (D&A nao modelado = 0). Pro-labore e custo
+        # operacional e Impostos/DAS (Simples, sobre o faturamento) e deducao da
+        # receita: os dois ficam descontados. Receita financeira fica fora.
+        # EBITDA ajustado = EBITDA + pro-labore (referencia usual pra microempresa).
+        # Mesma formula de _calcular_dre_mes() (relatorios.py).
+        descontos_operacionais = rec_qs.exclude(tipo='RECEITA_FINANCEIRA').aggregate(v=Sum('desconto'))['v'] or Decimal('0')
+        receita_liquida_operacional = receita_operacional - descontos_operacionais - impostos
+        ebitda = receita_liquida_operacional - (fixas + variaveis + prolabore + outros)
+        ebitda_ajustado = ebitda + prolabore
+        resultado_financeiro = resultado - ebitda
+        margem_ebitda = (ebitda / receita_liquida_operacional * 100) if receita_liquida_operacional else Decimal('0')
 
         dados_mes = {
             'mes': f'{mes:02d}/{ano}',
@@ -871,7 +877,10 @@ def dre(request):
             'outros':           outros,
             'total_despesas':   total_desp,
             'resultado':        resultado,
+            'receita_liquida_operacional': receita_liquida_operacional,
             'ebitda':           ebitda,
+            'ebitda_ajustado':  ebitda_ajustado,
+            'resultado_financeiro': resultado_financeiro,
             'margem_ebitda':    round(margem_ebitda, 2),
         }
         meses.append(dados_mes)
@@ -883,7 +892,8 @@ def dre(request):
     # como media simples das margens mensais (mes com receita 0 e margem 0
     # distorceria a media pra baixo mesmo sem representar isso de verdade).
     totais['margem_ebitda'] = round(
-        (totais['ebitda'] / totais['receita_liquida'] * 100) if totais['receita_liquida'] else Decimal('0'),
+        (totais['ebitda'] / totais['receita_liquida_operacional'] * 100)
+        if totais['receita_liquida_operacional'] else Decimal('0'),
         2,
     )
 

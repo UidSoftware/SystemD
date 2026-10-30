@@ -68,8 +68,17 @@ def _calcular_dre_mes(ano, mes):
     total_despesas = fixas + variaveis + prolabore + impostos + outros
     resultado = receita_liquida - total_despesas
 
-    # EBITDA = resultado + impostos + prolabore (sem D&A modelado)
-    ebitda = resultado + impostos + prolabore
+    # EBITDA padrao (corrigido em 29/10/2026, decisao do Luiz; antes era
+    # resultado + impostos + prolabore): resultado operacional antes do
+    # resultado financeiro e de D&A (D&A nao modelado = 0). Pro-labore e custo
+    # operacional e Impostos/DAS (Simples, sobre o faturamento) e deducao da
+    # receita: os dois ficam descontados. Receita financeira fica fora.
+    # EBITDA ajustado = EBITDA + pro-labore (referencia usual pra microempresa).
+    descontos_operacionais = rec_qs.exclude(tipo='RECEITA_FINANCEIRA').aggregate(v=Sum('desconto'))['v'] or Decimal('0')
+    receita_liquida_operacional = receita_operacional - descontos_operacionais - impostos
+    ebitda = receita_liquida_operacional - (fixas + variaveis + prolabore + outros)
+    ebitda_ajustado = ebitda + prolabore
+    resultado_financeiro = resultado - ebitda
 
     return {
         'receita_operacional': receita_operacional,
@@ -84,7 +93,10 @@ def _calcular_dre_mes(ano, mes):
         'outros': outros,
         'total_despesas': total_despesas,
         'resultado': resultado,
+        'receita_liquida_operacional': receita_liquida_operacional,
         'ebitda': ebitda,
+        'ebitda_ajustado': ebitda_ajustado,
+        'resultado_financeiro': resultado_financeiro,
     }
 
 
@@ -330,6 +342,7 @@ def calcular_indicadores_cfo():
         'resultado_mes': resultado,
         'receita_liquida_mes': receita_liq,
         'ebitda_mes': dre_mes['ebitda'],
+        'ebitda_ajustado_mes': dre_mes['ebitda_ajustado'],
         'var_mes_anterior': round(var_mes_anterior, 1),
         'var_ano_anterior': round(var_ano_anterior, 1),
     }
